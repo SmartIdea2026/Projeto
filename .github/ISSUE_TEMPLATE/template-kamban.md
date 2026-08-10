@@ -1,7 +1,7 @@
 ---
 name: Template Kamban
 about: 'Template padrão para criação de itens no Kamban '
-title: ''
+title: "[TASK]"
 labels: ''
 assignees: ''
 
