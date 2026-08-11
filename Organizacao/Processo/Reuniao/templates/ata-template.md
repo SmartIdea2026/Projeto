@@ -1,6 +1,6 @@
 # ATA — [Nome da reunião]
 
-- **Data:** YYYY-MM-DD
+- **Data:** DD/MM/YYYY
 - **Horário:** HH:MM às HH:MM (horário de início e horário de fim)
 - **Local/Modalidade:** [Presencial ou online e local/plataforma utilizada]
 - **Participantes:** 
@@ -31,12 +31,12 @@ Nome — função/representação
 
 | Tarefa | Responsável | Prazo | 
 |---|---|---|
-| [Descrição] | [Nome] | [DD/MM/AAAA] | 
+| [Descrição] | [Nome] | [DD/MM/YYYY] | 
 
 ## 6. Observações
 
 [Informações adicionais, caso existam.]
 
-**Responsáveis pela elaboração da ata: [Nome completo dos Responsáveis]**
+**Responsáveis pela elaboração da ata:** [Nome completo dos Responsáveis]
 
 
