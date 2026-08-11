@@ -29,12 +29,14 @@ Nome — função/representação
 
 ## 5. Tarefas e encaminhamentos
 
-| Tarefa | Responsável | Prazo | Status |
-|---|---|---|---|
-| [Descrição] | [Nome] | [DD/MM/AAAA] | Pendente |
+| Tarefa | Responsável | Prazo | 
+|---|---|---|
+| [Descrição] | [Nome] | [DD/MM/AAAA] | 
 
 ## 6. Observações
 
 [Informações adicionais, caso existam.]
+
+**Responsáveis pela elaboração da ata: [Nome completo dos Responsáveis]**
 
 
