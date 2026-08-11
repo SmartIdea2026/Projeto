@@ -138,7 +138,7 @@ Para gerar uma nova ATA, o usuário deverá:
 >
 > **Dados da reunião:**
 >
-> * Data: [YYYY-MM-DD]
+> * Data: [DD/MM/YYYY]
 > * Horário: [HH:MM às HH:MM]
 > * Local/Modalidade: [local ou plataforma]
 > * Participantes: [nome — função/representação]
