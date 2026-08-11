@@ -47,17 +47,26 @@ Caso sejam identificados problemas, a ATA deverá retornar ao responsável pelo 
 
 ## 4. Gravação de áudio
 
-A gravação de áudio será utilizada como recurso auxiliar para a elaboração da ATA.
+```text
+OBS: 
+Antes de realizar qualquer gravação, todos os participantes deverão ser informados sobre a gravação
+e darem o consentimento necessário.
+```
 
-A gravação **não substitui o registro da ATA**. Ela deverá ser utilizada apenas para auxiliar na recuperação de informações discutidas durante a reunião.
+* A gravação **não substitui o registro da ATA**. Ela deverá ser utilizada apenas para auxiliar na recuperação de informações discutidas durante a reunião.
 
-Antes de realizar qualquer gravação, os participantes deverão ser informados sobre a gravação e, quando aplicável, deverá ser obtido o consentimento necessário.
+* Não é necessário transcrever integralmente o áudio na ATA.
+
+
+### Armazenamento:
 
 O arquivo de áudio deverá ser armazenado no Drive do `smartideaifes@gmail.com` e **não deverá ser armazenado, sob hipótese alguma, no repositório do projeto**.
 
-A ATA deverá conter apenas as informações relevantes para o registro da reunião, não sendo necessário transcrever integralmente o áudio.
+* Caso a gravação não seja realizada, o responsável pela ATA deverá realizar o registro por meio de anotações durante a reunião.
 
-Caso a gravação não seja realizada, o responsável pela ATA deverá realizar o registro por meio de anotações durante a reunião.
+### Transcrição de áudio
+
+O áudio deverá ser anexado no NotebookLM, que fará automaticamente a transcrição do áudio.
 
 ## 5. Formato da ATA
 
@@ -120,10 +129,11 @@ Organizacao/
 
 ## 6. Prompt padrão para gerar ATA
 
-Para gerar uma nova ATA, o usuário deverá:
+Para gerar uma nova ATA, será utilizado o [notebook] do (https://notebook.google.com/notebook/971a05bb-12ce-44cb-810a-63449fa521f4?authuser=1) NotebookLM que já possui o arquivo de template da ATA.
 
-* Anexar/colar o arquivo `ata-template.md`;
-* Anexar/colar a transcrição do áudio ou as anotações da reunião.
+O usuário deverá:
+
+* Anexar o arquivo de áudio ou as anotações da reunião.
 * Copiar e colar o prompt abaixo e preencher os seguintes dados:
     * Data;
     * Horário de início e fim;
