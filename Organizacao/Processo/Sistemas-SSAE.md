@@ -1,10 +1,32 @@
 # Levantamento e Comparativo dos Sistemas de Assistência Estudantil do IFMG e do IFES
 
-## 1. Fluxos, Módulos e Funcionalidades
+# 1. Sistemas Analisados
+
+## 1.1 IFMG
+
+**Sistema:** [Acessar o sistema SSAE do IFMG](https://ssae.ifmg.edu.br/v1/Login?utm_source=chatgpt.com)
+
+**Manual do Aluno:** [Acessar o Manual do Aluno do IFMG](https://ssae.ifmg.edu.br/v1/manual/secoes/primeiroAcesso.html?utm_source=chatgpt.com)
+
+**Playlist de vídeos:** [Acessar a playlist de vídeos do sistema do IFMG](https://www.youtube.com/playlist?list=PL0OELRDIM8nd0CpJYbo09LWIGWKIJo2HI&utm_source=chatgpt.com)
+
+---
+
+## 1.2 IFES
+
+**Sistema:** [Acessar o sistema de assistência estudantil do IFES](https://estudantil.vitoria.ifes.edu.br/v1/Login?utm_source=chatgpt.com)
+
+**Manual do Aluno:** [Acessar o Manual do Aluno do IFES](https://estudantil.vitoria.ifes.edu.br/v1/manual/secoes/primeiroAcesso.html?utm_source=chatgpt.com)
+
+**Playlist de vídeos:** [Acessar a playlist de vídeos do sistema do IFES](https://www.youtube.com/playlist?list=PL_xcgAjJMMMxULUsVw54WOViXnU0Gw897&utm_source=chatgpt.com)
+
+---
+
+## 2. Fluxos, Módulos e Funcionalidades
 
 Os fluxos, módulos e funcionalidades identificados nos sistemas de assistência estudantil podem ser organizados em cinco grandes módulos.
 
-### 1.1 Fluxo de Acesso e Gestão de Conta
+### 2.1 Fluxo de Acesso e Gestão de Conta
 
 Este módulo constitui a porta de entrada do estudante no sistema e concentra as funcionalidades relacionadas ao acesso e à manutenção da conta.
 
@@ -52,7 +74,7 @@ Já informações como **CPF e campus** não podem ser alteradas diretamente pel
 
 ---
 
-### 1.2 Módulo "Meu Cadastro" — Perfil Socioeconômico
+### 2.2 Módulo "Meu Cadastro" — Perfil Socioeconômico
 
 O módulo **Meu Cadastro** é o núcleo do sistema, pois concentra as informações utilizadas para a análise socioeconômica e a concessão de benefícios da assistência estudantil.
 
@@ -111,7 +133,7 @@ Um exemplo é a verificação de correspondência entre o **número de integrant
 
 ---
 
-### 1.3 Gestão de Documentos
+### 2.3 Gestão de Documentos
 
 A entrega da documentação é realizada de forma **totalmente digital**.
 
@@ -138,7 +160,7 @@ A documentação apresentada deve **comprovar fielmente as informações declara
 
 ---
 
-### 1.4 Fluxo de Inscrição e Acompanhamento de Editais
+### 2.4 Fluxo de Inscrição e Acompanhamento de Editais
 
 Este módulo está relacionado à participação do estudante nos processos seletivos de assistência estudantil.
 
@@ -202,7 +224,7 @@ As informações referentes ao prazo e à possibilidade de recurso podem ser apr
 
 ---
 
-### 1.5 Funcionalidades de Suporte e Comunicação
+### 2.5 Funcionalidades de Suporte e Comunicação
 
 Além dos módulos diretamente relacionados ao cadastro e à inscrição, o sistema possui recursos destinados a orientar e comunicar o estudante.
 
@@ -236,28 +258,6 @@ Essa prática reduz o risco de perda de informações em situações como:
 * Queda de conexão;
 * Encerramento inesperado da sessão;
 * Falhas no sistema.
-
----
-
-# 2. Sistemas Analisados
-
-## 2.1 IFMG
-
-**Sistema:** [Acessar o sistema SSAE do IFMG](https://ssae.ifmg.edu.br/v1/Login?utm_source=chatgpt.com)
-
-**Manual do Aluno:** [Acessar o Manual do Aluno do IFMG](https://ssae.ifmg.edu.br/v1/manual/secoes/primeiroAcesso.html?utm_source=chatgpt.com)
-
-**Playlist de vídeos:** [Acessar a playlist de vídeos do sistema do IFMG](https://www.youtube.com/playlist?list=PL0OELRDIM8nd0CpJYbo09LWIGWKIJo2HI&utm_source=chatgpt.com)
-
----
-
-## 2.2 IFES
-
-**Sistema:** [Acessar o sistema de assistência estudantil do IFES](https://estudantil.vitoria.ifes.edu.br/v1/Login?utm_source=chatgpt.com)
-
-**Manual do Aluno:** [Acessar o Manual do Aluno do IFES](https://estudantil.vitoria.ifes.edu.br/v1/manual/secoes/primeiroAcesso.html?utm_source=chatgpt.com)
-
-**Playlist de vídeos:** [Acessar a playlist de vídeos do sistema do IFES](https://www.youtube.com/playlist?list=PL_xcgAjJMMMxULUsVw54WOViXnU0Gw897&utm_source=chatgpt.com)
 
 ---
 
