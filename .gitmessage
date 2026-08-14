@@ -1,0 +1,28 @@
+<tipo>(<escopo opcional>): <descrição breve>
+
+<corpo obrigatório>
+Descreva de forma objetiva:
+- o que foi alterado;
+- por que a alteração foi necessária;
+- informações relevantes para compreensão da mudança.
+
+Refs: #<número da issue>
+
+# TIPOS PERMITIDOS:
+# feat     - Nova funcionalidade
+# fix      - Correção de bug
+# docs     - Documentação
+# style    - Formatação sem alteração de comportamento
+# refactor - Reorganização/melhoria estrutural
+# test     - Testes
+# chore    - Manutenção/configuração
+# perf     - Melhoria de desempenho
+# ci       - Integração contínua
+
+# EXEMPLO:
+# feat(cadastro): adicionar validação de CPF
+#
+# Implementa a validação do campo CPF no formulário de cadastro,
+# impedindo o envio de dados inválidos.
+#
+# Refs: #27
