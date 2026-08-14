@@ -74,7 +74,7 @@ O áudio deverá ser anexado no NotebookLM, que fará automaticamente a transcri
 Cada ATA deverá seguir o template encontrado em:
 
 ```text
-templates/ata-template.md
+Templates/AtaTemplate.md
 ```
 
 Deverão ser registradas as seguintes informações:
@@ -116,16 +116,16 @@ Cada ATA deverá ser armazenada no diretório `atas/`, seguindo o padrão:
 Organizacao/
 └── Processo/
     └── Reuniao/
-        ├── atas/
+        ├── Atas/
         │   ├── 07-08-2026-reuniao-inicial.md
         │   └── 10-08-2026-reuniao-requisitos.md
-        ├── templates/
-        │   └── ata-template.md
+        ├── Templates/
+        │   └── AtaTemplate.md
         └── README.md
 ```
 
-* O diretório `atas/` armazenará todas as ATAs já registradas.
-* O diretório `templates/` conterá apenas o arquivo de template que cada ATA deverá seguir.
+* O diretório `Atas/` armazenará todas as ATAs já registradas.
+* O diretório `Templates/` conterá apenas o arquivo de template que cada ATA deverá seguir.
 
 ## 6. Prompt padrão para gerar ATA
 
@@ -142,7 +142,7 @@ O usuário deverá:
 
 ### Prompt
 
-> Utilize o arquivo `ata-template.md` enviado em anexo como modelo para gerar a ATA da reunião.
+> Utilize o arquivo `AtaTemplate.md` enviado em anexo como modelo para gerar a ATA da reunião.
 >
 > Preencha o template com base na transcrição ou anotações fornecidas.
 >
