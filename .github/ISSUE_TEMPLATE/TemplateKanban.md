@@ -17,3 +17,7 @@ assignees: ''
 - [ ] Critério de aceitação 1
 - [ ] Critério de aceitação 2
 - [ ] Critério de aceitação 3
+- [ ] Adicionar os resultados ao comentário da Issue.
+
+## Horas reais:
+
