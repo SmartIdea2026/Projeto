@@ -1,0 +1,39 @@
+{
+  "name": "ancoria",
+  "version": "0.1.0",
+  "description": "Busca unificada de documentos do GitHub e do Google Drive",
+  "main": "./out/main/index.js",
+  "author": "SmartIdea2026",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && electron-vite build",
+    "start": "electron-vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "postinstall": "electron-builder install-app-deps",
+    "package": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^38.8.6",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^4.0.1",
+    "jsdom": "^30.0.1",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.6",
+    "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "@seald-io/nedb": "^4.1.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  }
+}
