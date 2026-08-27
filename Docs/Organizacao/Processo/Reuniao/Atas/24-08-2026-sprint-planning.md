@@ -21,7 +21,7 @@ O objetivo principal da reunião foi realizar o planejamento da Sprint (Planning
 *   **Conversão do Banco de Dados:** Análise de viabilidade para converter o banco de dados em nuvem (Firebase) para um banco de dados local ou utilizar o armazenamento local do navegador (*local storage*), eliminando a necessidade de implementação de um fluxo complexo de login neste estágio do projeto.
 *   **Estudo e Quebra do Open Spec:** Alinhamento sobre o estudo do Open Spec (proposta de modificação por prompt, especificação de arquitetura, registro de decisões de arquitetura - ADR e processo de UX), dividindo-o em subtarefas de estudo e posterior geração de documentação e arquivos de especificação.
 *   **Uso da IA e Antigravity:** Instalação e verificação de uso da ferramenta Antigravity integrada ao plano Gemini Plus para possibilitar que as alterações no código do sistema sejam aplicadas pela inteligência artificial a partir de prompts baseados no padrão do Open Spec.
-*   **Escopo de Busca e Filtros do Sistema:** Definição de que a funcionalidade de busca do aplicativo deve ser restrita a arquivos de documentação (como `.md`, `.doc`, `.xls`, `.pdf`, `.epub`) e reuniões, sem abranger código-fonte. A busca exibirá metadados como data della última edição, autor, fonte (Git ou Drive) e resumos e relações gerados por IA.
+*   **Escopo de Busca e Filtros do Sistema:** Definição de que a funcionalidade de busca do aplicativo deve ser restrita a arquivos de documentação (como `.md`, `.doc`, `.xls`, `.pdf`, `.epub`) e reuniões, sem abranger código-fonte. A busca exibirá metadados como data da última edição, autor, fonte (Git ou Drive) e resumos e relações gerados por IA.
 *   **Organização e Gestão de Tarefas:** Definição de critérios de aceitação para as tarefas de estudo, as quais deverão resultar em apresentações curtas para compartilhamento de conhecimento entre a equipe durante as sessões de Review.
 *   **Infraestrutura e Trabalho Remoto:** Comunicação recebida sobre a pintura das salas do laboratório físico a partir de quarta-feira de manhã, demandando a organização da equipe para retirada das máquinas e realização da sprint inteiramente online.
 
@@ -65,4 +65,4 @@ O objetivo principal da reunião foi realizar o planejamento da Sprint (Planning
 *   A gravação do áudio da reunião foi efetuada para fins de resgate de informações e alinhamento, mas seu uso é acessório e não substitui a necessidade de elaboração e controle desta ata em formato Markdown.
 *   Felipe reforçou que a reunião diária (Daily) é a ferramenta ideal para entender o andamento das tarefas e realizar replanejamentos rápidos, evitando discussões prolongadas sobre redistribuição de tarefas no momento da Daily.
 
-**Responsáveis pela elaboração da ata:** Gabriele
+**Responsáveis pela elaboração da ata:** Pedro
