@@ -1,16 +1,17 @@
 ### ATA — Reunião de Planejamento da Sprint (Projeto Âncora)
 
 *   **Data:** 24/08/2026
-*   **Horário:** 15:30 às 16:45
-*   **Local/Modalidade:** Presencial (LED / Laboratório), com transição para Online (Remoto) a partir de quarta-feira
+*   **Horário:** 13:00 às 14:30
+*   **Local/Modalidade:** Presencial (SmartIdea)
 *   **Participantes:** 
     *   Felipe — Orientador / Cliente
     *   Moisés — Coorientador / Cliente
     *   Gabi — Desenvolvedora / Responsável pelas Anotações
     *   André — Desenvolvedor / Scrum Master
     *   Gustavo — Desenvolvedor
-    *   Demais integrantes do grupo de desenvolvimento
-
+    *   Vitória — Desenvolvedor
+    *   Isabela — Desenvolvedor
+      
 #### 1. Objetivo da reunião
 
 O objetivo principal da reunião foi realizar o planejamento da Sprint (Planning) para o aplicativo Âncora, revisando os requisitos do sistema, estimando o tempo de execução com auxílio de IA, definindo papéis na equipe, e estruturando as tarefas de desenvolvimento no Hub.
@@ -58,11 +59,11 @@ O objetivo principal da reunião foi realizar o planejamento da Sprint (Planning
 | Testar aplicação das especificações padrão Open Spec dentro do Antigravity no sistema Âncora | Equipe de Desenvolvimento | 28/08/2026 |
 | Aplicar modificações no protótipo (Figma), enviar para Felipe/Moisés para feedback e iterar | Equipe de Prototipação | 28/08/2026 |
 | Atualizar relatório de numeração de mesas do patrimônio físico para envio ao IFES | Moisés / Integrante designado | 28/08/2026 |
-| Registrar as atividades e métodos de apoio da IA no planejamento como critério da próxima planning | Gabriele / Equipe | 28/08/2026 |
+| Registrar as atividades e métodos de apoio da IA no planejamento como critério da próxima planning | Gabi / Equipe | 28/08/2026 |
 
 #### 6. Observações
 
 *   A gravação do áudio da reunião foi efetuada para fins de resgate de informações e alinhamento, mas seu uso é acessório e não substitui a necessidade de elaboração e controle desta ata em formato Markdown.
 *   Felipe reforçou que a reunião diária (Daily) é a ferramenta ideal para entender o andamento das tarefas e realizar replanejamentos rápidos, evitando discussões prolongadas sobre redistribuição de tarefas no momento da Daily.
 
-**Responsáveis pela elaboração da ata:** Pedro
+**Responsáveis pela elaboração da ata:** Pedro / Gustavo
