@@ -9,6 +9,7 @@
     "node": "^20.19.0 || >=22.12.0"
   },
   "scripts": {
+    "setup": "npm install && npm test",
     "dev": "electron-vite dev",
     "build": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && electron-vite build",
     "start": "electron-vite preview",

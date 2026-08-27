@@ -15,9 +15,31 @@ Confira sua versão com `node --version`.
 
 ## Instalação
 
+O caminho mais simples é o script de setup, que confere as versões, instala as dependências e roda os testes para confirmar que ficou tudo íntegro.
+
+**Linux e macOS:**
+
 ```bash
 cd AncorIA
-npm install
+./setup.sh
+```
+
+**Windows (PowerShell):**
+
+```powershell
+cd AncorIA
+.\setup.ps1
+```
+
+Se o PowerShell recusar a execução, libere para a sessão atual com `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`.
+
+### Instalação manual
+
+Preferindo fazer à mão, ou em qualquer sistema:
+
+```bash
+cd AncorIA
+npm run setup     # equivale a npm install && npm test
 ```
 
 O `npm install` baixa o binário do Electron, com cerca de **114 MB**. Em conexões lentas ou atrás de proxy corporativo esse é o passo demorado. Se o download falhar, é possível apontar um espelho:
@@ -30,6 +52,7 @@ ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ npm install
 
 | Comando | O que faz |
 | --- | --- |
+| `npm run setup` | Instala as dependências e roda os testes |
 | `npm run dev` | Executa em modo de desenvolvimento, com recarga automática |
 | `npm test` | Roda a suíte de testes |
 | `npm run build` | Verifica os tipos e gera o build de produção |
