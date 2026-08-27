@@ -32,6 +32,9 @@ __pycache__/
 venv/
 .venv/
 
+# OpenSpec — artefatos de planejamento mantidos apenas localmente
+openspec/
+
 # Misc
 *.tmp
 *.bak
