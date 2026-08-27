@@ -59,6 +59,7 @@ Processo em `Docs/ADR/TemplatesADR/ProcessoRegistroDecisoesArquitetura.md`; temp
 | 0001 | Aplicação desktop com Electron | Pesquisa §2.3, §21 |
 | 0002 | Banco NoSQL local no lugar do Firebase | Pesquisa §4.5, §12, §17 |
 | 0003 | Credenciais configuradas pela interface | Pesquisa §13, RNF02 |
+| 0004 | Modo de publicação do cliente OAuth do Google | — (em avaliação) |
 
 ## 5. Fluxo OpenSpec
 
