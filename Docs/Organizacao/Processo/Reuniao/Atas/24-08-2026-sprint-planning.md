@@ -6,7 +6,7 @@
 *   **Participantes:** 
     *   Felipe — Orientador / Cliente
     *   Moisés — Coorientador / Cliente
-    *   Gabriele (Gabi) — Desenvolvedora / Responsável pelas Anotações
+    *   Gabi — Desenvolvedora / Responsável pelas Anotações
     *   André — Desenvolvedor / Scrum Master
     *   Gustavo — Desenvolvedor
     *   Demais integrantes do grupo de desenvolvimento
