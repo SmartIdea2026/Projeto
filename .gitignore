@@ -35,3 +35,8 @@ venv/
 # Misc
 *.tmp
 *.bak
+
+# Build e dependências do AncorIA
+AncorIA/node_modules/
+AncorIA/out/
+AncorIA/release/
