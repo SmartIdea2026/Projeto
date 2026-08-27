@@ -71,13 +71,51 @@ Gere um **Personal Access Token** em *Settings → Developer settings → Person
 
 O Drive exige **OAuth**, porque uma chave de API autentica o projeto e não o usuário, e por isso não alcança documentos privados.
 
-1. No **Google Cloud Console**, crie um projeto.
-2. Habilite a **Google Drive API**.
-3. Em *Credenciais*, crie um **ID do cliente OAuth** do tipo **Desktop app**.
-4. Copie o **Client ID** para a tela de configurações e acione **Conectar ao Drive**.
-5. Conceda o consentimento na janela do navegador que se abrir.
+Todo o processo é feito no [Google Cloud Console](https://console.cloud.google.com).
+
+#### 1. Criar ou selecionar um projeto
+
+Use o seletor de projetos no topo da página.
+
+#### 2. Habilitar a Google Drive API
+
+Vá em *APIs e serviços → Biblioteca*, busque por **Google Drive API** e clique em **Ativar**. Sem esse passo, as chamadas retornam erro 403 mesmo com uma autorização válida.
+
+#### 3. Configurar a tela de consentimento
+
+Em *APIs e serviços → Tela de permissão OAuth* — nas versões mais recentes do console, essa área aparece como **Google Auth Platform**.
+
+* **Tipo de usuário:** escolha **Interno** se a instituição tiver Google Workspace; caso contrário, **Externo**. A escolha tem consequências importantes, descritas na seção de limitações abaixo.
+* Preencha nome do aplicativo, e-mail de suporte e contato do desenvolvedor.
+* Em *Escopos*, adicione `https://www.googleapis.com/auth/drive.readonly`.
+* Em *Usuários de teste*, **adicione o e-mail de cada integrante que for usar o aplicativo**.
+
+#### 4. Criar a credencial
+
+Em *APIs e serviços → Credenciais*, escolha **Criar credenciais → ID do cliente OAuth** e selecione o tipo de aplicativo **App para computador** (*Desktop app*).
+
+Copie o **Client ID** gerado, no formato `000000000000-xxxxxxxx.apps.googleusercontent.com`.
+
+O *client secret* exibido junto **não é necessário**. O AncorIA usa PKCE justamente porque o segredo de um aplicativo instalado viajaria dentro do binário distribuído, e portanto não seria secreto.
+
+#### 5. Conectar
+
+Cole o Client ID na tela de configurações do AncorIA e acione **Conectar ao Drive**. Conceda o consentimento na janela do navegador que se abrir.
 
 As credenciais são cifradas pelo chaveiro do sistema operacional e nunca são reexibidas.
+
+### Limitações do OAuth do Google
+
+Duas restrições da plataforma afetam o uso diário e não decorrem da implementação:
+
+**A autorização expira a cada 7 dias.** Enquanto o aplicativo estiver com status de publicação **"Em teste"** e tipo de usuário **Externo**, o Google invalida os tokens de renovação semanalmente. Como o AncorIA guarda esse token para não pedir consentimento a cada abertura, na prática **seria necessário reconectar o Drive toda semana**.
+
+Há duas saídas:
+
+* **Tipo Interno**, disponível para instituições com Google Workspace. Remove tanto a expiração de 7 dias quanto a necessidade de verificação. É o caminho mais simples quando aplicável.
+* **Publicar o aplicativo**, o que exige verificação junto ao Google. O escopo `drive.readonly` é classificado como **restrito**, e sua aprovação costuma envolver avaliação de segurança.
+
+**Somente usuários de teste conseguem autorizar.** Com o tipo Externo em status de teste, quem não constar da lista de *usuários de teste* recebe erro de acesso negado ao tentar conceder o consentimento.
 
 ## Estrutura
 
