@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Documento } from '../../src/compartilhado/tipos';
+import { FILTROS_PADRAO, type Documento } from '../../src/compartilhado/tipos';
 
 /**
  * Enriquecimento da página apresentada com autoria e data real.
@@ -130,5 +130,80 @@ describe('detalhamento da página apresentada', () => {
     const pagina = [doc('a.md')];
     expect(await servico.detalhar(pagina)).toEqual(pagina);
     expect(github.autoriaDoArquivo).not.toHaveBeenCalled();
+  });
+});
+
+describe('enriquecimento para a busca por autor', () => {
+  it('preenche a autoria antes de filtrar, para o termo alcançar o autor', async () => {
+    github.buscarDocumentos.mockResolvedValue({
+      dados: [doc('ata.md'), doc('requisitos.md')],
+      aviso: null
+    });
+    github.autoriaDoArquivo.mockImplementation(async (_t: string, _r: string, caminho: string) =>
+      caminho.includes('ata')
+        ? { autor: 'Gabi Prajo', dataModificacao: '2026-08-22T10:00:00Z' }
+        : { autor: 'Marina Alves', dataModificacao: '2026-08-18T09:00:00Z' }
+    );
+
+    const resultado = await servico.buscar({ ...FILTROS_PADRAO, termo: 'gabi' });
+
+    // Nenhum dos nomes de arquivo contém "gabi": a correspondência é do autor.
+    expect(resultado.documentos.map((d) => d.nome)).toEqual(['ata.md']);
+  });
+
+  it('não consulta autoria quando não há termo de busca', async () => {
+    github.documentosRecentes.mockResolvedValue({
+      dados: [doc('ata.md'), doc('requisitos.md')],
+      aviso: null
+    });
+
+    await servico.recentes(FILTROS_PADRAO);
+
+    // Na tela de recentes o autor serve só para exibição, e a página visível
+    // já é detalhada depois de apresentada.
+    expect(github.autoriaDoArquivo).not.toHaveBeenCalled();
+  });
+
+  it('avisa quando o acervo excede o teto do enriquecimento', async () => {
+    const muitos = Array.from({ length: 305 }, (_, i) => doc(`doc${i}.md`));
+    github.buscarDocumentos.mockResolvedValue({ dados: muitos, aviso: null });
+    github.autoriaDoArquivo.mockResolvedValue(null);
+
+    const resultado = await servico.buscar({ ...FILTROS_PADRAO, termo: 'doc' });
+
+    // Cada documento custa uma requisição; o teto evita que a primeira busca
+    // num acervo grande fique inviável, mas o usuário precisa saber do limite.
+    expect(github.autoriaDoArquivo).toHaveBeenCalledTimes(300);
+    expect(resultado.avisos.some((a) => a.mensagem.includes('300 primeiros'))).toBe(true);
+  });
+
+  it('não avisa quando o acervo cabe no teto', async () => {
+    github.buscarDocumentos.mockResolvedValue({ dados: [doc('ata.md')], aviso: null });
+    github.autoriaDoArquivo.mockResolvedValue(null);
+
+    const resultado = await servico.buscar({ ...FILTROS_PADRAO, termo: 'ata' });
+
+    expect(resultado.avisos).toEqual([]);
+  });
+
+  it('limita a concorrência das consultas de autoria', async () => {
+    let simultaneas = 0;
+    let pico = 0;
+    github.buscarDocumentos.mockResolvedValue({
+      dados: Array.from({ length: 30 }, (_, i) => doc(`doc${i}.md`)),
+      aviso: null
+    });
+    github.autoriaDoArquivo.mockImplementation(async () => {
+      simultaneas += 1;
+      pico = Math.max(pico, simultaneas);
+      await new Promise((resolver) => setTimeout(resolver, 1));
+      simultaneas -= 1;
+      return null;
+    });
+
+    await servico.buscar({ ...FILTROS_PADRAO, termo: 'doc' });
+
+    // Sem limite, os 30 sairiam de uma vez contra a API.
+    expect(pico).toBeLessThanOrEqual(6);
   });
 });

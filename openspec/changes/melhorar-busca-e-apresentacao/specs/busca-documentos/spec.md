@@ -4,6 +4,50 @@
 
 ## MODIFIED Requirements
 
+### Requirement: Busca por termo
+
+O sistema SHALL permitir que o usuário informe um termo e retorne os documentos cujo **nome ou autor** corresponda a esse termo.
+
+A comparação SHALL considerar o nome do arquivo e o nome de quem realizou a última alteração. Procurar pelo nome de um integrante deve encontrar o que ele produziu, e não apenas arquivos que o citem no nome.
+
+O conteúdo interno dos documentos NÃO SHALL ser considerado nesta versão.
+
+Documentos cuja autoria ainda não foi obtida SHALL permanecer encontráveis pelo nome.
+
+#### Scenario: Termo com correspondência
+
+- **GIVEN** que existem documentos cujo nome contém o termo informado
+- **WHEN** o usuário informa o termo e confirma a busca
+- **THEN** o sistema apresenta os documentos correspondentes
+- **AND** cada resultado exibe nome completo, extensão, data e fonte
+
+#### Scenario: Termo sem correspondência
+
+- **GIVEN** que nenhum documento possui nome ou autor correspondente ao termo
+- **WHEN** a busca é concluída
+- **THEN** o sistema informa que nenhum documento foi encontrado
+
+#### Scenario: Busca em andamento
+
+- **GIVEN** que o usuário confirmou uma busca
+- **WHEN** o sistema aguarda a resposta das fontes
+- **THEN** o sistema apresenta um indicador de carregamento
+- **AND** o indicador é removido quando os resultados são apresentados
+
+#### Scenario: Correspondência pelo autor
+
+- **GIVEN** que um documento foi alterado por uma pessoa cujo nome contém o termo
+- **AND** que o nome do arquivo não contém o termo
+- **WHEN** a busca é realizada
+- **THEN** o documento aparece entre os resultados
+
+#### Scenario: Acervo maior que o alcance da autoria
+
+- **GIVEN** que o acervo excede o limite de documentos cuja autoria é obtida por busca
+- **WHEN** o usuário realiza uma busca
+- **THEN** o sistema informa que a correspondência por autor cobriu parte do acervo
+- **AND** os documentos além do limite continuam sendo procurados pelo nome
+
 ### Requirement: Nova consulta ao alterar filtros
 
 A alteração de um filtro que restringe **quais** documentos são obtidos — termo, tipo, fonte ou período — SHALL resultar em nova consulta às fontes.

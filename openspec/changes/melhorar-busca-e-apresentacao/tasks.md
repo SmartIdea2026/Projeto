@@ -24,6 +24,9 @@
 - [x] 3.5 Tratar falha na consulta de autoria apresentando o documento sem os campos e sem erro — verificar com teste que simula falha
 - [x] 3.6 Substituir a data aproximada pela real quando obtida, removendo a marcação `dataAproximada` daquele documento — verificar com teste
 
+- [x] 3.7 Fazer o termo de busca casar com o autor além do nome do arquivo — verificar com teste que um documento é encontrado pelo autor sem o nome conter o termo
+- [x] 3.8 Preencher a autoria antes de filtrar quando há termo, com teto e concorrência limitada, avisando quando o acervo excede o teto — verificar com teste do teto, do aviso e do pico de concorrência
+
 ## 4. Disposição da interface
 
 - [x] 4.1 Posicionar os filtros abaixo da barra de busca conforme o protótipo, com o período recolhido em painel suspenso — verificar visualmente contra os prints fornecidos e com teste de componente

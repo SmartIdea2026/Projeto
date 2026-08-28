@@ -136,8 +136,18 @@ function avisarSobrePeriodo(resultado: ResultadoBusca, filtros: Filtros): Result
 export async function buscar(filtros: Filtros): Promise<ResultadoBusca> {
   const bruto = await coletar(filtros, (token) => github.buscarDocumentos(token));
 
-  const ordenados = ordenar(aplicarFiltros(bruto.documentos, filtros), filtros.ordenacao);
-  const filtrado = { ...bruto, ...paginar(ordenados, filtros.pagina ?? 1) };
+  // A autoria precisa existir antes do filtro: o termo é comparado ao nome e
+  // ao autor, e filtrar antes de conhecê-lo descartaria o que se procura.
+  const enriquecido = await enriquecerParaBusca(bruto.documentos, filtros);
+
+  const ordenados = ordenar(aplicarFiltros(enriquecido.documentos, filtros), filtros.ordenacao);
+  const filtrado = {
+    ...bruto,
+    ...paginar(ordenados, filtros.pagina ?? 1),
+    avisos: enriquecido.aviso
+      ? [...bruto.avisos, { fonte: 'github' as const, mensagem: enriquecido.aviso }]
+      : bruto.avisos
+  };
 
   return avisarSobrePeriodo(filtrado, filtros);
 }
@@ -247,25 +257,71 @@ export async function detalhar(documentos: Documento[]): Promise<Documento[]> {
   const token = cofre.obter('github.token');
   if (!token) return documentos;
 
-  return Promise.all(
-    documentos.map(async (documento) => {
-      if (!documento.repositorio || !documento.caminho) return documento;
+  const resultado: Documento[] = [...documentos];
+  const fila = documentos.map((documento, indice) => ({ documento, indice }));
+
+  async function trabalhar(): Promise<void> {
+    for (let item = fila.shift(); item; item = fila.shift()) {
+      const { documento, indice } = item;
+      if (!documento.repositorio || !documento.caminho) continue;
 
       const autoria = await github.autoriaDoArquivo(
-        token,
+        token!,
         documento.repositorio,
         documento.caminho
       );
-      if (!autoria) return documento;
+      if (!autoria) continue;
 
       // A data do commit é a real: a aproximação do repositório deixa de valer,
       // e com ela a marca que avisava o usuário sobre a imprecisão.
       const { dataAproximada: _descartada, ...semMarca } = documento;
-      return {
+      resultado[indice] = {
         ...semMarca,
         autor: autoria.autor,
         dataModificacao: autoria.dataModificacao
       };
-    })
+    }
+  }
+
+  // Uma requisição por documento: sem limite de concorrência, uma página de
+  // busca inteira sairia de uma vez contra a API.
+  await Promise.all(
+    Array.from({ length: Math.min(CONCORRENCIA_AUTORIA, fila.length) }, trabalhar)
   );
+
+  return resultado;
+}
+
+/** Teto de documentos enriquecidos para que a busca alcance o autor. */
+const TETO_AUTORIA_BUSCA = 300;
+const CONCORRENCIA_AUTORIA = 6;
+
+/**
+ * Preenche a autoria antes de filtrar, para que o termo alcance o autor.
+ *
+ * Só roda quando há termo: na tela de recentes o autor é usado apenas para
+ * exibição, e a página visível já é detalhada depois de apresentada.
+ *
+ * O teto existe porque cada documento custa uma requisição. O cache por `ETag`
+ * torna as buscas seguintes baratas — um 304 não consome cota —, mas o número
+ * de idas à rede continua proporcional ao acervo, e sem teto um acervo grande
+ * tornaria a primeira busca inviável.
+ */
+async function enriquecerParaBusca(
+  documentos: Documento[],
+  filtros: Filtros
+): Promise<{ documentos: Documento[]; aviso: string | null }> {
+  if (!filtros.termo.trim()) return { documentos, aviso: null };
+
+  const alcance = documentos.slice(0, TETO_AUTORIA_BUSCA);
+  const excedente = documentos.slice(TETO_AUTORIA_BUSCA);
+
+  return {
+    documentos: [...(await detalhar(alcance)), ...excedente],
+    aviso:
+      excedente.length > 0
+        ? `A busca por autor considerou os ${TETO_AUTORIA_BUSCA} primeiros ` +
+          'documentos. Os demais foram procurados apenas pelo nome.'
+        : null
+  };
 }
