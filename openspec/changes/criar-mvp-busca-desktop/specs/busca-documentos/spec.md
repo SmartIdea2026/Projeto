@@ -2,7 +2,12 @@
 
 **Issue:** #65
 
-## Requirement: Busca por termo
+## Purpose
+
+Localizar documentos das fontes integradas pelo nome, com filtros de tipo e período, ordenação, e acesso ao documento na fonte original.
+
+## ADDED Requirements
+### Requirement: Busca por termo
 
 O sistema SHALL permitir que o usuário informe um termo e retorne os documentos cujo nome corresponda a esse termo.
 
@@ -28,7 +33,7 @@ A comparação SHALL considerar apenas o nome do arquivo. O conteúdo interno do
 - **THEN** o sistema apresenta um indicador de carregamento
 - **AND** o indicador é removido quando os resultados são apresentados
 
-## Requirement: Filtro por tipo de documento
+### Requirement: Filtro por tipo de documento
 
 O sistema SHALL permitir restringir os resultados por tipo de documento, determinado pela extensão do arquivo.
 
@@ -46,27 +51,9 @@ Os tipos aceitos SHALL ser: `.md`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.pdf`, `.e
 - **WHEN** a busca é realizada
 - **THEN** esses arquivos não aparecem entre os resultados
 
-> **Adiado (ADR-0004).** O Google Drive saiu do escopo do MVP: o escopo `drive.readonly` é restrito pelo Google e exigiria avaliação de segurança CASA para ser publicado, ou conviveria com expiração de autorização a cada 7 dias. O texto abaixo descreve o alvo para quando a fonte retornar.
 
-## Requirement: Filtro por fonte — adiado
 
-O sistema SHALL permitir selecionar GitHub, Google Drive ou ambos como fonte da busca.
-
-No MVP o seletor não é apresentado, por haver uma fonte só. O modelo de dados preserva a seleção: lista vazia significa todas as fontes.
-
-#### Scenario: Nenhuma fonte selecionada
-
-- **GIVEN** que o usuário não selecionou nenhuma fonte
-- **WHEN** a busca é realizada
-- **THEN** o sistema consulta todas as fontes configuradas
-
-#### Scenario: Uma única fonte selecionada
-
-- **GIVEN** que o usuário selecionou apenas uma fonte
-- **WHEN** a busca é realizada
-- **THEN** o sistema consulta exclusivamente a fonte selecionada
-
-## Requirement: Filtro por período
+### Requirement: Filtro por período
 
 O sistema SHALL permitir definir um período por meio de data inicial e data final, restringindo os resultados aos documentos cuja data esteja dentro do intervalo.
 
@@ -76,7 +63,7 @@ O sistema SHALL permitir definir um período por meio de data inicial e data fin
 - **WHEN** a busca é realizada
 - **THEN** apenas documentos com data dentro do intervalo são apresentados
 
-## Requirement: Nova consulta ao alterar filtros
+### Requirement: Nova consulta ao alterar filtros
 
 Qualquer alteração de filtro após uma busca SHALL resultar em nova consulta às fontes, independentemente de qual filtro foi alterado.
 
@@ -87,7 +74,7 @@ Qualquer alteração de filtro após uma busca SHALL resultar em nova consulta �
 - **THEN** o sistema realiza nova consulta às fontes conforme os filtros vigentes
 - **AND** apresenta o indicador de carregamento durante a consulta
 
-## Requirement: Ordenação dos resultados
+### Requirement: Ordenação dos resultados
 
 O sistema SHALL permitir ordenar os resultados por A–Z, Z–A, data crescente e data decrescente.
 
@@ -100,7 +87,7 @@ A alteração da ordenação SHALL reorganizar os resultados já obtidos, sem re
 - **THEN** os resultados são reorganizados conforme o critério
 - **AND** nenhuma nova consulta às fontes é realizada
 
-## Requirement: Acesso ao documento na fonte original
+### Requirement: Acesso ao documento na fonte original
 
 Cada resultado SHALL disponibilizar um link que direcione o usuário ao documento em sua fonte original.
 
@@ -120,19 +107,19 @@ O sistema SHALL registrar localmente os documentos cujos links foram acessados.
 - **THEN** apenas identificação, nome, fonte, link e data do acesso são armazenados
 - **AND** o conteúdo do documento não é armazenado
 
-## Requirement: Falha na comunicação com as fontes
+### Requirement: Falha na comunicação com as fontes
 
 O sistema SHALL informar o usuário quando ocorrer falha na comunicação com uma fonte, apresentando os resultados obtidos das fontes que responderam.
 
 #### Scenario: Falha em apenas uma fonte
 
-- **GIVEN** que a busca foi realizada nas duas fontes
-- **WHEN** apenas uma delas falha
+- **GIVEN** que a busca foi realizada em todas as fontes configuradas
+- **WHEN** uma delas falha e outra responde
 - **THEN** o sistema apresenta os documentos da fonte que respondeu
 - **AND** informa ao usuário qual fonte falhou
 
-#### Scenario: Falha nas duas fontes
+#### Scenario: Falha em todas as fontes
 
-- **GIVEN** que a busca foi realizada nas duas fontes
-- **WHEN** ambas falham
+- **GIVEN** que a busca foi realizada em todas as fontes configuradas
+- **WHEN** todas falham
 - **THEN** o sistema informa que não foi possível realizar a busca

@@ -60,7 +60,7 @@ Os elementos abaixo existem no protótipo visual e **não** fazem parte desta en
 * Campo de busca vazio não dispara consulta às fontes; a tela mantém a lista de documentos recentes.
 * Período com data final anterior à data inicial apresenta mensagem junto ao filtro e não dispara consulta.
 * Falha em uma das fontes apresenta faixa de aviso identificando a fonte, preservando os resultados da outra.
-* Falha nas duas fontes substitui a lista por mensagem informando que não foi possível realizar a busca, com ação de nova tentativa.
+* Falha em todas as fontes substitui a lista por mensagem informando que não foi possível realizar a busca, com ação de nova tentativa.
 * Credencial inválida apresenta mensagem distinta de "não foi possível conectar", para que o usuário saiba se deve corrigir a credencial ou verificar a conexão.
 
 ### Acessibilidade (a11y)

@@ -6,6 +6,7 @@ import {
   type ResultadoBusca,
   type StatusFonte
 } from '../compartilhado/tipos';
+import { ordenar } from '../compartilhado/ordenacao';
 import { Cartao } from './componentes/Cartao';
 import { Filtros } from './componentes/Filtros';
 import { Configuracoes } from './telas/Configuracoes';
@@ -108,8 +109,32 @@ export function App() {
   }
 
   // Qualquer alteração de filtro dispara nova consulta às fontes (RN06).
+  /**
+   * Verdadeiro quando a ordenação foi a única coisa alterada.
+   *
+   * A especificação exige que trocar o critério de ordenação reorganize os
+   * resultados já obtidos, sem nova consulta às fontes: reconsultar gastaria
+   * cota da API e faria o usuário esperar por uma reordenação que é local.
+   */
+  function apenasOrdenacaoMudou(novos: TipoFiltros): boolean {
+    const { ordenacao: _a, ...restoNovo } = novos;
+    const { ordenacao: _b, ...restoAtual } = filtros;
+    return (
+      novos.ordenacao !== filtros.ordenacao &&
+      JSON.stringify(restoNovo) === JSON.stringify(restoAtual)
+    );
+  }
+
   function aoAlterarFiltros(novos: TipoFiltros) {
     setFiltros(novos);
+
+    if (apenasOrdenacaoMudou(novos)) {
+      setResultado((atual) =>
+        atual ? { ...atual, documentos: ordenar(atual.documentos, novos.ordenacao) } : atual
+      );
+      return;
+    }
+
     const invalido =
       Boolean(novos.dataInicial && novos.dataFinal) && novos.dataInicial! > novos.dataFinal!;
     if (invalido || !temCredencial) return;

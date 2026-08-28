@@ -1,9 +1,8 @@
-import type {
-  Documento,
-  Filtros,
-  Fonte,
-  Ordenacao
-} from '../../compartilhado/tipos';
+import type { Documento, Filtros, Fonte } from '../../compartilhado/tipos';
+
+// Reexportado para que o main continue importando as regras de um lugar só. A
+// implementação vive em `compartilhado/` porque o renderer também a usa.
+export { ordenar } from '../../compartilhado/ordenacao';
 
 /**
  * Regras de filtragem e ordenação aplicadas sobre os documentos já obtidos.
@@ -42,24 +41,6 @@ export function aplicarFiltros(documentos: Documento[], filtros: Filtros): Docum
   });
 }
 
-export function ordenar(documentos: Documento[], criterio: Ordenacao): Documento[] {
-  const copia = [...documentos];
-  const porNome = (a: Documento, b: Documento) =>
-    a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' });
-  const porData = (a: Documento, b: Documento) =>
-    Date.parse(a.dataModificacao) - Date.parse(b.dataModificacao);
-
-  switch (criterio) {
-    case 'a-z':
-      return copia.sort(porNome);
-    case 'z-a':
-      return copia.sort((a, b) => porNome(b, a));
-    case 'data-asc':
-      return copia.sort(porData);
-    case 'data-desc':
-      return copia.sort((a, b) => porData(b, a));
-  }
-}
 
 /** Remove duplicatas por id, preservando a ordem de entrada. */
 export function unificar(documentos: Documento[]): Documento[] {

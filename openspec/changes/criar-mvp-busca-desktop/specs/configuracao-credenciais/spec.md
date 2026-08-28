@@ -2,7 +2,12 @@
 
 **Issue:** #65
 
-## Requirement: Configuração do acesso pela interface
+## Purpose
+
+Configurar e verificar o acesso às fontes externas pela interface, mantendo as credenciais protegidas e fora da camada de apresentação.
+
+## ADDED Requirements
+### Requirement: Configuração do acesso pela interface
 
 O sistema SHALL disponibilizar uma tela de configurações, acessível a partir da tela principal, para que o usuário configure o acesso a cada fonte.
 
@@ -24,54 +29,9 @@ No MVP existe uma única fonte (ADR-0004), portanto uma única credencial a conf
 - **THEN** o sistema apresenta o motivo da recusa
 - **AND** não persiste o token informado
 
-> **Adiado (ADR-0004).** O Google Drive saiu do escopo do MVP: o escopo `drive.readonly` é restrito pelo Google e exigiria avaliação de segurança CASA para ser publicado, ou conviveria com expiração de autorização a cada 7 dias. O texto abaixo descreve o alvo para quando a fonte retornar.
 
-## Requirement: Autorização do Google Drive — adiado
 
-O acesso ao Google Drive SHALL ser concedido por meio de autorização explícita do usuário, realizada fora da aplicação, e SHALL permanecer válido entre execuções sem exigir nova autorização a cada abertura.
-
-#### Scenario: Autorização concedida
-
-- **GIVEN** que o usuário informou a identificação do cliente OAuth
-- **WHEN** aciona a ação de conexão e concede o consentimento
-- **THEN** o sistema persiste a autorização de forma protegida
-- **AND** passa a apresentar a fonte como conectada
-
-#### Scenario: Autorização recusada ou abandonada
-
-- **GIVEN** que o usuário acionou a ação de conexão
-- **WHEN** recusa o consentimento ou não o conclui
-- **THEN** o sistema informa que a autorização não foi concluída
-- **AND** a fonte permanece como não conectada
-
-#### Scenario: Autorização expirada
-
-- **GIVEN** que a fonte estava conectada
-- **WHEN** a autorização deixa de ser aceita pelo provedor
-- **THEN** o sistema informa que é necessário conectar novamente
-- **AND** não consulta essa fonte nas buscas
-
-#### Scenario: Conexão sem identificação do cliente
-
-- **GIVEN** que a identificação do cliente OAuth não foi informada
-- **WHEN** o usuário aciona a ação de conexão
-- **THEN** o sistema orienta a informar a identificação antes de autorizar
-
-#### Scenario: Credencial substituída
-
-- **GIVEN** que já existe uma credencial configurada para uma fonte
-- **WHEN** o usuário informa uma nova credencial para a mesma fonte
-- **THEN** o sistema substitui a credencial anterior
-- **AND** revalida a fonte com a nova credencial
-
-#### Scenario: Credencial removida
-
-- **GIVEN** que existe uma credencial configurada
-- **WHEN** o usuário limpa o campo e confirma
-- **THEN** o sistema descarta a credencial armazenada
-- **AND** a fonte deixa de ser consultada nas buscas
-
-## Requirement: Proteção da credencial armazenada
+### Requirement: Proteção da credencial armazenada
 
 A credencial SHALL ser armazenada de forma protegida pelo mecanismo de proteção de segredos do sistema operacional.
 
@@ -91,7 +51,7 @@ A credencial NÃO SHALL ser exposta à camada de interface após ter sido inform
 - **THEN** a credencial é utilizada fora da camada de interface
 - **AND** a camada de interface recebe apenas os resultados já tratados
 
-## Requirement: Validação das credenciais
+### Requirement: Validação das credenciais
 
 O sistema SHALL verificar se cada credencial configurada é válida, apresentando o resultado dessa verificação ao usuário.
 
