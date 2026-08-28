@@ -124,3 +124,11 @@
   font-size: 13px;
   text-decoration: underline;
 }
+
+/* Rótulo que precede os controles de filtro, conforme o protótipo. */
+.filtros__rotulo {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--texto-suave);
+  align-self: center;
+}

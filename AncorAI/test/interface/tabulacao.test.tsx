@@ -44,6 +44,7 @@ const api = {
   verificarCredenciais: vi.fn(async () => CONECTADO),
   definirCredencial: vi.fn(async () => CONECTADO),
   removerCredencial: vi.fn(async () => CONECTADO),
+  detalharDocumentos: vi.fn(async (docs: unknown[]) => docs),
   abrirDocumento: vi.fn(),
   documentosAcessados: vi.fn(async () => [])
 };
@@ -83,11 +84,15 @@ describe('ordem de tabulação da tela principal', () => {
       if (elemento.closest('.conexoes')) return 'cabecalho';
       if (elemento.closest('.busca')) return 'busca';
       if (elemento.closest('.filtros')) return 'filtros';
+      if (elemento.closest('.linha-lista')) return 'ordenacao';
       if (elemento.closest('.cartao')) return 'resultados';
+      if (elemento.closest('.paginacao')) return 'paginacao';
       return 'outro';
     };
 
     // A ordem do DOM é a ordem de tabulação, já que não há tabindex positivo.
+    // A ordenação fica entre os filtros e a lista, à direita do contador,
+    // conforme o protótipo — e a tabulação acompanha essa leitura.
     expect(focaveis().map(regiaoDe)).toEqual([
       'cabecalho',
       'busca',
@@ -95,7 +100,7 @@ describe('ordem de tabulação da tela principal', () => {
       'filtros',
       'filtros',
       'filtros',
-      'filtros',
+      'ordenacao',
       'resultados'
     ]);
   });

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FILTROS_PADRAO,
+  POR_PAGINA,
   type Documento,
   type Filtros as TipoFiltros,
   type ResultadoBusca,
@@ -40,6 +41,33 @@ export function App() {
     ? 'A data final não pode ser anterior à data inicial.'
     : null;
 
+  /**
+   * Busca autoria e data real dos documentos já apresentados.
+   *
+   * Roda depois de a lista aparecer, nunca antes: cada documento custa uma
+   * requisição ao GitHub, e segurar a tela por até dez delas trocaria um
+   * incômodo pequeno — a linha de autoria preencher com atraso — por uma
+   * espera que o usuário sentiria em toda navegação.
+   *
+   * A resposta é descartada se outra consulta chegou no meio tempo, para não
+   * sobrescrever a lista nova com o detalhe da antiga.
+   */
+  const detalharPagina = useCallback(async (base: ResultadoBusca) => {
+    if (base.documentos.length === 0) return;
+
+    try {
+      const detalhados = await window.ancorai.detalharDocumentos(base.documentos);
+      setResultado((atual) => {
+        if (!atual || atual.documentos.length !== detalhados.length) return atual;
+        const mesmoConjunto = atual.documentos.every((d, i) => d.id === detalhados[i]?.id);
+        return mesmoConjunto ? { ...atual, documentos: detalhados } : atual;
+      });
+    } catch {
+      // Falhar aqui não muda nada para o usuário: a lista continua na tela sem
+      // os campos de autoria, que são complemento e não requisito.
+    }
+  }, []);
+
   const carregarRecentes = useCallback(
     async (filtrosAtuais: TipoFiltros, emSegundoPlano = false) => {
       if (!emSegundoPlano) setCarregando(true);
@@ -49,21 +77,24 @@ export function App() {
         // que o usuário já estava vendo; apenas o aviso é apresentado.
         if (novo.documentos.length > 0 || !emSegundoPlano) setResultado(novo);
         else setResultado((atual) => (atual ? { ...atual, falhas: novo.falhas } : novo));
+        void detalharPagina(novo);
       } finally {
         setCarregando(false);
       }
     },
-    []
+    [detalharPagina]
   );
 
   const executarBusca = useCallback(async (filtrosAtuais: TipoFiltros) => {
     setCarregando(true);
     try {
-      setResultado(await window.ancorai.buscar(filtrosAtuais));
+      const novo = await window.ancorai.buscar(filtrosAtuais);
+      setResultado(novo);
+      void detalharPagina(novo);
     } finally {
       setCarregando(false);
     }
-  }, []);
+  }, [detalharPagina]);
 
   // Rotina de inicialização: verifica as credenciais e, havendo alguma válida,
   // já apresenta os documentos recentes.
@@ -95,7 +126,7 @@ export function App() {
     if (periodoInvalido) return;
 
     const termo = termoCampo.trim();
-    const novos = { ...filtros, termo };
+    const novos = { ...filtros, termo, pagina: 1 };
     setFiltros(novos);
 
     if (!termo) {
@@ -135,10 +166,22 @@ export function App() {
       return;
     }
 
+    // Alterar um filtro de consulta muda o conjunto: permanecer na página 4 de
+    // um resultado que já não existe deixaria a tela vazia sem explicação.
+    novos = { ...novos, pagina: 1 };
+    setFiltros(novos);
+
     const invalido =
       Boolean(novos.dataInicial && novos.dataFinal) && novos.dataInicial! > novos.dataFinal!;
     if (invalido || !temCredencial) return;
 
+    if (mostrandoRecentes) void carregarRecentes(novos);
+    else void executarBusca(novos);
+  }
+
+  function irParaPagina(pagina: number) {
+    const novos = { ...filtros, pagina };
+    setFiltros(novos);
     if (mostrandoRecentes) void carregarRecentes(novos);
     else void executarBusca(novos);
   }
@@ -148,6 +191,16 @@ export function App() {
   }
 
   const documentos = resultado?.documentos ?? [];
+  const total = resultado?.total ?? 0;
+  const pagina = resultado?.pagina ?? 1;
+  const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+
+  /** Há consulta ativa quando o usuário digitou um termo ou aplicou um filtro. */
+  const consultaAtiva =
+    filtros.termo.trim().length > 0 ||
+    filtros.extensoes.length > 0 ||
+    Boolean(filtros.dataInicial) ||
+    Boolean(filtros.dataFinal);
   const falhas = resultado?.falhas ?? [];
   const avisos = resultado?.avisos ?? [];
 
@@ -235,14 +288,36 @@ export function App() {
           </div>
         ))}
 
-        {/* Alterações da lista são anunciadas por leitores de tela. */}
-        <div aria-live="polite" aria-atomic="true">
-          {!carregando && temCredencial && (
-            <p className="resumo-lista">
-              {mostrandoRecentes
-                ? `${documentos.length} documento(s) modificado(s) recentemente`
-                : `${documentos.length} resultado(s)`}
-            </p>
+        {/*
+          O contador informa o TOTAL encontrado, não o tamanho da página: dizer
+          "10 resultados" a partir da décima primeira correspondência esconderia
+          justamente a informação que o número existe para dar.
+
+          Ele some quando não há consulta ativa — campo de busca vazio e nenhum
+          filtro aplicado —, que é a tela inicial de documentos recentes.
+        */}
+        <div className="linha-lista" aria-live="polite" aria-atomic="true">
+          {!carregando && temCredencial && consultaAtiva && (
+            <p className="resumo-lista">{total} resultado(s)</p>
+          )}
+          {!carregando && temCredencial && documentos.length > 0 && (
+            <label className="ordenacao">
+              <span className="apenas-leitor">Ordenação</span>
+              <select
+                value={filtros.ordenacao}
+                onChange={(evento) =>
+                  aoAlterarFiltros({
+                    ...filtros,
+                    ordenacao: evento.target.value as TipoFiltros['ordenacao']
+                  })
+                }
+              >
+                <option value="data-desc">Data decrescente</option>
+                <option value="data-asc">Data crescente</option>
+                <option value="a-z">Nome (A–Z)</option>
+                <option value="z-a">Nome (Z–A)</option>
+              </select>
+            </label>
           )}
         </div>
 
@@ -288,6 +363,31 @@ export function App() {
               <Cartao key={documento.id} documento={documento} aoAbrir={abrir} />
             ))}
           </ul>
+        )}
+
+        {/* A navegação só aparece quando há mais de uma página. */}
+        {!carregando && totalPaginas > 1 && (
+          <nav className="paginacao" aria-label="Navegação entre páginas">
+            <button
+              type="button"
+              className="botao botao--secundario"
+              disabled={pagina <= 1}
+              onClick={() => irParaPagina(pagina - 1)}
+            >
+              Anterior
+            </button>
+            <span className="paginacao__posicao">
+              Página {pagina} de {totalPaginas}
+            </span>
+            <button
+              type="button"
+              className="botao botao--secundario"
+              disabled={pagina >= totalPaginas}
+              onClick={() => irParaPagina(pagina + 1)}
+            >
+              Próxima
+            </button>
+          </nav>
         )}
       </main>
 

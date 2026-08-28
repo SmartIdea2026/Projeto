@@ -52,6 +52,14 @@ export interface Documento {
    * limitação, porque vem dos commits.
    */
   dataAproximada?: boolean;
+  /**
+   * Quem realizou a última alteração.
+   *
+   * Identifica o autor do último commit que tocou o arquivo — que pode ter
+   * apenas movido ou reformatado o documento. É autoria da alteração, não
+   * autoria intelectual, e a interface rotula assim.
+   */
+  autor?: string;
   /** Caminho dentro do repositório, quando a fonte é o GitHub. */
   caminho?: string;
   /** Repositório de origem, quando a fonte é o GitHub. */
@@ -62,6 +70,8 @@ export type Ordenacao = 'a-z' | 'z-a' | 'data-asc' | 'data-desc';
 
 export interface Filtros {
   termo: string;
+  /** Página desejada, começando em 1. Ausente significa a primeira. */
+  pagina?: number;
   /** Lista vazia significa todas as fontes (RN04). */
   fontes: Fonte[];
   /** Lista vazia significa todas as extensões aceitas. */
@@ -120,8 +130,21 @@ export interface AvisoFonte {
   mensagem: string;
 }
 
+/** Quantidade de documentos apresentados por página. */
+export const POR_PAGINA = 10;
+
 export interface ResultadoBusca {
+  /** Apenas a fatia apresentada, com no máximo `POR_PAGINA` documentos. */
   documentos: Documento[];
+  /**
+   * Total encontrado na consulta, e não o tamanho da página.
+   *
+   * O contador da interface precisa do total: informar o tamanho da fatia diria
+   * sempre "10 resultados" a partir da décima primeira correspondência.
+   */
+  total: number;
+  /** Página apresentada, começando em 1. */
+  pagina: number;
   falhas: FalhaFonte[];
   /** Resultados vieram, mas podem estar incompletos ou imprecisos. */
   avisos: AvisoFonte[];

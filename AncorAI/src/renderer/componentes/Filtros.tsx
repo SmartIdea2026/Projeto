@@ -1,4 +1,4 @@
-import { EXTENSOES_ACEITAS, type Filtros, type Ordenacao } from '../../compartilhado/tipos';
+import { EXTENSOES_ACEITAS, type Filtros } from '../../compartilhado/tipos';
 
 interface Props {
   filtros: Filtros;
@@ -11,12 +11,6 @@ interface Props {
   seria um menu de opção única. `filtros.fontes` continua existindo e vazio
   significa todas as fontes, então o controle volta quando houver o que escolher.
 */
-const ORDENACOES: Array<{ valor: Ordenacao; rotulo: string }> = [
-  { valor: 'data-desc', rotulo: 'Data (decrescente)' },
-  { valor: 'data-asc', rotulo: 'Data (crescente)' },
-  { valor: 'a-z', rotulo: 'Nome (A–Z)' },
-  { valor: 'z-a', rotulo: 'Nome (Z–A)' }
-];
 
 export function Filtros({ filtros, aoAlterar, erroPeriodo }: Props) {
   const tipoAtivo = filtros.extensoes.length > 0;
@@ -25,8 +19,14 @@ export function Filtros({ filtros, aoAlterar, erroPeriodo }: Props) {
   return (
     <>
       <div className="filtros">
+        {/*
+          O protótipo separa "Extensão" de "Tipo": o primeiro é a extensão do
+          arquivo, este filtro; o segundo é a classificação por IA, que chega na
+          mudança seguinte. Rotular este como "Tipo" colidiria com aquele.
+        */}
+        <span className="filtros__rotulo">FILTROS</span>
         <label className={`filtro ${tipoAtivo ? 'filtro--ativo' : ''}`}>
-          <span>Tipo:</span>
+          <span>Extensão:</span>
           <select
             value={filtros.extensoes[0] ?? ''}
             onChange={(evento) =>
@@ -80,21 +80,6 @@ export function Filtros({ filtros, aoAlterar, erroPeriodo }: Props) {
           )}
         </div>
 
-        <label className="filtro">
-          <span className="apenas-leitor">Ordenação</span>
-          <select
-            value={filtros.ordenacao}
-            onChange={(evento) =>
-              aoAlterar({ ...filtros, ordenacao: evento.target.value as Ordenacao })
-            }
-          >
-            {ORDENACOES.map((opcao) => (
-              <option key={opcao.valor} value={opcao.valor}>
-                {opcao.rotulo}
-              </option>
-            ))}
-          </select>
-        </label>
       </div>
 
       {erroPeriodo && (

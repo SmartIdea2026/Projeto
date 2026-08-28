@@ -23,6 +23,9 @@ export const CANAIS = {
   /** Resultado guardado da rotina anterior, para exibição imediata. */
   recentesDoCache: 'busca:recentes-cache',
 
+  /** Autoria e data real dos documentos da página apresentada. */
+  detalharDocumentos: 'busca:detalhar',
+
   /** Abre o documento na fonte original e registra o acesso. */
   abrirDocumento: 'documento:abrir',
   /** Lista os documentos acessados anteriormente. */

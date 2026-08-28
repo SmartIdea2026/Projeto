@@ -124,3 +124,44 @@ describe('unificação das fontes', () => {
     expect(unificados.map((item) => item.id)).toEqual(['x', 'y']);
   });
 });
+
+describe('desempate da ordenação por data', () => {
+  // Situação comum no GitHub: a busca deriva a data do repositório, então todo
+  // documento de um mesmo repositório carrega a mesma data.
+  const mesmaData = [
+    doc({ id: '1', nome: 'zebra.md', dataModificacao: '2026-08-01T00:00:00Z' }),
+    doc({ id: '2', nome: 'abacate.md', dataModificacao: '2026-08-01T00:00:00Z' }),
+    doc({ id: '3', nome: 'manga.md', dataModificacao: '2026-08-01T00:00:00Z' })
+  ];
+
+  it('desempata por nome A–Z nos dois sentidos da data', () => {
+    expect(ordenar(mesmaData, 'data-desc').map((d) => d.nome)).toEqual([
+      'abacate.md',
+      'manga.md',
+      'zebra.md'
+    ]);
+    expect(ordenar(mesmaData, 'data-asc').map((d) => d.nome)).toEqual([
+      'abacate.md',
+      'manga.md',
+      'zebra.md'
+    ]);
+  });
+
+  it('produz a mesma ordem em chamadas sucessivas', () => {
+    const primeira = ordenar(mesmaData, 'data-desc').map((d) => d.id);
+    const segunda = ordenar([...mesmaData].reverse(), 'data-desc').map((d) => d.id);
+    expect(segunda).toEqual(primeira);
+  });
+
+  it('a data continua tendo precedência sobre o nome', () => {
+    const datasDistintas = [
+      doc({ id: 'a', nome: 'abacate.md', dataModificacao: '2026-01-01T00:00:00Z' }),
+      doc({ id: 'b', nome: 'zebra.md', dataModificacao: '2026-08-01T00:00:00Z' })
+    ];
+    // O desempate só entra quando as datas empatam.
+    expect(ordenar(datasDistintas, 'data-desc').map((d) => d.nome)).toEqual([
+      'zebra.md',
+      'abacate.md'
+    ]);
+  });
+});

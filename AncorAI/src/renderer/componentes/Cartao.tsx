@@ -49,6 +49,11 @@ export function Cartao({ documento, aoAbrir }: Props) {
 
         <div className="cartao__meta">
           {documento.repositorio && <span>{documento.repositorio}</span>}
+          {/*
+            Rotulado como última alteração, e não como autoria: quem fez o
+            último commit pode ter apenas movido ou reformatado o arquivo.
+          */}
+          {documento.autor && <span>Alterado por {documento.autor}</span>}
           {modificacao && (
             <span>
               {/*
