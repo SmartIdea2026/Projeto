@@ -15,6 +15,35 @@ function formatarData(iso?: string): string | null {
   });
 }
 
+/**
+ * Um dado do rodapé do cartão: rótulo e valor.
+ *
+ * Sem o rótulo, a linha vira uma sequência de textos soltos — um nome, uma
+ * data, outra data — sem dizer o que cada um significa. O valor vai destacado
+ * para que a leitura ache o dado antes de ler o rótulo.
+ */
+function Meta({
+  icone,
+  rotulo,
+  valor
+}: {
+  icone?: string;
+  rotulo: string;
+  valor: string;
+}) {
+  return (
+    <span className="meta">
+      {icone && (
+        <span className="meta__icone" aria-hidden="true">
+          {icone}
+        </span>
+      )}
+      <span className="meta__rotulo">{rotulo}</span>
+      <span className="meta__valor">{valor}</span>
+    </span>
+  );
+}
+
 interface Props {
   documento: Documento;
   aoAbrir: (documento: Documento) => void;
@@ -48,20 +77,26 @@ export function Cartao({ documento, aoAbrir }: Props) {
         </div>
 
         <div className="cartao__meta">
-          {documento.repositorio && <span>{documento.repositorio}</span>}
-          {modificacao && (
-            <span>
-              {/*
-                A data da busca no GitHub vem do repositório, não do arquivo.
-                Marcar a aproximação evita que o usuário leia como exata uma
-                data que não é.
-              */}
-              {documento.dataAproximada ? 'Repositório atualizado em ' : 'Modificado em '}
-              {modificacao}
-            </span>
+          {documento.repositorio && (
+            <Meta icone="⌥" rotulo="Repositório:" valor={documento.repositorio} />
           )}
+          {/*
+            O valor vem de quem assinou o último commit que tocou o arquivo,
+            que pode tê-lo apenas movido ou reformatado.
+          */}
+          {documento.autor && <Meta icone="👤" rotulo="Autor:" valor={documento.autor} />}
           {/* Data de criação só aparece quando a fonte a fornece. */}
-          {criacao && <span>Criado em {criacao}</span>}
+          {criacao && <Meta rotulo="Criado em" valor={criacao} />}
+          {modificacao && (
+            /*
+              A data da busca no GitHub vem do repositório, não do arquivo.
+              O rótulo muda para não apresentar como exata uma data que não é.
+            */
+            <Meta
+              rotulo={documento.dataAproximada ? 'Repositório atualizado em' : 'Modificado em'}
+              valor={modificacao}
+            />
+          )}
         </div>
 
         <div className="cartao__acoes">

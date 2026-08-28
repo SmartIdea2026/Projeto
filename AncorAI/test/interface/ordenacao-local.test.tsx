@@ -43,6 +43,7 @@ const api = {
   verificarCredenciais: vi.fn(),
   definirCredencial: vi.fn(),
   removerCredencial: vi.fn(),
+  detalharDocumentos: vi.fn(async (docs: unknown[]) => docs),
   abrirDocumento: vi.fn(),
   documentosAcessados: vi.fn(async () => [])
 };
@@ -90,5 +91,23 @@ describe('troca do critério de ordenação', () => {
     fireEvent.change(tipo, { target: { value: 'pdf' } });
 
     await waitFor(() => expect(api.recentes).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe('persistência do critério de ordenação', () => {
+  it('mantém o critério escolhido quando outro filtro recarrega a lista', async () => {
+    render(<App />);
+    await waitFor(() => expect(api.recentes).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(screen.getByLabelText('Ordenação'), { target: { value: 'a-z' } });
+
+    // Alterar o tipo recarrega os recentes: o critério escolhido tem de ir junto.
+    const tipo = document.querySelectorAll('.filtros select')[0]!;
+    fireEvent.change(tipo, { target: { value: 'pdf' } });
+
+    await waitFor(() => expect(api.recentes).toHaveBeenCalledTimes(2));
+
+    const filtrosEnviados = api.recentes.mock.calls[1]![0] as { ordenacao: string };
+    expect(filtrosEnviados.ordenacao).toBe('a-z');
   });
 });

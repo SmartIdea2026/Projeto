@@ -124,3 +124,106 @@
   font-size: 13px;
   text-decoration: underline;
 }
+
+/* Rótulo que precede os controles de filtro, conforme o protótipo. */
+.filtros__rotulo {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--texto-suave);
+  align-self: center;
+}
+
+/* --- Filtro de período em painel suspenso --- */
+
+/* Ancora o painel ao botão que o abre. */
+.periodo {
+  position: relative;
+  display: inline-flex;
+}
+
+.filtro--botao {
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.periodo__painel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  min-width: 280px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra-alta);
+  padding: 16px;
+  text-align: left;
+}
+
+.periodo__titulo {
+  margin: 0 0 12px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+}
+
+.periodo__campos {
+  display: flex;
+  gap: 12px;
+}
+
+.periodo__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+/* O campo de data carrega o próprio ícone de calendário, ancorado à direita
+   pelo navegador. Com o campo estreito e rotulado, o ícone fica junto do que
+   ele controla — que era o problema dos dois campos soltos na barra. */
+.periodo__campo input {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--texto);
+}
+
+.periodo__campo input:hover {
+  border-color: var(--borda-forte);
+}
+
+.periodo__limpar {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--verde-medio);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.periodo__limpar:disabled {
+  color: var(--texto-suave);
+  cursor: default;
+  text-decoration: none;
+  opacity: 0.6;
+}
+
+.periodo__painel .erro-campo {
+  margin-top: 12px;
+}
+
+.erro-periodo {
+  text-align: center;
+}

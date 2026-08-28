@@ -14,6 +14,10 @@ export { ordenar } from '../../compartilhado/ordenacao';
 /**
  * Aplica os filtros de termo, extensão e período.
  *
+ * O termo é comparado ao nome do arquivo e ao autor da última alteração. O
+ * autor só está preenchido nos documentos que passaram por `detalhar`; os
+ * demais continuam encontráveis pelo nome.
+ *
  * O filtro de fonte não é aplicado aqui: ele decide quais fontes chegam a ser
  * consultadas, antes desta etapa.
  */
@@ -24,7 +28,14 @@ export function aplicarFiltros(documentos: Documento[], filtros: Filtros): Docum
   const final = filtros.dataFinal ? Date.parse(filtros.dataFinal) + 86_399_999 : null;
 
   return documentos.filter((documento) => {
-    if (termo && !documento.nome.toLocaleLowerCase().includes(termo)) return false;
+    // O termo casa com o nome do arquivo ou com quem o alterou por último:
+    // procurar "gabi" deve encontrar o que a Gabi escreveu, não só arquivos
+    // com "gabi" no nome.
+    if (termo) {
+      const noNome = documento.nome.toLocaleLowerCase().includes(termo);
+      const noAutor = (documento.autor ?? '').toLocaleLowerCase().includes(termo);
+      if (!noNome && !noAutor) return false;
+    }
 
     if (filtros.extensoes.length > 0 && !filtros.extensoes.includes(documento.extensao)) {
       return false;

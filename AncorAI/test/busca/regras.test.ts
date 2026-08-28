@@ -124,3 +124,83 @@ describe('unificação das fontes', () => {
     expect(unificados.map((item) => item.id)).toEqual(['x', 'y']);
   });
 });
+
+describe('desempate da ordenação por data', () => {
+  // Situação comum no GitHub: a busca deriva a data do repositório, então todo
+  // documento de um mesmo repositório carrega a mesma data.
+  const mesmaData = [
+    doc({ id: '1', nome: 'zebra.md', dataModificacao: '2026-08-01T00:00:00Z' }),
+    doc({ id: '2', nome: 'abacate.md', dataModificacao: '2026-08-01T00:00:00Z' }),
+    doc({ id: '3', nome: 'manga.md', dataModificacao: '2026-08-01T00:00:00Z' })
+  ];
+
+  it('desempata por nome A–Z nos dois sentidos da data', () => {
+    expect(ordenar(mesmaData, 'data-desc').map((d) => d.nome)).toEqual([
+      'abacate.md',
+      'manga.md',
+      'zebra.md'
+    ]);
+    expect(ordenar(mesmaData, 'data-asc').map((d) => d.nome)).toEqual([
+      'abacate.md',
+      'manga.md',
+      'zebra.md'
+    ]);
+  });
+
+  it('produz a mesma ordem em chamadas sucessivas', () => {
+    const primeira = ordenar(mesmaData, 'data-desc').map((d) => d.id);
+    const segunda = ordenar([...mesmaData].reverse(), 'data-desc').map((d) => d.id);
+    expect(segunda).toEqual(primeira);
+  });
+
+  it('a data continua tendo precedência sobre o nome', () => {
+    const datasDistintas = [
+      doc({ id: 'a', nome: 'abacate.md', dataModificacao: '2026-01-01T00:00:00Z' }),
+      doc({ id: 'b', nome: 'zebra.md', dataModificacao: '2026-08-01T00:00:00Z' })
+    ];
+    // O desempate só entra quando as datas empatam.
+    expect(ordenar(datasDistintas, 'data-desc').map((d) => d.nome)).toEqual([
+      'zebra.md',
+      'abacate.md'
+    ]);
+  });
+});
+
+describe('busca pelo autor', () => {
+  const documentos = [
+    doc({ id: '1', nome: 'ata-reuniao.md', autor: 'Gabi Prajo' }),
+    doc({ id: '2', nome: 'requisitos.md', autor: 'Marina Alves' }),
+    doc({ id: '3', nome: 'gabi-notas.md' })
+  ];
+
+  it('encontra pelo nome de quem alterou o arquivo', () => {
+    const encontrados = aplicarFiltros(documentos, { ...FILTROS_PADRAO, termo: 'marina' });
+    expect(encontrados.map((d) => d.id)).toEqual(['2']);
+  });
+
+  it('casa por nome ou por autor, sem exigir os dois', () => {
+    // "gabi" está no autor do primeiro e no nome do terceiro.
+    const encontrados = aplicarFiltros(documentos, { ...FILTROS_PADRAO, termo: 'gabi' });
+    expect(encontrados.map((d) => d.id)).toEqual(['1', '3']);
+  });
+
+  it('ignora diferença de caixa no autor', () => {
+    const encontrados = aplicarFiltros(documentos, { ...FILTROS_PADRAO, termo: 'PRAJO' });
+    expect(encontrados.map((d) => d.id)).toEqual(['1']);
+  });
+
+  it('encontra por sobrenome, não só pelo início do nome', () => {
+    const encontrados = aplicarFiltros(documentos, { ...FILTROS_PADRAO, termo: 'alves' });
+    expect(encontrados.map((d) => d.id)).toEqual(['2']);
+  });
+
+  it('documento sem autor continua encontrável pelo nome', () => {
+    const encontrados = aplicarFiltros(documentos, { ...FILTROS_PADRAO, termo: 'notas' });
+    expect(encontrados.map((d) => d.id)).toEqual(['3']);
+  });
+
+  it('não confunde ausência de autor com correspondência', () => {
+    const encontrados = aplicarFiltros(documentos, { ...FILTROS_PADRAO, termo: 'inexistente' });
+    expect(encontrados).toEqual([]);
+  });
+});

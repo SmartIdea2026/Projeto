@@ -38,6 +38,9 @@ const api = {
   recentesDoCache: (filtros?: Filtros): Promise<ResultadoBusca | null> =>
     ipcRenderer.invoke(CANAIS.recentesDoCache, filtros),
 
+  detalharDocumentos: (documentos: Documento[]): Promise<Documento[]> =>
+    ipcRenderer.invoke(CANAIS.detalharDocumentos, documentos),
+
   abrirDocumento: (documento: Documento): Promise<void> =>
     ipcRenderer.invoke(CANAIS.abrirDocumento, documento),
 

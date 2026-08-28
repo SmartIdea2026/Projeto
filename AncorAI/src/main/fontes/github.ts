@@ -269,6 +269,48 @@ export async function recentesDoRepositorio(
   return { dados: [...encontrados.values()], aviso: null };
 }
 
+interface CommitDeArquivoApi {
+  commit: { author: { name: string; date: string } };
+  author?: { login: string } | null;
+}
+
+/**
+ * Autoria e data real da última alteração de um arquivo.
+ *
+ * A árvore Git não traz nenhum dos dois: ela lista caminhos e nada mais. Cada
+ * arquivo exige uma consulta própria — custo que adiou este item no MVP e que
+ * a paginação torna aceitável, por incidir apenas sobre a página apresentada.
+ *
+ * Devolve `null` quando não há commit ou a consulta falha: um documento sem
+ * autoria é apresentado sem ela, nunca como erro.
+ */
+export async function autoriaDoArquivo(
+  token: string,
+  repositorio: string,
+  caminho: string
+): Promise<{ autor: string; dataModificacao: string } | null> {
+  try {
+    const { dados } = await requisitar<CommitDeArquivoApi[]>(
+      `/repos/${repositorio}/commits?path=${encodeURIComponent(caminho)}&per_page=1`,
+      token,
+      `github:autoria:${repositorio}:${caminho}`
+    );
+
+    const commit = dados[0];
+    if (!commit) return null;
+
+    // O login do GitHub identifica melhor que o nome configurado no git, que
+    // varia entre máquinas; o nome do commit é o recurso quando o autor não
+    // está associado a uma conta.
+    return {
+      autor: commit.author?.login ?? commit.commit.author.name,
+      dataModificacao: commit.commit.author.date
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Executa uma tarefa por repositório com concorrência limitada.
  *

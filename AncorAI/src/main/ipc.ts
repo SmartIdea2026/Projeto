@@ -47,6 +47,10 @@ export function registrarCanais(): void {
     servico.recentesDoCache({ ...FILTROS_PADRAO, ...filtros })
   );
 
+  ipcMain.handle(CANAIS.detalharDocumentos, (_evento, documentos: Documento[]) =>
+    servico.detalhar(documentos)
+  );
+
   ipcMain.handle(CANAIS.abrirDocumento, async (_evento, documento: Documento) => {
     await registrarAcesso(documento);
     await shell.openExternal(documento.link);

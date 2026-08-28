@@ -100,8 +100,32 @@
   color: var(--texto-suave);
   font-size: 13px;
   display: flex;
-  gap: 16px;
+  gap: 20px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Rótulo e valor andam juntos: a quebra de linha não pode separá-los. */
+.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.meta__icone {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.meta__rotulo {
+  color: var(--texto-suave);
+}
+
+/* O valor é o dado; o rótulo só diz o que ele é. O peso guia a leitura. */
+.meta__valor {
+  color: var(--texto);
+  font-weight: 600;
 }
 
 .cartao__acoes {
@@ -123,4 +147,53 @@
 .link-fonte:hover {
   border-color: var(--verde-medio);
   background: #eef5f1;
+}
+
+/* Linha acima da lista: contador à esquerda, ordenação à direita (protótipo). */
+.linha-lista {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 40px;
+  margin-bottom: 8px;
+}
+
+/* Mantém a ordenação encostada à direita mesmo sem o contador ao lado. */
+.linha-lista .ordenacao {
+  margin-left: auto;
+}
+
+.ordenacao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ordenacao select {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--texto);
+  cursor: pointer;
+}
+
+.ordenacao select:hover {
+  border-color: var(--borda-forte);
+}
+
+.paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.paginacao__posicao {
+  font-size: 14px;
+  color: var(--texto-suave);
 }

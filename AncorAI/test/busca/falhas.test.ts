@@ -224,3 +224,46 @@ describe('aviso de resultado parcial', () => {
     expect(resultado.avisos).toHaveLength(0);
   });
 });
+
+describe('ordenação da lista de recentes', () => {
+  const antigo = { ...documento, id: 'github:1', nome: 'zebra.md', dataModificacao: '2026-01-01T00:00:00Z' };
+  const novo = { ...documento, id: 'github:2', nome: 'abacate.md', dataModificacao: '2026-08-01T00:00:00Z' };
+
+  it('respeita o critério pedido em vez de impor data decrescente', async () => {
+    github.documentosRecentes.mockResolvedValue({ dados: [antigo, novo], aviso: null });
+
+    const resultado = await servico.recentes({ ...FILTROS_PADRAO, ordenacao: 'a-z' });
+
+    // Antes, `prepararRecentes` fixava 'data-desc' e a escolha era descartada.
+    expect(resultado.documentos.map((d) => d.nome)).toEqual(['abacate.md', 'zebra.md']);
+  });
+
+  it('usa data decrescente quando esse é o critério vigente', async () => {
+    github.documentosRecentes.mockResolvedValue({ dados: [antigo, novo], aviso: null });
+
+    const resultado = await servico.recentes({ ...FILTROS_PADRAO, ordenacao: 'data-desc' });
+
+    expect(resultado.documentos.map((d) => d.nome)).toEqual(['abacate.md', 'zebra.md']);
+  });
+
+  it('ordena os recentes vindos do cache pelo mesmo critério', async () => {
+    const { lerCache } = await import('../../src/main/banco/repositorio');
+    vi.mocked(lerCache).mockResolvedValue({ payload: [antigo, novo], etag: null } as never);
+
+    const resultado = await servico.recentesDoCache({ ...FILTROS_PADRAO, ordenacao: 'z-a' });
+
+    expect(resultado?.documentos.map((d) => d.nome)).toEqual(['zebra.md', 'abacate.md']);
+  });
+
+  it('produz a mesma ordem que a reordenação local do renderer', async () => {
+    const { ordenar } = await import('../../src/compartilhado/ordenacao');
+    github.documentosRecentes.mockResolvedValue({ dados: [antigo, novo], aviso: null });
+
+    const doServico = await servico.recentes({ ...FILTROS_PADRAO, ordenacao: 'data-asc' });
+    const doRenderer = ordenar([antigo, novo], 'data-asc');
+
+    // Os dois lados usam a mesma função de `compartilhado/`: divergir seria
+    // reintroduzir exatamente o defeito que esta mudança corrige.
+    expect(doServico.documentos.map((d) => d.id)).toEqual(doRenderer.map((d) => d.id));
+  });
+});

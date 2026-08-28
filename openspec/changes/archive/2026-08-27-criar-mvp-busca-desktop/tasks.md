@@ -111,4 +111,4 @@ As tarefas abaixo foram concluídas e depois retiradas do escopo, sem chegarem a
 
 - [x] Verificar a correspondência entre as especificações e o código implementado *(a conferência encontrou uma divergência real: a troca de ordenação disparava nova consulta às fontes, contrariando o requisito "Ordenação dos resultados". Corrigida.)*
 - [ ] Atualizar o status das ADRs de Proposto para Aceito, se confirmadas
-- [ ] Executar `/opsx:archive` para incorporar os deltas às especificações principais
+- [x] Executar `/opsx:archive` para incorporar os deltas às especificações principais *(21 requisitos aplicados em 4 capabilities; `ui-spec.md` não foi incorporado — a ferramenta só lê arquivos `spec.md` dentro de pasta de capability)*
