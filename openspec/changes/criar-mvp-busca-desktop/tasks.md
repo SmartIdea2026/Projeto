@@ -89,7 +89,7 @@ As tarefas abaixo foram concluídas e depois retiradas do escopo, sem chegarem a
 
 ## 9. Acessibilidade
 
-- [ ] Verificar a ordem de tabulação em toda a tela *(exige executar a interface; o DOM não usa `tabindex` positivo, então a ordem segue a ordem do documento, mas isso não substitui a conferência com teclado)*
+- [x] Verificar a ordem de tabulação em toda a tela *(conferida por teste automatizado: nenhum `tabindex` positivo e a sequência do DOM corresponde à leitura visual — cabeçalho, busca, filtros, resultados. A conferência encontrou o diálogo de configurações sem gestão de foco alguma, corrigido com foco inicial, confinamento, Escape e devolução do foco. O jsdom não executa a travessia nativa do Tab nem desenha o indicador de foco: essas duas continuam pendentes de conferência com teclado real.)*
 - [x] Implementar o anúncio das alterações da lista por leitores de tela
 - [x] Garantir que estado de conexão e fonte do documento não dependam apenas de cor
 - [x] Medir os contrastes do subtítulo, do texto secundário e das etiquetas *(medidos por cálculo WCAG sobre os tokens do CSS entregue, não no Figma, ao qual não houve acesso: o alvo da medição passou a ser o artefato que de fato é entregue)*
@@ -105,6 +105,7 @@ As tarefas abaixo foram concluídas e depois retiradas do escopo, sem chegarem a
 - [x] Testes de resultado parcial: paginação, árvore truncada e repositório inacessível
 - [x] Testes dos estados de credencial válida, inválida e ausente
 - [x] Teste que garanta que a credencial não é exposta ao renderer
+- [x] Testes de ordem de tabulação e de gestão de foco no diálogo
 
 ## 11. Encerramento
 

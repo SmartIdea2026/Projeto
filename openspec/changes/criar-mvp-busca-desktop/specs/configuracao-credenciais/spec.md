@@ -31,6 +31,32 @@ No MVP existe uma única fonte (ADR-0004), portanto uma única credencial a conf
 
 
 
+### Requirement: Operação do diálogo de configurações por teclado
+
+O diálogo de configurações SHALL ser operável inteiramente por teclado: o foco SHALL entrar nele ao abrir, permanecer confinado enquanto estiver aberto, e retornar ao elemento que o acionou quando fechar.
+
+O diálogo declara `aria-modal`, que afirma às tecnologias assistivas que o restante da tela está inerte. Sem o confinamento do foco, essa afirmação seria falsa.
+
+#### Scenario: Diálogo aberto por teclado
+
+- **GIVEN** que o usuário acionou a abertura das configurações
+- **WHEN** o diálogo é apresentado
+- **THEN** o foco passa para o primeiro elemento acionável dentro dele
+
+#### Scenario: Tabulação confinada ao diálogo
+
+- **GIVEN** que o diálogo está aberto
+- **WHEN** o usuário tabula a partir do último elemento acionável
+- **THEN** o foco retorna ao primeiro elemento do diálogo
+- **AND** não alcança elementos da tela que está atrás
+
+#### Scenario: Diálogo fechado pelo teclado
+
+- **GIVEN** que o diálogo está aberto
+- **WHEN** o usuário aciona a tecla Escape
+- **THEN** o diálogo é fechado
+- **AND** o foco retorna ao elemento que o abriu
+
 ### Requirement: Proteção da credencial armazenada
 
 A credencial SHALL ser armazenada de forma protegida pelo mecanismo de proteção de segredos do sistema operacional.
