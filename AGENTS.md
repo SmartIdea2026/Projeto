@@ -9,6 +9,7 @@ Este documento reúne os padrões vigentes do repositório para que qualquer age
 3. **Nunca gravar credenciais em texto legível** nem expô-las à camada de interface. Ver seção 6.
 4. **Nunca adotar banco relacional.** A persistência do projeto é NoSQL, orientada a documentos.
 5. **Nunca sobrescrever silenciosamente uma decisão de arquitetura.** Registre uma ADR. Ver seção 4.
+6. **Sempre manter o `README.md` atualizado e coerente com o estado real do sistema.** Toda mudança que altere comportamento observável, comandos de uso, estrutura de pastas ou requisitos de configuração atualiza o README **na mesma entrega**, nunca em tarefa posterior. O README é a porta de entrada de quem clona o repositório: desatualizado, ele faz um integrante novo executar comandos que não existem mais, procurar pastas que mudaram de lugar, ou concluir que o sistema está quebrado quando apenas o texto envelheceu.
 
 ## 2. Contexto do projeto
 

@@ -4,6 +4,18 @@ Aplicação desktop que centraliza a busca de documentos do **GitHub**.
 
 O Google Drive integrava o escopo e foi retirado do MVP pela [ADR-0004](../Docs/ADR/ADR-0004-remocao-google-drive-mvp.md): o escopo `drive.readonly` é restrito pelo Google e exigiria avaliação de segurança para publicação. A arquitetura segue preparada para múltiplas fontes.
 
+## O que a aplicação faz
+
+- **Busca por nome ou autor.** O termo casa com o nome do arquivo e com quem realizou a última alteração, então procurar pelo nome de um integrante encontra o que ele produziu.
+- **Filtros de extensão e período.** O período fica recolhido em um painel, aberto pelo botão abaixo da barra de busca.
+- **Ordenação** por data ou nome, com desempate por nome A–Z. A ordenação reorganiza os resultados já obtidos, sem nova consulta às fontes.
+- **Paginação** de 10 documentos por página, com o total encontrado exibido à esquerda.
+- **Documentos recentes** na abertura, a partir do resultado guardado da execução anterior, atualizado em segundo plano.
+- **Autoria e data da última alteração** em cada resultado, obtidas apenas para a página apresentada.
+- **Avisos de resultado parcial** quando a listagem foi truncada, um repositório ficou inacessível ou a data usada é aproximada.
+
+Os resumos por IA ainda não fazem parte desta versão; estão propostos na mudança `resumos-e-indice-por-ia`.
+
 ## Requisitos
 
 | Item | Versão |
@@ -79,11 +91,12 @@ src/
 │   ├── componentes/         Componentes reutilizáveis
 │   ├── telas/               Telas completas
 │   └── estilos/             Folhas divididas por área da interface
-└── compartilhado/        Tipos e canais comuns aos processos
+└── compartilhado/        Tipos, canais e ordenação comuns aos processos
 
 test/
-├── busca/                Regras de filtro, ordenação e cenários de falha
-├── fontes/               Normalização das respostas das APIs
+├── busca/                Regras de filtro, ordenação, paginação e falhas
+├── fontes/               Normalização das respostas das APIs e autoria
+├── interface/            Componentes: tabulação, paginação, filtros e autoria
 ├── persistencia/         Banco local
 └── seguranca/            Fronteira entre renderer e processo principal
 ```
@@ -102,7 +115,7 @@ Ou instale o pacote `libfuse2`.
 
 **Após empacotar, confira `git status`.** Houve um caso em que o `package.json` foi reescrito durante o empacotamento, perdendo `scripts` e `devDependencies`. Não foi possível reproduzir depois, mas vale a conferência. Se acontecer: `git restore AncorAI/package.json`.
 
-**O aplicativo encerra logo ao abrir, sem mensagem.** Verifique se a variável `ELECTRON_RUN_AS_NODE` está definida no ambiente — ela força o Electron a rodar como Node puro. Remova-a antes de executar.
+**O aplicativo encerra logo ao abrir, sem mensagem.** Verifique se a variável `ELECTRON_RUN_AS_NODE` está definida no ambiente — ela força o Electron a rodar como Node puro, e o processo termina sem erro e sem janela. O `./iniciar.sh` já a limpa; ao rodar os comandos npm direto, remova-a antes.
 
 ## Documentação
 
