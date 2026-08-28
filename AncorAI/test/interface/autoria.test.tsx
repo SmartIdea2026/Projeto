@@ -64,13 +64,12 @@ describe('preenchimento da autoria', () => {
 
     // O documento está na tela com a consulta de autoria ainda pendente.
     await waitFor(() => expect(screen.getByText('ata.md')).toBeInTheDocument());
-    expect(screen.queryByText(/Alterado por/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Autor:')).not.toBeInTheDocument();
 
     liberar([{ ...base, autor: 'GustavoMairinck', dataModificacao: '2026-08-22T10:00:00Z' }]);
 
-    await waitFor(() =>
-      expect(screen.getByText('Alterado por GustavoMairinck')).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByText('Autor:')).toBeInTheDocument());
+    expect(screen.getByText('GustavoMairinck')).toBeInTheDocument();
   });
 
   it('mantém a lista utilizável quando o detalhamento falha', async () => {
@@ -80,7 +79,7 @@ describe('preenchimento da autoria', () => {
 
     await waitFor(() => expect(screen.getByText('ata.md')).toBeInTheDocument());
     // Sem autoria e sem erro: os campos são complemento, não requisito.
-    expect(screen.queryByText(/Alterado por/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Autor:')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
@@ -101,5 +100,39 @@ describe('preenchimento da autoria', () => {
 
     await waitFor(() => expect(screen.getByText('ata.md')).toBeInTheDocument());
     expect(screen.queryByText('outro.md')).not.toBeInTheDocument();
+  });
+});
+
+describe('rótulos dos metadados', () => {
+  it('nomeia cada dado em vez de apresentá-los soltos', async () => {
+    api.detalharDocumentos.mockResolvedValue([
+      {
+        ...base,
+        autor: 'Gabi Prajo',
+        dataCriacao: '2026-02-02T00:00:00Z',
+        dataModificacao: '2026-08-22T10:00:00Z',
+        dataAproximada: undefined
+      }
+    ]);
+
+    render(<App />);
+
+    // Sem rótulo, a linha seria um nome e duas datas sem dizer o que são.
+    await waitFor(() => expect(screen.getByText('Autor:')).toBeInTheDocument());
+    expect(screen.getByText('Repositório:')).toBeInTheDocument();
+    expect(screen.getByText('Criado em')).toBeInTheDocument();
+    expect(screen.getByText('Modificado em')).toBeInTheDocument();
+    expect(screen.getByText('Gabi Prajo')).toBeInTheDocument();
+  });
+
+  it('avisa quando a data é a do repositório, não a do arquivo', async () => {
+    api.detalharDocumentos.mockResolvedValue([base]);
+
+    render(<App />);
+
+    await waitFor(() =>
+      expect(screen.getByText('Repositório atualizado em')).toBeInTheDocument()
+    );
+    expect(screen.queryByText('Modificado em')).not.toBeInTheDocument();
   });
 });

@@ -65,4 +65,6 @@ Filtros abaixo da barra de busca; contador à esquerda e ordenação à direita,
 
 **Contradição resolvida por reinterpretação.** A mudança reescreve um requisito vigente em vez de criar um novo. É o caminho correto — os dois requisitos eram incompatíveis, então um deles estava errado —, mas exige que a revisão confirme a leitura antes do archive.
 
-**Autoria no GitHub identifica o commit, não necessariamente o autor do documento.** Quem fez o último commit pode ter apenas movido ou reformatado o arquivo. O campo será rotulado como última alteração, não como autoria intelectual.
+**Autoria no GitHub identifica o commit, não necessariamente o autor do documento.** Quem fez o último commit pode ter apenas movido ou reformatado o arquivo.
+
+A equipe optou por rotular o campo como **"Autor:"**, acompanhando o protótipo, em vez do rótulo mais literal "Alterado por". O risco permanece registrado aqui: em documentos que passaram por movimentação ou reformatação em massa, o nome apresentado pode não ser o de quem escreveu o conteúdo.

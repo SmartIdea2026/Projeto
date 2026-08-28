@@ -100,8 +100,32 @@
   color: var(--texto-suave);
   font-size: 13px;
   display: flex;
-  gap: 16px;
+  gap: 20px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Rótulo e valor andam juntos: a quebra de linha não pode separá-los. */
+.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.meta__icone {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.meta__rotulo {
+  color: var(--texto-suave);
+}
+
+/* O valor é o dado; o rótulo só diz o que ele é. O peso guia a leitura. */
+.meta__valor {
+  color: var(--texto);
+  font-weight: 600;
 }
 
 .cartao__acoes {
