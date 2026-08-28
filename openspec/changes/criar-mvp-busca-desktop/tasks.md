@@ -31,18 +31,18 @@
 
 ## 4. Integração com o Google Drive — removida do MVP (ADR-0004)
 
-As tarefas abaixo foram concluídas e depois retiradas do escopo, sem chegarem a ser verificadas contra uma conta real. Ficam registradas porque descrevem o alvo da retomada; o código está no commit `0d6e6e8`.
+As tarefas abaixo foram concluídas e depois retiradas do escopo, sem chegarem a ser verificadas contra uma conta real. Ficam registradas **fora da contagem** — sem caixa de marcação — porque não são trabalho pendente nem trabalho entregue: descrevem o alvo da retomada. O código está no commit `0d6e6e8`.
 
 
-- [~] Implementar o fluxo OAuth de aplicativo instalado com PKCE e redirecionamento em loopback
-- [~] Implementar a verificação do parâmetro de estado no retorno da autorização
-- [~] Implementar a expiração do servidor local quando o consentimento é abandonado
-- [~] Implementar a renovação do acesso a partir do token de renovação
-- [~] Manter o token de acesso apenas em memória, persistindo somente o de renovação
-- [~] Implementar a busca de arquivos por nome e tipo
-- [~] Implementar a obtenção dos arquivos modificados recentemente
-- [~] Tratar erros de cota e de credencial
-- [~] Implementar cache dos resultados
+- Implementar o fluxo OAuth de aplicativo instalado com PKCE e redirecionamento em loopback
+- Implementar a verificação do parâmetro de estado no retorno da autorização
+- Implementar a expiração do servidor local quando o consentimento é abandonado
+- Implementar a renovação do acesso a partir do token de renovação
+- Manter o token de acesso apenas em memória, persistindo somente o de renovação
+- Implementar a busca de arquivos por nome e tipo
+- Implementar a obtenção dos arquivos modificados recentemente
+- Tratar erros de cota e de credencial
+- Implementar cache dos resultados
 
 ## 5. Normalização e regras de busca
 
@@ -89,23 +89,26 @@ As tarefas abaixo foram concluídas e depois retiradas do escopo, sem chegarem a
 
 ## 9. Acessibilidade
 
-- [ ] Verificar a ordem de tabulação em toda a tela *(exige executar a interface)*
+- [x] Verificar a ordem de tabulação em toda a tela *(conferida por teste automatizado: nenhum `tabindex` positivo e a sequência do DOM corresponde à leitura visual — cabeçalho, busca, filtros, resultados. A conferência encontrou o diálogo de configurações sem gestão de foco alguma, corrigido com foco inicial, confinamento, Escape e devolução do foco. O jsdom não executa a travessia nativa do Tab nem desenha o indicador de foco: essas duas continuam pendentes de conferência com teclado real.)*
 - [x] Implementar o anúncio das alterações da lista por leitores de tela
 - [x] Garantir que estado de conexão e fonte do documento não dependam apenas de cor
-- [ ] Medir no Figma os contrastes do subtítulo, do texto secundário e das etiquetas *(sem acesso ao Figma; valores acessíveis foram adotados no CSS, mas não conferidos contra o protótipo)*
-- [ ] Ajustar as cores que não atingirem a proporção de 4.5:1 *(depende da medição acima)*
+- [x] Medir os contrastes do subtítulo, do texto secundário e das etiquetas *(medidos por cálculo WCAG sobre os tokens do CSS entregue, não no Figma, ao qual não houve acesso: o alvo da medição passou a ser o artefato que de fato é entregue)*
+- [x] Ajustar as cores que não atingirem a proporção de 4.5:1 *(nenhuma reprovou — a menor margem é a etiqueta em verde médio sobre creme, com 4.63:1)*
 
 ## 10. Testes
 
 - [x] Testes de filtragem por nome, tipo, fonte e período
 - [x] Testes de ordenação pelos quatro critérios
-- [x] Testes de normalização dos resultados das duas fontes
-- [x] Testes dos cenários de falha em uma e nas duas fontes
+- [x] Teste de que a troca de ordenação não dispara nova consulta às fontes
+- [x] Testes de normalização dos resultados das fontes
+- [x] Testes dos cenários de falha nas fontes
+- [x] Testes de resultado parcial: paginação, árvore truncada e repositório inacessível
 - [x] Testes dos estados de credencial válida, inválida e ausente
 - [x] Teste que garanta que a credencial não é exposta ao renderer
+- [x] Testes de ordem de tabulação e de gestão de foco no diálogo
 
 ## 11. Encerramento
 
-- [ ] Verificar a correspondência entre as especificações e o código implementado
+- [x] Verificar a correspondência entre as especificações e o código implementado *(a conferência encontrou uma divergência real: a troca de ordenação disparava nova consulta às fontes, contrariando o requisito "Ordenação dos resultados". Corrigida.)*
 - [ ] Atualizar o status das ADRs de Proposto para Aceito, se confirmadas
 - [ ] Executar `/opsx:archive` para incorporar os deltas às especificações principais

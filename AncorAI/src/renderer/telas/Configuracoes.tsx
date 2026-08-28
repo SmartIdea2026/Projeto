@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { StatusFonte } from '../../compartilhado/tipos';
 
 interface Props {
@@ -6,6 +6,15 @@ interface Props {
   aoFechar: () => void;
   aoAtualizarStatus: (status: StatusFonte[]) => void;
 }
+
+/**
+ * Elementos que recebem foco, na ordem do documento.
+ *
+ * Sem `tabindex` positivo em lugar algum da aplicação, a ordem de tabulação é
+ * a ordem do DOM — que por sua vez segue a leitura visual da tela.
+ */
+const FOCAVEIS =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])';
 
 const DESCRICAO_ESTADO: Record<string, string> = {
   conectada: 'Conectada',
@@ -16,6 +25,8 @@ const DESCRICAO_ESTADO: Record<string, string> = {
 };
 
 export function Configuracoes({ status, aoFechar, aoAtualizarStatus }: Props) {
+  const dialogo = useRef<HTMLDivElement>(null);
+  const focoAnterior = useRef<HTMLElement | null>(null);
   const [token, setToken] = useState('');
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [erro, setErro] = useState<Record<string, string>>({});
@@ -37,12 +48,64 @@ export function Configuracoes({ status, aoFechar, aoAtualizarStatus }: Props) {
     }
   }
 
+  /**
+   * Leva o foco para dentro do diálogo ao abrir e o devolve ao fechar.
+   *
+   * Sem isto, quem navega por teclado abre as configurações e continua com o
+   * foco no botão atrás delas: o conteúdo aparece na tela mas fica fora de
+   * alcance, e ao fechar o ponto de partida se perde.
+   */
+  useEffect(() => {
+    focoAnterior.current = document.activeElement as HTMLElement | null;
+    dialogo.current?.querySelector<HTMLElement>(FOCAVEIS)?.focus();
+
+    return () => focoAnterior.current?.focus();
+  }, []);
+
+  /**
+   * Mantém a tabulação dentro do diálogo e permite fechá-lo pelo teclado.
+   *
+   * `aria-modal="true"` declara que o restante da tela está inerte. Sem o
+   * confinamento o Tab sai do diálogo para trás dele, e o atributo passa a
+   * afirmar às tecnologias assistivas algo que não é verdade.
+   */
+  function aoTeclar(evento: React.KeyboardEvent<HTMLDivElement>) {
+    if (evento.key === 'Escape') {
+      evento.stopPropagation();
+      aoFechar();
+      return;
+    }
+
+    if (evento.key !== 'Tab') return;
+
+    const focaveis = Array.from(
+      dialogo.current?.querySelectorAll<HTMLElement>(FOCAVEIS) ?? []
+    );
+    if (focaveis.length === 0) return;
+
+    const primeiro = focaveis[0]!;
+    const ultimo = focaveis[focaveis.length - 1]!;
+    const ativo = document.activeElement;
+
+    // O ciclo é fechado nas duas pontas: Tab no último volta ao primeiro, e
+    // Shift+Tab no primeiro vai para o último.
+    if (!evento.shiftKey && ativo === ultimo) {
+      evento.preventDefault();
+      primeiro.focus();
+    } else if (evento.shiftKey && ativo === primeiro) {
+      evento.preventDefault();
+      ultimo.focus();
+    }
+  }
+
   return (
     <div
       className="modal-fundo"
       role="dialog"
       aria-modal="true"
       aria-labelledby="titulo-config"
+      ref={dialogo}
+      onKeyDown={aoTeclar}
       onClick={(evento) => {
         if (evento.target === evento.currentTarget) aoFechar();
       }}

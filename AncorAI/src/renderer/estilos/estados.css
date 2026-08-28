@@ -55,6 +55,12 @@
   font-size: 14px;
 }
 
+.aviso--info {
+  background: #eef2f0;
+  border-color: #c2d3cb;
+  color: var(--verde-escuro);
+}
+
 .aviso--erro {
   background: #fbeeec;
   border-color: #e0a99f;

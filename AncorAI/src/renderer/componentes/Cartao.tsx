@@ -49,7 +49,17 @@ export function Cartao({ documento, aoAbrir }: Props) {
 
         <div className="cartao__meta">
           {documento.repositorio && <span>{documento.repositorio}</span>}
-          {modificacao && <span>Modificado em {modificacao}</span>}
+          {modificacao && (
+            <span>
+              {/*
+                A data da busca no GitHub vem do repositório, não do arquivo.
+                Marcar a aproximação evita que o usuário leia como exata uma
+                data que não é.
+              */}
+              {documento.dataAproximada ? 'Repositório atualizado em ' : 'Modificado em '}
+              {modificacao}
+            </span>
+          )}
           {/* Data de criação só aparece quando a fonte a fornece. */}
           {criacao && <span>Criado em {criacao}</span>}
         </div>

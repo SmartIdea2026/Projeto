@@ -76,6 +76,14 @@ O Drive foi implementado por completo e retirado do escopo pela **ADR-0004**, an
 
 A retomada depende de a instituição possuir Google Workspace, caso em que a tela de consentimento pode ser configurada como *Internal* e nenhuma das duas restrições se aplica. O código permanece recuperável no commit `0d6e6e8`.
 
+### 2.4 Resultado parcial e data aproximada
+
+Três condições produzem resultado incompleto sem que nada dê errado: a conta possui mais repositórios do que o teto de páginas percorridas, a árvore de um repositório vem `truncated`, ou um repositório não é alcançável pela credencial. Nenhuma delas é erro — a busca responde e traz documentos — mas todas mudam o que o resultado significa.
+
+Por isso `ResultadoBusca` separa `avisos` de `falhas`. Misturá-los quebraria a leitura da interface, que usa a contagem de falhas para distinguir "nenhuma fonte respondeu" de "houve resposta": um resultado parcial passaria a disparar a tela de falha total.
+
+A busca também produz data aproximada. A árvore Git não informa data por arquivo, então cada documento herda o `pushed_at` do repositório. Filtrar por período nesses documentos filtra, na prática, por atividade do repositório. Os documentos afetados carregam `dataAproximada: true`, o cartão diz "Repositório atualizado em" em vez de "Modificado em", e o filtro de período emite aviso. A lista de recentes vem dos commits e não sofre disso.
+
 ## 4. Normalização dos resultados
 
 As fontes convergem para um mesmo formato antes de chegar ao renderer. O formato foi desenhado para duas fontes e permanece assim com uma, porque é ele que torna barato acrescentar a próxima:

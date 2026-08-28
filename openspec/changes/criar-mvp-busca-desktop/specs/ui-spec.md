@@ -60,13 +60,15 @@ Os elementos abaixo existem no protótipo visual e **não** fazem parte desta en
 * Campo de busca vazio não dispara consulta às fontes; a tela mantém a lista de documentos recentes.
 * Período com data final anterior à data inicial apresenta mensagem junto ao filtro e não dispara consulta.
 * Falha em uma das fontes apresenta faixa de aviso identificando a fonte, preservando os resultados da outra.
-* Falha nas duas fontes substitui a lista por mensagem informando que não foi possível realizar a busca, com ação de nova tentativa.
+* Falha em todas as fontes substitui a lista por mensagem informando que não foi possível realizar a busca, com ação de nova tentativa.
 * Credencial inválida apresenta mensagem distinta de "não foi possível conectar", para que o usuário saiba se deve corrigir a credencial ou verificar a conexão.
 
 ### Acessibilidade (a11y)
 
 * Todos os controles — barra de busca, filtros, cartões e links — são alcançáveis por teclado, em ordem de tabulação que segue a leitura visual da tela.
 * O campo de busca recebe foco na abertura da aplicação.
+* Nenhum elemento usa `tabindex` positivo: a ordem de tabulação é a ordem do documento, que segue a leitura visual.
+* O diálogo de configurações recebe o foco ao abrir, confina a tabulação enquanto está aberto, fecha com Escape e devolve o foco a quem o acionou.
 * Indicador de foco visível em todos os elementos acionáveis, com contraste adequado contra o fundo creme e contra o branco dos cartões.
 * Alterações na lista de resultados são anunciadas por leitores de tela, incluindo a quantidade de resultados e as mensagens de erro.
 * O estado de conexão de cada fonte é comunicado por texto, e não apenas pela cor do ponto indicador.

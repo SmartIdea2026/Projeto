@@ -1,16 +1,21 @@
-# Especificação — Integração com as fontes
+# Especificação — Integração com fontes externas
 
 **Issue:** #65
 
-## Requirement: Consulta às fontes externas
+## Purpose
+
+Consultar as APIs das fontes integradas, normalizar os resultados em formato único, conter o consumo de requisições e comunicar falhas e resultados parciais.
+
+## ADDED Requirements
+### Requirement: Consulta às fontes externas
 
 O sistema SHALL consultar as fontes configuradas por meio de suas respectivas APIs, conforme os parâmetros definidos para a busca.
 
 No MVP a única fonte é o GitHub (ADR-0004).
 
-#### Scenario: Consulta com as duas fontes disponíveis
+#### Scenario: Consulta com as fontes disponíveis
 
-- **GIVEN** que as credenciais das duas fontes são válidas
+- **GIVEN** que as credenciais das fontes configuradas são válidas
 - **WHEN** uma busca é realizada sem restrição de fonte
 - **THEN** o sistema consulta ambas as fontes
 - **AND** apresenta os resultados combinados em uma única lista
@@ -22,7 +27,7 @@ No MVP a única fonte é o GitHub (ADR-0004).
 - **THEN** o sistema consulta apenas a fonte com credencial válida
 - **AND** informa que a outra fonte não está configurada
 
-## Requirement: Escopo de varredura
+### Requirement: Escopo de varredura
 
 O sistema SHALL considerar todos os repositórios da conta GitHub configurada.
 
@@ -39,7 +44,7 @@ O sistema SHALL considerar todos os repositórios da conta GitHub configurada.
 - **THEN** os documentos desse repositório não aparecem nos resultados
 - **AND** a busca é concluída normalmente para os demais repositórios
 
-## Requirement: Normalização dos resultados
+### Requirement: Normalização dos resultados
 
 Documentos provenientes de fontes distintas SHALL ser apresentados em formato uniforme, contendo nome, extensão, fonte, data de modificação e link de acesso.
 
@@ -59,7 +64,7 @@ A data de modificação SHALL ser o critério canônico de ordenação temporal.
 - **THEN** o sistema exibe a data de modificação
 - **AND** omite a data de criação sem apresentar erro
 
-## Requirement: Limite de requisições das APIs
+### Requirement: Limite de requisições das APIs
 
 O sistema SHALL respeitar os limites de requisição das APIs externas, reaproveitando resultados já obtidos sempre que possível.
 
@@ -76,7 +81,34 @@ O sistema SHALL respeitar os limites de requisição das APIs externas, reaprove
 - **WHEN** o conteúdo da fonte não sofreu alteração desde então
 - **THEN** o sistema reutiliza o resultado anterior sem consumir nova requisição
 
-## Requirement: Comunicação de erro ao usuário
+### Requirement: Comunicação de resultado parcial
+
+O sistema SHALL informar o usuário quando o resultado apresentado estiver incompleto ou apoiado em data aproximada, distinguindo esse aviso de uma falha.
+
+A distinção é necessária porque um documento ausente do resultado é indistinguível de um documento inexistente para quem observa a tela.
+
+#### Scenario: Inventário truncado pela API
+
+- **GIVEN** que um repositório é grande demais para ser listado em uma requisição
+- **WHEN** a busca é realizada
+- **THEN** o sistema apresenta os documentos obtidos
+- **AND** informa que parte do repositório ficou de fora, identificando-o
+
+#### Scenario: Repositório inacessível entre outros acessíveis
+
+- **GIVEN** que a credencial não alcança um dos repositórios
+- **WHEN** a busca é realizada
+- **THEN** o sistema apresenta os documentos dos repositórios acessíveis
+- **AND** nomeia o repositório que não pôde ser consultado
+
+#### Scenario: Filtro de período sobre data aproximada
+
+- **GIVEN** que os documentos de uma fonte têm data aproximada
+- **WHEN** o usuário aplica um filtro de período
+- **THEN** o sistema informa que a data considerada é a de atividade do repositório
+- **AND** apresenta o resultado sem interromper a busca
+
+### Requirement: Comunicação de erro ao usuário
 
 O sistema SHALL informar o usuário sempre que ocorrer falha na comunicação com uma API, sem interromper as funcionalidades que não dependem dela.
 

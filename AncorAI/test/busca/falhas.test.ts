@@ -67,12 +67,13 @@ describe('falha de uma fonte (CB05)', () => {
   });
 
   it('devolve os documentos quando a fonte responde', async () => {
-    github.buscarDocumentos.mockResolvedValue([documento]);
+    github.buscarDocumentos.mockResolvedValue({ dados: [documento], aviso: null });
 
     const resultado = await servico.buscar({ ...FILTROS_PADRAO, termo: 'a' });
 
     expect(resultado.documentos.map((d) => d.fonte)).toEqual(['github']);
     expect(resultado.falhas).toHaveLength(0);
+    expect(resultado.avisos).toHaveLength(0);
   });
 });
 
@@ -115,7 +116,7 @@ describe('fonte não configurada', () => {
 
 describe('seleção de fonte na busca (RN05)', () => {
   it('consulta a fonte quando ela está selecionada', async () => {
-    github.buscarDocumentos.mockResolvedValue([documento]);
+    github.buscarDocumentos.mockResolvedValue({ dados: [documento], aviso: null });
 
     await servico.buscar({ ...FILTROS_PADRAO, termo: 'a', fontes: ['github'] });
 
@@ -123,7 +124,7 @@ describe('seleção de fonte na busca (RN05)', () => {
   });
 
   it('lista vazia de fontes significa todas as fontes (RN04)', async () => {
-    github.buscarDocumentos.mockResolvedValue([documento]);
+    github.buscarDocumentos.mockResolvedValue({ dados: [documento], aviso: null });
 
     await servico.buscar({ ...FILTROS_PADRAO, termo: 'a', fontes: [] });
 
@@ -165,5 +166,61 @@ describe('estado das credenciais', () => {
     const status = await servico.status(false);
 
     expect(status.every((item) => item.estado === 'invalida')).toBe(true);
+  });
+});
+
+describe('aviso de resultado parcial', () => {
+  it('repassa o aviso da fonte sem tratá-lo como falha', async () => {
+    github.buscarDocumentos.mockResolvedValue({
+      dados: [documento],
+      aviso: 'Parte dos documentos ficou de fora.'
+    });
+
+    const resultado = await servico.buscar({ ...FILTROS_PADRAO, termo: 'a' });
+
+    // A distinção é o ponto: houve resultado, então não é falha.
+    expect(resultado.documentos).toHaveLength(1);
+    expect(resultado.falhas).toHaveLength(0);
+    expect(resultado.avisos).toEqual([
+      { fonte: 'github', mensagem: 'Parte dos documentos ficou de fora.' }
+    ]);
+  });
+
+  it('avisa que o filtro de período incide sobre data aproximada', async () => {
+    github.buscarDocumentos.mockResolvedValue({
+      dados: [{ ...documento, dataAproximada: true }],
+      aviso: null
+    });
+
+    const resultado = await servico.buscar({
+      ...FILTROS_PADRAO,
+      dataInicial: '2026-07-01',
+      dataFinal: '2026-09-01'
+    });
+
+    expect(resultado.avisos).toHaveLength(1);
+    expect(resultado.avisos[0]?.mensagem).toContain('atividade do repositório');
+  });
+
+  it('não avisa sobre período quando nenhum filtro de data está ativo', async () => {
+    github.buscarDocumentos.mockResolvedValue({
+      dados: [{ ...documento, dataAproximada: true }],
+      aviso: null
+    });
+
+    const resultado = await servico.buscar({ ...FILTROS_PADRAO, termo: 'a' });
+
+    expect(resultado.avisos).toHaveLength(0);
+  });
+
+  it('não avisa sobre período quando as datas são exatas', async () => {
+    github.buscarDocumentos.mockResolvedValue({ dados: [documento], aviso: null });
+
+    const resultado = await servico.buscar({
+      ...FILTROS_PADRAO,
+      dataInicial: '2026-07-01'
+    });
+
+    expect(resultado.avisos).toHaveLength(0);
   });
 });
