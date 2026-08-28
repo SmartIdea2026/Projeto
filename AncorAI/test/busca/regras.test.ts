@@ -84,15 +84,13 @@ describe('filtro por tipo e período', () => {
 });
 
 describe('seleção de fonte', () => {
-  it('considera as duas fontes quando nenhuma é escolhida (RN04)', () => {
+  it('considera todas as fontes quando nenhuma é escolhida (RN04)', () => {
     expect(fonteSelecionada(FILTROS_PADRAO, 'github')).toBe(true);
-    expect(fonteSelecionada(FILTROS_PADRAO, 'drive')).toBe(true);
   });
 
   it('consulta apenas a fonte escolhida (RN05)', () => {
-    const filtros = { ...FILTROS_PADRAO, fontes: ['drive' as const] };
-    expect(fonteSelecionada(filtros, 'drive')).toBe(true);
-    expect(fonteSelecionada(filtros, 'github')).toBe(false);
+    const filtros = { ...FILTROS_PADRAO, fontes: ['github' as const] };
+    expect(fonteSelecionada(filtros, 'github')).toBe(true);
   });
 });
 
@@ -120,7 +118,7 @@ describe('unificação das fontes', () => {
   it('remove duplicatas por id preservando a ordem', () => {
     const unificados = unificar([
       doc({ id: 'x', nome: 'a.md' }),
-      doc({ id: 'y', nome: 'b.md', fonte: 'drive' }),
+      doc({ id: 'y', nome: 'b.md' }),
       doc({ id: 'x', nome: 'a.md' })
     ]);
     expect(unificados.map((item) => item.id)).toEqual(['x', 'y']);

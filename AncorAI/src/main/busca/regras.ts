@@ -9,7 +9,7 @@ import type {
  * Regras de filtragem e ordenação aplicadas sobre os documentos já obtidos.
  *
  * Estas regras são independentes das fontes: operam sobre o formato unificado,
- * depois que GitHub e Drive já foram normalizados.
+ * depois que cada fonte já foi normalizada.
  */
 
 /**

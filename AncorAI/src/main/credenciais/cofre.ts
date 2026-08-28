@@ -11,10 +11,7 @@ import { safeStorage } from 'electron';
  * devolve o valor lido por `obter`.
  */
 
-export type ChaveCredencial =
-  | 'github.token'
-  | 'drive.clientId'
-  | 'drive.refreshToken';
+export type ChaveCredencial = 'github.token';
 
 let diretorioCofre = '';
 

@@ -1,8 +1,7 @@
 import type { Documento } from '../../compartilhado/tipos';
 
 const NOME_FONTE = {
-  github: 'GitHub',
-  drive: 'Google Drive'
+  github: 'GitHub'
 } as const;
 
 function formatarData(iso?: string): string | null {
@@ -43,7 +42,7 @@ export function Cartao({ documento, aoAbrir }: Props) {
             nunca só por cor (ui-spec, acessibilidade).
           */}
           <span className={`etiqueta etiqueta--fonte etiqueta--${documento.fonte}`}>
-            <span aria-hidden="true">{documento.fonte === 'github' ? '⌥' : '△'}</span>
+            <span aria-hidden="true">⌥</span>
             {fonte}
           </span>
         </div>

@@ -1,6 +1,8 @@
 # AncorAI
 
-Aplicação desktop que centraliza a busca de documentos do **GitHub** e do **Google Drive**.
+Aplicação desktop que centraliza a busca de documentos do **GitHub**.
+
+O Google Drive integrava o escopo e foi retirado do MVP pela [ADR-0004](../Docs/ADR/ADR-0004-remocao-google-drive-mvp.md): o escopo `drive.readonly` é restrito pelo Google e exigiria avaliação de segurança para publicação. A arquitetura segue preparada para múltiplas fontes.
 
 ## Requisitos
 
@@ -44,16 +46,6 @@ Ao abrir pela primeira vez, o aplicativo não tem acesso a nenhuma fonte. Config
 
 Gere um **Personal Access Token** em *Settings → Developer settings → Personal access tokens*, com permissão de **leitura** nos repositórios desejados. Prefira um *fine-grained token* restrito ao necessário. Cole o token na tela de configurações.
 
-### Google Drive
-
-O Drive exige **OAuth**, porque uma chave de API autentica o projeto e não o usuário, e por isso não alcança documentos privados.
-
-1. No **Google Cloud Console**, crie um projeto.
-2. Habilite a **Google Drive API**.
-3. Em *Credenciais*, crie um **ID do cliente OAuth** do tipo **Desktop app**.
-4. Copie o **Client ID** para a tela de configurações e acione **Conectar ao Drive**.
-5. Conceda o consentimento na janela do navegador que se abrir.
-
 As credenciais são cifradas pelo chaveiro do sistema operacional e nunca são reexibidas.
 
 ## Estrutura
@@ -65,8 +57,7 @@ src/
 │   ├── janela.ts            Criação da janela
 │   ├── ipc.ts               Registro dos canais expostos ao renderer
 │   ├── busca/               Orquestração das fontes e regras de filtro
-│   ├── fontes/              Integrações com GitHub e Drive
-│   ├── oauth/               Fluxo OAuth do Google
+│   ├── fontes/              Integração com o GitHub
 │   ├── credenciais/         Cofre cifrado e cache de validação
 │   └── banco/               Persistência NoSQL local
 ├── preload/              Fronteira tipada entre os processos

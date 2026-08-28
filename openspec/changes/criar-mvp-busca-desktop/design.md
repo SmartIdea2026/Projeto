@@ -24,7 +24,7 @@ A aplicação é executada inteiramente no cliente. Não há servidor próprio.
 │  └───┬───────────────┬───────────────┬───┘  │
 └──────┼───────────────┼───────────────┼──────┘
        ▼               ▼               ▼
-  GitHub API    Google Drive API   SQLite local
+       GitHub API              Banco NoSQL local
 ```
 
 **Princípio central:** todo acesso a credencial e a rede acontece no processo *main*. O *renderer* comunica-se apenas por IPC tipado e recebe somente resultados já normalizados. Isso mantém a intenção da seção 13 do documento de pesquisa tecnológica — credenciais fora da camada de interface — mesmo sem um backend remoto.
@@ -70,27 +70,22 @@ O resultado é persistido em cache local e reutilizado entre execuções, com re
 
 `GET /users/{owner}/repos` retorna **apenas repositórios públicos**. Se a conta `SmartIdea2026` possuir repositórios privados, eles não aparecerão por esse caminho. Nesse caso será necessário usar `GET /user/repos?affiliation=...` com o token do próprio usuário. Atualmente a conta possui 1 repositório público.
 
-## 3. Integração com o Google Drive
+## 3. Integração com o Google Drive — removida do MVP
 
-A Drive API resolve os dois casos de uso de forma direta:
+O Drive foi implementado por completo e retirado do escopo pela **ADR-0004**, antes de ser verificado contra uma conta real. O motivo não é de implementação: o escopo `drive.readonly` é classificado como **restrito** pelo Google, o que impõe avaliação de segurança CASA para publicar o aplicativo, ou expiração do *refresh token* a cada 7 dias enquanto o projeto permanecer em modo *Testing*.
 
-```text
-Busca:     GET /files?q=name contains '<termo>' and (mimeType=... or ...)
-Recentes:  GET /files?orderBy=modifiedTime desc&pageSize=20
-```
-
-Ambas são chamadas únicas. O Drive fornece nativamente `createdTime`, `modifiedTime` e `webViewLink`.
+A retomada depende de a instituição possuir Google Workspace, caso em que a tela de consentimento pode ser configurada como *Internal* e nenhuma das duas restrições se aplica. O código permanece recuperável no commit `0d6e6e8`.
 
 ## 4. Normalização dos resultados
 
-As duas fontes convergem para um mesmo formato antes de chegar ao renderer:
+As fontes convergem para um mesmo formato antes de chegar ao renderer. O formato foi desenhado para duas fontes e permanece assim com uma, porque é ele que torna barato acrescentar a próxima:
 
 ```ts
 type Documento = {
   id: string;
   nome: string;
   extensao: string;
-  fonte: 'github' | 'drive';
+  fonte: Fonte;              // união de fontes; hoje só 'github'
   dataModificacao: string;   // ISO 8601 — campo canônico de ordenação
   dataCriacao?: string;      // ausente no GitHub
   link: string;              // URL de redirecionamento para a fonte original
@@ -107,31 +102,11 @@ Arquivos de código-fonte e de configuração são excluídos, o que diverge do 
 
 ## 6. Credenciais
 
-As duas fontes **não são simétricas**, e a interface reflete isso.
-
 **GitHub:** token informado em campo na tela de configurações, enviado ao processo *main* por IPC e **nunca** mantido no estado do renderer. Validado por `GET /user` antes de ser gravado.
 
-**Google Drive:** exige fluxo OAuth 2.0. Uma chave de API autentica o *projeto*, não o *usuário*, e `files.list` recusa conteúdo privado — uma chave sozinha só alcança arquivos públicos. A tela de configurações recebe o Client ID de um cliente OAuth do tipo *Desktop app* e oferece uma ação de conexão que dispara o consentimento.
+O Drive exigia um desenho assimétrico — OAuth 2.0 com PKCE e redirecionamento em *loopback*, porque uma chave de API autentica o *projeto* e não o *usuário*. Saiu com a fonte (ADR-0004), e com ele a assimetria: no MVP há uma credencial, de um tipo só.
 
-O fluxo segue o modelo de loopback para aplicativos instalados:
-
-```text
-Usuário aciona "Conectar ao Drive"
-        ↓
-Servidor HTTP efêmero em 127.0.0.1 (porta atribuída pelo sistema)
-        ↓
-Navegador abre o consentimento do Google  (access_type=offline, prompt=consent)
-        ↓
-Redirecionamento para 127.0.0.1/callback com o código
-        ↓
-Troca do código pelo refresh token, protegida por PKCE
-        ↓
-Refresh token gravado no cofre cifrado
-```
-
-PKCE é usado porque o *client secret* de um aplicativo instalado não é de fato secreto — ele viaja dentro do binário distribuído. O parâmetro `state` é verificado no retorno, e o servidor local expira em cinco minutos caso o consentimento seja abandonado.
-
-Ambas as credenciais são persistidas com `safeStorage`, que delega a proteção ao chaveiro do sistema operacional. O *access token* do Google vive apenas em memória; somente o *refresh token* é persistido.
+A credencial é persistida com `safeStorage`, que delega a proteção ao chaveiro do sistema operacional.
 
 Detalhamento e alternativas descartadas em `Docs/ADR/ADR-0003-gerenciamento-credenciais-api.md`.
 
@@ -185,8 +160,7 @@ AncorAI/
 │   │   ├── janela.ts       criação da janela
 │   │   ├── ipc.ts          canais expostos ao renderer
 │   │   ├── busca/          orquestração e regras de filtro
-│   │   ├── fontes/         github.ts, drive.ts
-│   │   ├── oauth/          fluxo OAuth do Google
+│   │   ├── fontes/         github.ts
 │   │   ├── credenciais/    cofre e validação
 │   │   └── banco/          repositório NoSQL local
 │   ├── preload/

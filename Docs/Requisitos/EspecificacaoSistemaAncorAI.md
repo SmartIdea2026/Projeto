@@ -12,7 +12,7 @@ Complementa `LevantamentoRequisitosFluxo.md`, que registra o levantamento origin
 
 ## 1. Visão geral
 
-O AncorAI é uma aplicação **desktop** de uso interno que centraliza a busca de documentos distribuídos entre **GitHub** e **Google Drive**.
+O AncorAI é uma aplicação **desktop** de uso interno que centraliza a busca de documentos do projeto. O MVP integra o **GitHub**; o **Google Drive** foi retirado do escopo pela ADR-0004, e a arquitetura permanece preparada para múltiplas fontes.
 
 Resolve três problemas:
 
@@ -46,7 +46,7 @@ A aplicação executa inteiramente no cliente. Não há servidor próprio.
                     └───┬───────────┬───────────┬──┘
                         │           │           │
               ┌─────────▼──┐  ┌─────▼──────┐  ┌─▼──────────┐
-              │ GitHub API │  │ Drive API  │  │ Banco NoSQL│
+              │ GitHub API │  │ Banco NoSQL│              
               └────────────┘  └────────────┘  │   local    │
                                               └────────────┘
 ```
@@ -148,7 +148,7 @@ A distinção é importante: **alterar filtro consulta as fontes novamente**, en
 | **RF02** | Comparar o termo com o nome do arquivo, sem considerar conteúdo | Implementado |
 | **RF03** | Filtrar por tipo de documento, fonte e período | Implementado |
 | **RF04** | Determinar o tipo pela extensão do arquivo | Implementado |
-| **RF05** | Selecionar GitHub ou Google Drive como fonte | Implementado |
+| **RF05** | Selecionar GitHub ou Google Drive como fonte | Adiado (ADR-0004) |
 | **RF06** | Consultar ambas as fontes quando nenhuma for selecionada | Implementado |
 | **RF07** | Consultar exclusivamente a fonte selecionada | Implementado |
 | **RF08** | Definir período por data inicial e final | Implementado |
@@ -192,7 +192,7 @@ RF26, RF27 e RF28 são novos e não constam do levantamento original.
 
 * **RN01** — O termo é comparado com o nome do arquivo.
 * **RN02** — O conteúdo dos documentos não é considerado.
-* **RN03** — A busca pode ocorrer no GitHub, no Drive ou em ambos.
+* **RN03** — A busca ocorre em todas as fontes configuradas. No MVP há uma: o GitHub (ADR-0004).
 * **RN04** — Sem seleção de fonte, ambas são consultadas.
 * **RN05** — Com uma fonte selecionada, apenas ela é consultada.
 * **RN06** — Alterar qualquer filtro dispara nova consulta.
@@ -214,7 +214,7 @@ RF26, RF27 e RF28 são novos e não constam do levantamento original.
 ### Credenciais
 
 * **RN23** — O GitHub é configurado por token, validado antes de ser gravado.
-* **RN24** — O Google Drive exige autorização por consentimento do usuário. Uma chave isolada não alcança documentos privados.
+* **RN24** — *Adiado com a fonte (ADR-0004).* O Google Drive exigiria autorização por consentimento do usuário: uma chave isolada não alcança documentos privados, e o escopo `drive.readonly` é restrito pelo Google.
 * **RN25** — Credenciais nunca são reexibidas após gravadas.
 * **RN26** — Credencial inválida e falha de conexão são estados distintos, comunicados de forma diferente.
 
@@ -255,11 +255,11 @@ Para os documentos recentes, a lista de commits é combinada ao detalhe dos mais
 
 > **Verificado contra a API real em 27/08/2026:** a Events API **não** serve para descobrir arquivos alterados — o `payload` de um `PushEvent` não traz a lista de commits, e os eventos são majoritariamente de issues. A árvore Git resolve o inventário completo em uma chamada.
 
-### Google Drive
+### Google Drive — fora do MVP
 
-A API resolve busca e recentes em uma requisição cada, filtrando por nome, tipo e data e ordenando no próprio serviço.
+Retirado pela **ADR-0004**. A API resolveria busca e recentes em uma requisição cada, mas o acesso exige **OAuth 2.0** com escopo `drive.readonly`, classificado como restrito pelo Google: publicar o aplicativo demandaria avaliação de segurança CASA, e permanecer em modo de teste imporia nova autorização a cada 7 dias.
 
-O acesso exige **OAuth 2.0** com consentimento do usuário, por meio de fluxo de aplicativo instalado com redirecionamento em loopback e PKCE.
+A retomada depende de a instituição possuir Google Workspace, o que permitiria consentimento *Internal* sem qualquer dessas restrições.
 
 ### Controle de consumo
 
@@ -279,7 +279,7 @@ Banco NoSQL local, orientado a documentos.
   id: 'github:SmartIdea2026/Projeto:Docs/ADR/ADR-0001.md',
   nome: 'ADR-0001.md',
   extensao: 'md',
-  fonte: 'github',            // 'github' | 'drive'
+  fonte: 'github',            // união de fontes; hoje só 'github'
   dataModificacao: '2026-08-27T12:00:00Z',
   dataCriacao: undefined,     // ausente no GitHub
   link: 'https://github.com/…',
@@ -301,18 +301,18 @@ Tela única de busca, com tela de configurações acessível pelo cabeçalho.
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
-│ ⚓ AncorAI          [● GitHub conectada] [● Drive ...]   │
+│ ⚓ AncorAI                      [● GitHub conectada]     │
 │    WORKSPACE INTERNO                                     │
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
 │           Busque em todo o seu workspace                 │
-│    Documentos do GitHub e do Google Drive em um só lugar │
+│      Todos os documentos do seu GitHub em um só lugar    │
 │                                                          │
 │   ┌────────────────────────────────────────────────┐     │
 │   │ 🔍 Buscar pelo nome do documento…    [Buscar]  │     │
 │   └────────────────────────────────────────────────┘     │
 │                                                          │
-│     [Tipo: todos] [Fonte: todas] [Período] [Ordenação]   │
+│           [Tipo: todos] [Período] [Ordenação]            │
 │                                                          │
 │   N documento(s) modificado(s) recentemente              │
 │   ┌────────────────────────────────────────────────┐     │

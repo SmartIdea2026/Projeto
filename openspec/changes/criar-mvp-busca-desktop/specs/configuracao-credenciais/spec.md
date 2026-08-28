@@ -6,7 +6,9 @@
 
 O sistema SHALL disponibilizar uma tela de configurações, acessível a partir da tela principal, para que o usuário configure o acesso a cada fonte.
 
-O GitHub SHALL ser configurado por um campo de token. O Google Drive SHALL ser configurado por um campo de identificação do cliente OAuth somado a uma ação de autorização, porque uma chave de acesso isolada não alcança documentos privados naquela fonte.
+O GitHub SHALL ser configurado por um campo de token.
+
+No MVP existe uma única fonte (ADR-0004), portanto uma única credencial a configurar.
 
 #### Scenario: Token do GitHub informado pela primeira vez
 
@@ -22,7 +24,9 @@ O GitHub SHALL ser configurado por um campo de token. O Google Drive SHALL ser c
 - **THEN** o sistema apresenta o motivo da recusa
 - **AND** não persiste o token informado
 
-## Requirement: Autorização do Google Drive
+> **Adiado (ADR-0004).** O Google Drive saiu do escopo do MVP: o escopo `drive.readonly` é restrito pelo Google e exigiria avaliação de segurança CASA para ser publicado, ou conviveria com expiração de autorização a cada 7 dias. O texto abaixo descreve o alvo para quando a fonte retornar.
+
+## Requirement: Autorização do Google Drive — adiado
 
 O acesso ao Google Drive SHALL ser concedido por meio de autorização explícita do usuário, realizada fora da aplicação, e SHALL permanecer válido entre execuções sem exigir nova autorização a cada abertura.
 

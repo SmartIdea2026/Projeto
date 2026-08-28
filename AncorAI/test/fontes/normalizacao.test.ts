@@ -1,23 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * Normalização dos resultados das duas fontes (design, seção 4).
+ * Normalização dos resultados das fontes (design, seção 4).
  *
- * Verifica que GitHub e Drive, apesar de formatos de resposta muito diferentes,
- * chegam à interface com o mesmo conjunto de campos.
+ * Verifica que a resposta da API chega à interface com o conjunto de campos do
+ * formato unificado. Com a saída do Drive do MVP (ADR-0004) resta o GitHub; o
+ * valor do teste está em travar o contrato do formato, para que a segunda fonte
+ * tenha um alvo definido quando voltar.
  */
 
 vi.mock('../../src/main/banco/repositorio', () => ({
   lerCache: vi.fn(async () => null),
   gravarCache: vi.fn(async () => undefined)
 }));
-vi.mock('../../src/main/oauth/google', () => ({
-  obterAcesso: vi.fn(async () => 'acesso'),
-  esquecerAcesso: vi.fn()
-}));
-
 const github = await import('../../src/main/fontes/github');
-const drive = await import('../../src/main/fontes/drive');
 
 function resposta(corpo: unknown, cabecalhos: Record<string, string> = {}) {
   return {
@@ -102,64 +98,5 @@ describe('normalização do GitHub', () => {
     );
 
     expect(await github.buscarDocumentos('token')).toHaveLength(0);
-  });
-});
-
-describe('normalização do Google Drive', () => {
-  it('converte a resposta da API no mesmo formato', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () =>
-        resposta({
-          files: [
-            {
-              id: 'abc123',
-              name: 'relatorio.pdf',
-              mimeType: 'application/pdf',
-              createdTime: '2026-02-14T10:00:00Z',
-              modifiedTime: '2026-08-10T10:00:00Z',
-              webViewLink: 'https://drive.google.com/file/d/abc123/view'
-            }
-          ]
-        })
-      )
-    );
-
-    const documentos = await drive.buscarDocumentos('cliente', 'refresh', 'relatorio');
-
-    expect(documentos).toHaveLength(1);
-    const [documento] = documentos;
-    expect(CAMPOS.every((campo) => campo in documento!)).toBe(true);
-    expect(documento).toMatchObject({
-      id: 'drive:abc123',
-      nome: 'relatorio.pdf',
-      extensao: 'pdf',
-      fonte: 'drive',
-      dataModificacao: '2026-08-10T10:00:00Z',
-      // Diferente do GitHub, o Drive fornece data de criação.
-      dataCriacao: '2026-02-14T10:00:00Z'
-    });
-  });
-
-  it('atribui extensão aos formatos nativos do Google, que não têm uma', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () =>
-        resposta({
-          files: [
-            {
-              id: 'doc1',
-              name: 'Ata da reunião',
-              mimeType: 'application/vnd.google-apps.document',
-              modifiedTime: '2026-08-10T10:00:00Z'
-            }
-          ]
-        })
-      )
-    );
-
-    const [documento] = await drive.buscarDocumentos('cliente', 'refresh', 'ata');
-    expect(documento?.extensao).toBe('doc');
-    expect(documento?.link).toContain('drive.google.com');
   });
 });

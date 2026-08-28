@@ -4,7 +4,9 @@
 
 ## Requirement: Consulta às fontes externas
 
-O sistema SHALL consultar o GitHub e o Google Drive por meio de suas respectivas APIs, conforme os parâmetros definidos para a busca.
+O sistema SHALL consultar as fontes configuradas por meio de suas respectivas APIs, conforme os parâmetros definidos para a busca.
+
+No MVP a única fonte é o GitHub (ADR-0004).
 
 #### Scenario: Consulta com as duas fontes disponíveis
 
@@ -22,7 +24,7 @@ O sistema SHALL consultar o GitHub e o Google Drive por meio de suas respectivas
 
 ## Requirement: Escopo de varredura
 
-O sistema SHALL considerar todos os repositórios da conta GitHub configurada e todo o conteúdo acessível do Google Drive.
+O sistema SHALL considerar todos os repositórios da conta GitHub configurada.
 
 #### Scenario: Conta com múltiplos repositórios
 
@@ -45,7 +47,7 @@ A data de modificação SHALL ser o critério canônico de ordenação temporal.
 
 #### Scenario: Resultados de fontes diferentes na mesma lista
 
-- **GIVEN** que a busca retornou documentos do GitHub e do Google Drive
+- **GIVEN** que a busca retornou documentos de fontes distintas
 - **WHEN** os resultados são apresentados
 - **THEN** todos exibem o mesmo conjunto de informações
 - **AND** cada um indica visualmente sua fonte de origem

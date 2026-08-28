@@ -46,15 +46,19 @@ Os tipos aceitos SHALL ser: `.md`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.pdf`, `.e
 - **WHEN** a busca é realizada
 - **THEN** esses arquivos não aparecem entre os resultados
 
-## Requirement: Filtro por fonte
+> **Adiado (ADR-0004).** O Google Drive saiu do escopo do MVP: o escopo `drive.readonly` é restrito pelo Google e exigiria avaliação de segurança CASA para ser publicado, ou conviveria com expiração de autorização a cada 7 dias. O texto abaixo descreve o alvo para quando a fonte retornar.
+
+## Requirement: Filtro por fonte — adiado
 
 O sistema SHALL permitir selecionar GitHub, Google Drive ou ambos como fonte da busca.
+
+No MVP o seletor não é apresentado, por haver uma fonte só. O modelo de dados preserva a seleção: lista vazia significa todas as fontes.
 
 #### Scenario: Nenhuma fonte selecionada
 
 - **GIVEN** que o usuário não selecionou nenhuma fonte
 - **WHEN** a busca é realizada
-- **THEN** o sistema consulta GitHub e Google Drive
+- **THEN** o sistema consulta todas as fontes configuradas
 
 #### Scenario: Uma única fonte selecionada
 

@@ -95,11 +95,6 @@
   border-radius: 6px;
 }
 
-.etiqueta--drive {
-  background: #eef5f1;
-  border-color: #bcd8c9;
-  border-radius: 999px;
-}
 
 .cartao__meta {
   color: var(--texto-suave);

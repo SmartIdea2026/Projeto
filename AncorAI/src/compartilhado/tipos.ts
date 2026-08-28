@@ -5,7 +5,15 @@
  * token, apenas o estado da conexão (ADR-0003).
  */
 
-export type Fonte = 'github' | 'drive';
+/**
+ * Fontes de documentos disponíveis.
+ *
+ * O Google Drive foi retirado do MVP (ADR-0004): o escopo `drive.readonly` é
+ * restrito pelo Google e exigiria avaliação de segurança para ser publicado.
+ * O tipo segue sendo uma união, e toda a orquestração continua plural, para que
+ * uma segunda fonte volte a caber sem reescrever a busca.
+ */
+export type Fonte = 'github';
 
 /** Extensões aceitas, conforme a ata de 24/08/2026 e o design, seção 5. */
 export const EXTENSOES_ACEITAS = [

@@ -29,11 +29,6 @@ const api = {
   verificarCredenciais: (): Promise<StatusFonte[]> =>
     ipcRenderer.invoke(CANAIS.credenciaisVerificar),
 
-  definirClienteDrive: (clientId: string): Promise<StatusFonte[]> =>
-    ipcRenderer.invoke(CANAIS.driveDefinirCliente, clientId),
-
-  autorizarDrive: (): Promise<StatusFonte[]> => ipcRenderer.invoke(CANAIS.driveAutorizar),
-
   buscar: (filtros: Filtros): Promise<ResultadoBusca> =>
     ipcRenderer.invoke(CANAIS.buscar, filtros),
 

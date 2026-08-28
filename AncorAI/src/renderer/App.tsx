@@ -10,7 +10,7 @@ import { Cartao } from './componentes/Cartao';
 import { Filtros } from './componentes/Filtros';
 import { Configuracoes } from './telas/Configuracoes';
 
-const NOME_FONTE = { github: 'GitHub', drive: 'Google Drive' } as const;
+const NOME_FONTE = { github: 'GitHub' } as const;
 
 const ROTULO_ESTADO: Record<string, string> = {
   conectada: 'conectada',
@@ -134,14 +134,14 @@ export function App() {
           </div>
           <div>
             <div className="marca__nome">
-              Ancor<span>IA</span>
+              Ancor<span>AI</span>
             </div>
             <div className="marca__legenda">Workspace interno</div>
           </div>
         </div>
 
         <div className="conexoes">
-          {(['github', 'drive'] as const).map((fonte) => {
+          {(['github'] as const).map((fonte) => {
             const item = status.find((atual) => atual.fonte === fonte);
             const estado = item?.estado ?? 'nao-configurada';
             return (
@@ -165,7 +165,7 @@ export function App() {
 
       <main className="conteudo">
         <h1 className="titulo">Busque em todo o seu workspace</h1>
-        <p className="subtitulo">Documentos do GitHub e do Google Drive em um só lugar.</p>
+        <p className="subtitulo">Todos os documentos do seu GitHub em um só lugar.</p>
 
         <form className="busca" onSubmit={aoSubmeter} role="search">
           <span aria-hidden="true">🔍</span>
@@ -215,10 +215,9 @@ export function App() {
 
         {!carregando && !temCredencial && (
           <div className="vazio">
-            <h2>Configure o acesso às fontes</h2>
+            <h2>Configure o acesso ao GitHub</h2>
             <p>
-              O AncorAI precisa de uma credencial do GitHub ou de uma conexão com o
-              Google Drive para localizar documentos.
+              O AncorAI precisa de um token do GitHub para localizar documentos.
             </p>
             <button
               type="button"

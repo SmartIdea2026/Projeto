@@ -12,7 +12,9 @@ Este documento reúne os padrões vigentes do repositório para que qualquer age
 
 ## 2. Contexto do projeto
 
-O **AncorAI** (também chamado Âncora) é uma aplicação **desktop** que centraliza a busca de documentos espalhados entre **GitHub** e **Google Drive**. Serve para contextualizar novos integrantes, localizar documentos de processo e acompanhar o que os stakeholders produziram recentemente.
+O **AncorAI** (também chamado Âncora) é uma aplicação **desktop** que centraliza a busca de documentos do projeto. Serve para contextualizar novos integrantes, localizar documentos de processo e acompanhar o que os stakeholders produziram recentemente.
+
+O MVP integra o **GitHub**. O **Google Drive** estava no escopo e foi retirado pela ADR-0004 — a arquitetura permanece multi-fonte, então trate `Fonte` como uma união que voltará a ter mais de um membro.
 
 O código da aplicação fica em `AncorAI/`. A documentação fica em `Docs/`.
 
@@ -51,6 +53,7 @@ Processo em `Docs/ADR/TemplatesADR/ProcessoRegistroDecisoesArquitetura.md`; temp
 * Exige ADR toda decisão que altere tecnologia relevante, estrutura do sistema, integração, segurança, persistência ou deploy.
 * Ao substituir uma decisão vigente, **crie uma nova ADR** referenciando a anterior — nunca reescreva o histórico. Uma ADR ainda `Proposto` e não mergeada pode ser corrigida no lugar.
 * Cite nominalmente as seções dos documentos que a decisão supera.
+* Decisões vigentes: **ADR-0001** desktop com Electron; **ADR-0002** persistência NoSQL local; **ADR-0003** credenciais pela interface; **ADR-0004** remoção do Google Drive do MVP.
 
 ### ADRs vigentes
 
@@ -89,7 +92,7 @@ Proposal → Specs → Design → Tasks → Implementação → Archive
 │ Credenciais, rede, cache, banco NoSQL   │
 └───┬──────────────┬──────────────┬───────┘
     ▼              ▼              ▼
-GitHub API   Google Drive API   Banco local
+    GitHub API              Banco local
 ```
 
 ### Regras de segurança
@@ -102,8 +105,8 @@ GitHub API   Google Drive API   Banco local
 ### Integrações
 
 * **GitHub:** o inventário de documentos vem da **árvore Git** (`git/trees?recursive=1`), que devolve o repositório inteiro em uma requisição. A Events API **não serve** para descobrir arquivos alterados — o `payload` de `PushEvent` não traz a lista de commits. Use cache revalidado por `ETag` e trate HTTP 403 e 429.
-* **Google Drive:** exige **OAuth 2.0**. Uma chave de API autentica o projeto, não o usuário, e não alcança documentos privados.
-* Falha de uma fonte **nunca** impede a apresentação dos resultados da outra.
+* **Google Drive:** fora do MVP (ADR-0004). Exigiria **OAuth 2.0** — uma chave de API autentica o projeto, não o usuário — e o escopo `drive.readonly` é restrito pelo Google.
+* Falha de uma fonte **nunca** impede a apresentação dos resultados das demais.
 
 ### Persistência
 

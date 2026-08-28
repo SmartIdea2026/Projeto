@@ -1,4 +1,4 @@
-import { EXTENSOES_ACEITAS, type Filtros, type Fonte, type Ordenacao } from '../../compartilhado/tipos';
+import { EXTENSOES_ACEITAS, type Filtros, type Ordenacao } from '../../compartilhado/tipos';
 
 interface Props {
   filtros: Filtros;
@@ -6,11 +6,11 @@ interface Props {
   erroPeriodo: string | null;
 }
 
-const FONTES: Array<{ valor: Fonte; rotulo: string }> = [
-  { valor: 'github', rotulo: 'GitHub' },
-  { valor: 'drive', rotulo: 'Google Drive' }
-];
-
+/*
+  O seletor de fonte saiu junto com o Drive (ADR-0004): com uma fonte só, ele
+  seria um menu de opção única. `filtros.fontes` continua existindo e vazio
+  significa todas as fontes, então o controle volta quando houver o que escolher.
+*/
 const ORDENACOES: Array<{ valor: Ordenacao; rotulo: string }> = [
   { valor: 'data-desc', rotulo: 'Data (decrescente)' },
   { valor: 'data-asc', rotulo: 'Data (crescente)' },
@@ -20,7 +20,6 @@ const ORDENACOES: Array<{ valor: Ordenacao; rotulo: string }> = [
 
 export function Filtros({ filtros, aoAlterar, erroPeriodo }: Props) {
   const tipoAtivo = filtros.extensoes.length > 0;
-  const fonteAtiva = filtros.fontes.length > 0;
   const periodoAtivo = Boolean(filtros.dataInicial || filtros.dataFinal);
 
   return (
@@ -41,26 +40,6 @@ export function Filtros({ filtros, aoAlterar, erroPeriodo }: Props) {
             {EXTENSOES_ACEITAS.map((extensao) => (
               <option key={extensao} value={extensao}>
                 .{extensao}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className={`filtro ${fonteAtiva ? 'filtro--ativo' : ''}`}>
-          <span>Fonte:</span>
-          <select
-            value={filtros.fontes[0] ?? ''}
-            onChange={(evento) =>
-              aoAlterar({
-                ...filtros,
-                fontes: evento.target.value ? [evento.target.value as Fonte] : []
-              })
-            }
-          >
-            <option value="">todas</option>
-            {FONTES.map((fonte) => (
-              <option key={fonte.valor} value={fonte.valor}>
-                {fonte.rotulo}
               </option>
             ))}
           </select>

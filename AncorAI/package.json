@@ -1,7 +1,7 @@
 {
   "name": "ancorai",
   "version": "0.1.0",
-  "description": "Busca unificada de documentos do GitHub e do Google Drive",
+  "description": "Busca unificada de documentos do GitHub",
   "main": "./out/main/index.js",
   "author": "SmartIdea2026",
   "private": true,

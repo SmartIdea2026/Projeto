@@ -17,12 +17,10 @@ const DESCRICAO_ESTADO: Record<string, string> = {
 
 export function Configuracoes({ status, aoFechar, aoAtualizarStatus }: Props) {
   const [token, setToken] = useState('');
-  const [clientId, setClientId] = useState('');
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [erro, setErro] = useState<Record<string, string>>({});
 
   const github = status.find((item) => item.fonte === 'github');
-  const drive = status.find((item) => item.fonte === 'drive');
 
   async function executar(chave: string, acao: () => Promise<StatusFonte[]>) {
     setOcupado(chave);
@@ -103,71 +101,6 @@ export function Configuracoes({ status, aoFechar, aoAtualizarStatus }: Props) {
                 }
               >
                 Remover
-              </button>
-            )}
-          </div>
-        </section>
-
-        <section className="campo">
-          <div className="campo__rotulo">
-            <span>Google Drive</span>
-            <span>{DESCRICAO_ESTADO[drive?.estado ?? 'nao-configurada']}</span>
-          </div>
-          {/*
-            O Drive não usa campo de chave: uma chave de API autentica o projeto,
-            não o usuário, e não lista arquivos privados. O acesso exige
-            consentimento via OAuth (ADR-0003).
-          */}
-          <p className="campo__ajuda">
-            {drive?.estado === 'conectada'
-              ? `Conectado como ${drive.conta}.`
-              : 'Crie um cliente OAuth do tipo "Desktop app" no Google Cloud, informe o Client ID e autorize o acesso.'}
-          </p>
-          <label>
-            <span className="apenas-leitor">Client ID do Google</span>
-            <input
-              type="text"
-              value={clientId}
-              placeholder="000000000000-xxxxxxxx.apps.googleusercontent.com"
-              autoComplete="off"
-              onChange={(evento) => setClientId(evento.target.value)}
-            />
-          </label>
-          {erro['drive'] && (
-            <p className="erro-campo" role="alert">
-              {erro['drive']}
-            </p>
-          )}
-          <div className="campo__acoes">
-            <button
-              type="button"
-              className="botao botao--secundario"
-              disabled={!clientId.trim() || ocupado === 'drive'}
-              onClick={() =>
-                void executar('drive', () =>
-                  window.ancorai.definirClienteDrive(clientId.trim())
-                )
-              }
-            >
-              Salvar Client ID
-            </button>
-            <button
-              type="button"
-              className="botao botao--primario"
-              disabled={ocupado === 'drive'}
-              onClick={() => void executar('drive', () => window.ancorai.autorizarDrive())}
-            >
-              {ocupado === 'drive' ? 'Aguardando autorização…' : 'Conectar ao Drive'}
-            </button>
-            {drive?.estado === 'conectada' && (
-              <button
-                type="button"
-                className="botao botao--secundario"
-                onClick={() =>
-                  void executar('drive', () => window.ancorai.removerCredencial('drive'))
-                }
-              >
-                Desconectar
               </button>
             )}
           </div>

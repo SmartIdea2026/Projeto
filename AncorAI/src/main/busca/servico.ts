@@ -8,32 +8,22 @@ import type {
 } from '../../compartilhado/tipos';
 import * as cofre from '../credenciais/cofre';
 import * as github from '../fontes/github';
-import * as drive from '../fontes/drive';
-import { obterAcesso, esquecerAcesso } from '../oauth/google';
 import { ErroFonte } from '../fontes/comum';
 import { aplicarFiltros, fonteSelecionada, ordenar, unificar } from './regras';
-import { gravarValidacao, invalidarValidacao, lerValidacao } from '../credenciais/validacao';
+import { gravarValidacao, lerValidacao } from '../credenciais/validacao';
 import { gravarCache, lerCache } from '../banco/repositorio';
 
 /**
- * Orquestra as duas fontes.
+ * Orquestra as fontes configuradas.
  *
  * A regra central é que a falha de uma fonte nunca impede a apresentação dos
- * resultados da outra (CB05): cada fonte é consultada de forma independente e
+ * resultados das demais (CB05): cada fonte é consultada de forma independente e
  * as falhas são coletadas para exibição, em vez de interromper a busca.
+ *
+ * O MVP tem só o GitHub (ADR-0004), mas a orquestração continua plural: a
+ * coleta percorre fontes, isola falhas por fonte e unifica o resultado. Uma
+ * segunda fonte volta a caber sem reescrever nada disto.
  */
-
-interface CredenciaisDrive {
-  clientId: string;
-  refreshToken: string;
-}
-
-function credenciaisDrive(): CredenciaisDrive | null {
-  const clientId = cofre.obter('drive.clientId');
-  const refreshToken = cofre.obter('drive.refreshToken');
-  if (!clientId || !refreshToken) return null;
-  return { clientId, refreshToken };
-}
 
 function mensagemDe(erro: unknown): string {
   if (erro instanceof ErroFonte) return erro.message;
@@ -43,8 +33,7 @@ function mensagemDe(erro: unknown): string {
 /** Executa as consultas às fontes selecionadas, isolando as falhas. */
 async function coletar(
   filtros: Filtros,
-  doGithub: (token: string) => Promise<Documento[]>,
-  doDrive: (credenciais: CredenciaisDrive) => Promise<Documento[]>
+  doGithub: (token: string) => Promise<Documento[]>
 ): Promise<ResultadoBusca> {
   const documentos: Documento[] = [];
   const falhas: ResultadoBusca['falhas'] = [];
@@ -71,38 +60,12 @@ async function coletar(
     }
   }
 
-  if (fonteSelecionada(filtros, 'drive')) {
-    const credenciais = credenciaisDrive();
-    if (credenciais) {
-      tarefas.push(
-        doDrive(credenciais)
-          .then((encontrados) => {
-            documentos.push(...encontrados);
-          })
-          .catch((erro) => {
-            falhas.push({
-              fonte: 'drive',
-              mensagem: mensagemDe(erro),
-              limiteExcedido: erro instanceof ErroFonte && erro.limiteExcedido
-            });
-          })
-      );
-    } else {
-      falhas.push({ fonte: 'drive', mensagem: 'O Google Drive não está conectado.' });
-    }
-  }
-
   await Promise.all(tarefas);
   return { documentos: unificar(documentos), falhas, doCache: false };
 }
 
 export async function buscar(filtros: Filtros): Promise<ResultadoBusca> {
-  const bruto = await coletar(
-    filtros,
-    (token) => github.buscarDocumentos(token),
-    ({ clientId, refreshToken }) =>
-      drive.buscarDocumentos(clientId, refreshToken, filtros.termo)
-  );
+  const bruto = await coletar(filtros, (token) => github.buscarDocumentos(token));
 
   return {
     ...bruto,
@@ -140,11 +103,7 @@ export async function recentesDoCache(filtros: Filtros): Promise<ResultadoBusca 
 }
 
 export async function recentes(filtros: Filtros): Promise<ResultadoBusca> {
-  const bruto = await coletar(
-    filtros,
-    (token) => github.documentosRecentes(token),
-    ({ clientId, refreshToken }) => drive.documentosRecentes(clientId, refreshToken)
-  );
+  const bruto = await coletar(filtros, (token) => github.documentosRecentes(token));
 
   // Só substitui o resultado guardado quando a consulta trouxe algo: uma falha
   // de rede não deve apagar a lista que o usuário já via.
@@ -186,26 +145,12 @@ async function statusDaFonte(
 
 export async function status(reaproveitar = true): Promise<StatusFonte[]> {
   const token = cofre.obter('github.token');
-  const credenciais = credenciaisDrive();
 
   return Promise.all([
-    statusDaFonte('github', token, () => github.verificarCredencial(token!), reaproveitar),
-    statusDaFonte(
-      'drive',
-      credenciais && `${credenciais.clientId}:${credenciais.refreshToken}`,
-      () => drive.verificarCredencial(credenciais!.clientId, credenciais!.refreshToken),
-      reaproveitar
-    )
+    statusDaFonte('github', token, () => github.verificarCredencial(token!), reaproveitar)
   ]);
 }
 
 export async function validarTokenGithub(token: string): Promise<string> {
   return github.verificarCredencial(token);
-}
-
-export async function validarDrive(clientId: string, refreshToken: string): Promise<string> {
-  esquecerAcesso();
-  await invalidarValidacao('drive');
-  await obterAcesso(clientId, refreshToken);
-  return drive.verificarCredencial(clientId, refreshToken);
 }

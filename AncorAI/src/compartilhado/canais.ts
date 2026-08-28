@@ -11,15 +11,10 @@ export const CANAIS = {
   credenciaisDefinir: 'credenciais:definir',
   /** Remove a credencial de uma fonte. */
   credenciaisRemover: 'credenciais:remover',
-  /** Estado das duas fontes. Nunca inclui o valor das credenciais. */
+  /** Estado das fontes. Nunca inclui o valor das credenciais. */
   credenciaisStatus: 'credenciais:status',
   /** Revalida as credenciais contra as APIs, ignorando o cache de validação. */
   credenciaisVerificar: 'credenciais:verificar',
-
-  /** Inicia o fluxo OAuth do Google Drive e aguarda o consentimento. */
-  driveAutorizar: 'drive:autorizar',
-  /** Grava o Client ID do cliente OAuth do tipo Desktop app. */
-  driveDefinirCliente: 'drive:definir-cliente',
 
   /** Executa uma busca com os filtros informados. */
   buscar: 'busca:executar',

@@ -59,10 +59,10 @@ describe('registro de documentos acessados', () => {
   });
 
   it('ordena do acesso mais recente para o mais antigo', async () => {
-    await registrarAcesso({ ...documento, id: 'drive:2', nome: 'outro.pdf', fonte: 'drive' });
+    await registrarAcesso({ ...documento, id: 'github:2', nome: 'outro.pdf' });
     const acessados = await listarAcessados();
 
-    expect(acessados[0]?.id).toBe('drive:2');
+    expect(acessados[0]?.id).toBe('github:2');
   });
 });
 

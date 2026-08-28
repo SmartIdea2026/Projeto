@@ -5,7 +5,6 @@ import { FILTROS_PADRAO } from '../compartilhado/tipos';
 import { listarAcessados, registrarAcesso } from './banco/repositorio';
 import * as cofre from './credenciais/cofre';
 import * as servico from './busca/servico';
-import { autorizar, esquecerAcesso } from './oauth/google';
 
 /**
  * Registro dos canais IPC.
@@ -17,27 +16,17 @@ import { autorizar, esquecerAcesso } from './oauth/google';
 export function registrarCanais(): void {
   ipcMain.handle(
     CANAIS.credenciaisDefinir,
-    async (_evento, fonte: Fonte, valor: string) => {
-      if (fonte === 'github') {
-        // Valida antes de gravar: evita persistir uma credencial que já se sabe
-        // inválida e permite devolver o erro imediatamente ao usuário.
-        await servico.validarTokenGithub(valor);
-        cofre.definir('github.token', valor);
-      } else {
-        cofre.definir('drive.clientId', valor);
-      }
+    async (_evento, _fonte: Fonte, valor: string) => {
+      // Valida antes de gravar: evita persistir uma credencial que já se sabe
+      // inválida e permite devolver o erro imediatamente ao usuário.
+      await servico.validarTokenGithub(valor);
+      cofre.definir('github.token', valor);
       return servico.status();
     }
   );
 
-  ipcMain.handle(CANAIS.credenciaisRemover, async (_evento, fonte: Fonte) => {
-    if (fonte === 'github') {
-      cofre.remover('github.token');
-    } else {
-      cofre.remover('drive.clientId');
-      cofre.remover('drive.refreshToken');
-      esquecerAcesso();
-    }
+  ipcMain.handle(CANAIS.credenciaisRemover, async (_evento, _fonte: Fonte) => {
+    cofre.remover('github.token');
     return servico.status();
   });
 
@@ -45,22 +34,6 @@ export function registrarCanais(): void {
 
   // A verificação manual ignora o resultado guardado e consulta as APIs.
   ipcMain.handle(CANAIS.credenciaisVerificar, () => servico.status(false));
-
-  ipcMain.handle(CANAIS.driveDefinirCliente, async (_evento, clientId: string) => {
-    cofre.definir('drive.clientId', clientId);
-    return servico.status();
-  });
-
-  ipcMain.handle(CANAIS.driveAutorizar, async () => {
-    const clientId = cofre.obter('drive.clientId');
-    if (!clientId) {
-      throw new Error('Informe o Client ID do Google antes de conectar.');
-    }
-    const refreshToken = await autorizar(clientId);
-    cofre.definir('drive.refreshToken', refreshToken);
-    await servico.validarDrive(clientId, refreshToken);
-    return servico.status();
-  });
 
   ipcMain.handle(CANAIS.buscar, (_evento, filtros: Filtros) =>
     servico.buscar({ ...FILTROS_PADRAO, ...filtros })
