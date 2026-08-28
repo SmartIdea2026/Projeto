@@ -15,6 +15,20 @@ A restrição de versão vem do Vite e do electron-vite. O `engine-strict` está
 
 Confira sua versão com `node --version`.
 
+## Abrir pelo terminal
+
+Há um atalho para não rodar os comandos um a um. Da pasta `AncorAI`:
+
+```bash
+./iniciar.sh
+```
+
+Ele confere a versão do Node, instala as dependências quando faltam ou quando o `package-lock.json` mudou, e abre a aplicação. Rodar de novo pula a instalação. `./iniciar.sh build` compila e abre a versão compilada.
+
+O script também limpa a variável `ELECTRON_RUN_AS_NODE` para esta execução. Alguns terminais embutidos em editores a definem, e com ela o Electron roda como Node puro: o comando termina sem erro e nenhuma janela aparece.
+
+O script não instala nada no sistema e não cria atalhos — é só um atalho de terminal. É `bash`, então funciona no Linux e no macOS; no Windows, use o Git Bash ou os comandos abaixo.
+
 ## Instalação
 
 ```bash
