@@ -1,0 +1,126 @@
+/* Lista de resultados e cartões de documento. */
+
+/* ---------- Resultados ---------- */
+
+.resumo-lista {
+  color: var(--texto-suave);
+  font-size: 14px;
+  margin: 26px 0 14px;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.cartao {
+  display: flex;
+  gap: 16px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 18px 20px;
+  box-shadow: var(--sombra);
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.cartao:hover {
+  border-color: var(--borda-forte);
+  box-shadow: var(--sombra-alta);
+}
+
+.cartao__icone {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #eef5f1;
+  color: var(--verde-escuro);
+  display: grid;
+  place-items: center;
+  flex: none;
+  font-size: 18px;
+}
+
+.cartao__corpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.cartao__titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.cartao__nome {
+  font-weight: 600;
+  font-size: 16px;
+  word-break: break-word;
+}
+
+.etiqueta {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: #edeae0;
+  color: var(--texto-suave);
+  border: 1px solid var(--borda);
+}
+
+/*
+ * Fonte identificável sem depender de cor: cada uma tem ícone e rótulo
+ * textual próprios, e formatos de borda distintos.
+ */
+.etiqueta--fonte {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--texto);
+}
+
+.etiqueta--github {
+  background: #eceff0;
+  border-color: #c9d1d4;
+  border-radius: 6px;
+}
+
+
+.cartao__meta {
+  color: var(--texto-suave);
+  font-size: 13px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.cartao__acoes {
+  margin-top: 12px;
+}
+
+.link-fonte {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  padding: 7px 14px;
+  color: var(--verde-escuro);
+  font-size: 13px;
+}
+
+.link-fonte:hover {
+  border-color: var(--verde-medio);
+  background: #eef5f1;
+}

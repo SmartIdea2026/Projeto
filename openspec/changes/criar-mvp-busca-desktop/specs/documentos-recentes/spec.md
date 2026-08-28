@@ -12,7 +12,7 @@ A rotina SHALL ser executada somente para as fontes cuja credencial for válida.
 
 - **GIVEN** que as credenciais das duas fontes são válidas
 - **WHEN** o sistema é iniciado
-- **THEN** o sistema apresenta os documentos recentes do GitHub e do Google Drive
+- **THEN** o sistema apresenta os documentos recentes de cada fonte configurada
 - **AND** cada documento indica sua fonte de origem
 
 #### Scenario: Apenas uma fonte válida

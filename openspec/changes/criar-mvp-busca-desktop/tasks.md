@@ -4,7 +4,7 @@
 
 ## 1. Estrutura do projeto
 
-- [x] Inicializar o projeto em `AncorIA/` com Electron, React, TypeScript e Vite
+- [x] Inicializar o projeto em `AncorAI/` com Electron, React, TypeScript e Vite
 - [x] Configurar a separação entre processos *main*, *preload* e *renderer*
 - [x] Configurar o `contextBridge` expondo apenas a API tipada de IPC ao renderer
 - [x] Configurar Vitest e React Testing Library
@@ -29,17 +29,20 @@
 - [x] Tratar respostas de limite de requisição (HTTP 403 e 429)
 - [x] Limitar a concorrência das requisições por repositório
 
-## 4. Integração com o Google Drive
+## 4. Integração com o Google Drive — removida do MVP (ADR-0004)
 
-- [x] Implementar o fluxo OAuth de aplicativo instalado com PKCE e redirecionamento em loopback
-- [x] Implementar a verificação do parâmetro de estado no retorno da autorização
-- [x] Implementar a expiração do servidor local quando o consentimento é abandonado
-- [x] Implementar a renovação do acesso a partir do token de renovação
-- [x] Manter o token de acesso apenas em memória, persistindo somente o de renovação
-- [x] Implementar a busca de arquivos por nome e tipo
-- [x] Implementar a obtenção dos arquivos modificados recentemente
-- [x] Tratar erros de cota e de credencial
-- [x] Implementar cache dos resultados
+As tarefas abaixo foram concluídas e depois retiradas do escopo, sem chegarem a ser verificadas contra uma conta real. Ficam registradas porque descrevem o alvo da retomada; o código está no commit `0d6e6e8`.
+
+
+- [~] Implementar o fluxo OAuth de aplicativo instalado com PKCE e redirecionamento em loopback
+- [~] Implementar a verificação do parâmetro de estado no retorno da autorização
+- [~] Implementar a expiração do servidor local quando o consentimento é abandonado
+- [~] Implementar a renovação do acesso a partir do token de renovação
+- [~] Manter o token de acesso apenas em memória, persistindo somente o de renovação
+- [~] Implementar a busca de arquivos por nome e tipo
+- [~] Implementar a obtenção dos arquivos modificados recentemente
+- [~] Tratar erros de cota e de credencial
+- [~] Implementar cache dos resultados
 
 ## 5. Normalização e regras de busca
 

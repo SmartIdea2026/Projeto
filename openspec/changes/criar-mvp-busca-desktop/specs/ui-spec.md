@@ -4,7 +4,7 @@
 
 ## 1. Contexto da Interface
 
-* **Objetivo da Tela:** permitir que o usuário localize documentos do GitHub e do Google Drive a partir do nome, com filtros e ordenação, e visualize os documentos modificados recentemente sem precisar buscar.
+* **Objetivo da Tela:** permitir que o usuário localize documentos das fontes configuradas a partir do nome, com filtros e ordenação, e visualize os documentos modificados recentemente sem precisar buscar. No MVP a fonte é o GitHub (ADR-0004).
 * **Gatilho de Acesso:** abertura da aplicação. A tela de busca é a tela inicial do sistema.
 
 ## 2. ADDED Requirements (Adicionados)
@@ -13,13 +13,13 @@
 * **Indicadores de conexão:** uma etiqueta por fonte, com ponto colorido e rótulo. Três estados: *conectada*, *credencial inválida* e *não configurada*. Acionar a etiqueta abre a tela de configurações.
 * **Título e subtítulo:** título centralizado "Busque em todo o seu workspace". O subtítulo NÃO menciona resumos por IA.
 * **Barra de busca:** campo centralizado em formato pílula, com ícone de lupa à esquerda, ocupando a largura principal da tela. Recebe o foco automaticamente na abertura.
-* **Filtros:** três controles abaixo da barra — tipo de documento, fonte e período, e ordenação. Cada um exibe o valor selecionado no próprio rótulo.
+* **Filtros:** controles abaixo da barra — tipo de documento, período e ordenação. Cada um exibe o valor selecionado no próprio rótulo. O seletor de fonte só é apresentado quando houver mais de uma fonte: com uma só, seria um menu de opção única.
 * **Contador de resultados:** texto discreto acima da lista, informando a quantidade de itens apresentados.
 * **Cartão de resultado:** ocupa a largura total da área de conteúdo. Contém ícone do tipo de arquivo, nome do documento, etiqueta de extensão, etiqueta de fonte, data de modificação e link de acesso à fonte original.
 * **Lista de documentos recentes:** ocupa a área de resultados quando o campo de busca está vazio, precedida de um título que a identifica como documentos recentes.
-* **Tela de configurações:** uma seção por fonte, cada uma com indicação do estado da conexão. As seções não são simétricas, porque as fontes não autenticam da mesma forma:
+* **Tela de configurações:** uma seção por fonte, cada uma com indicação do estado da conexão.
   * **GitHub:** campo de token mascarado, com ações de salvar e remover. O valor nunca é reexibido depois de salvo.
-  * **Google Drive:** campo para o Client ID do cliente OAuth do tipo *Desktop app*, mais um botão de conexão que abre o consentimento no navegador. Enquanto aguarda o retorno, o botão apresenta estado de espera. Uma chave isolada não alcança documentos privados nessa fonte, por isso não existe campo de "chave do Drive".
+  * O Google Drive tinha uma seção assimétrica, com Client ID e botão de consentimento. Saiu com a fonte (ADR-0004).
 
 ### Estados visuais
 
@@ -37,8 +37,8 @@ Cada estado abaixo é obrigatório e não é inferido a partir do protótipo:
 ## 3. MODIFIED Requirements (Modificados)
 
 * **Área de resultados:** deixa de dividir espaço com o painel lateral e passa a ocupar a largura total da janela.
-* **Subtítulo da tela:** o texto "Documentos do GitHub e do Google Drive em um só lugar, com resumos gerados por IA" perde a menção a resumos.
-* **Etiqueta de fonte:** GitHub e Google Drive deixam de ser distinguidos apenas por cor. A distinção passa a contar com ícone e rótulo textual legível, não dependendo exclusivamente de cor.
+* **Subtítulo da tela:** o texto "Documentos do GitHub e do Google Drive em um só lugar, com resumos gerados por IA" perde a menção a resumos e, com a saída do Drive (ADR-0004), passa a citar apenas o GitHub.
+* **Etiqueta de fonte:** fontes deixam de ser distinguidas apenas por cor. A distinção conta com ícone e rótulo textual legível, não dependendo exclusivamente de cor. A etiqueta permanece no cartão com uma fonte só, porque indica onde o documento vive e mantém o contrato pronto para a segunda fonte.
 * **Data exibida no cartão:** a data de modificação passa a ser a informação principal. A data de criação é exibida apenas quando a fonte a fornece.
 
 ## 4. REMOVED Requirements (Removidos)

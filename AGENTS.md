@@ -12,9 +12,11 @@ Este documento reúne os padrões vigentes do repositório para que qualquer age
 
 ## 2. Contexto do projeto
 
-O **AncorIA** (também chamado Âncora) é uma aplicação **desktop** que centraliza a busca de documentos espalhados entre **GitHub** e **Google Drive**. Serve para contextualizar novos integrantes, localizar documentos de processo e acompanhar o que os stakeholders produziram recentemente.
+O **AncorAI** (também chamado Âncora) é uma aplicação **desktop** que centraliza a busca de documentos do projeto. Serve para contextualizar novos integrantes, localizar documentos de processo e acompanhar o que os stakeholders produziram recentemente.
 
-O código da aplicação fica em `AncorIA/`. A documentação fica em `Docs/`.
+O MVP integra o **GitHub**. O **Google Drive** estava no escopo e foi retirado pela ADR-0004 — a arquitetura permanece multi-fonte, então trate `Fonte` como uma união que voltará a ter mais de um membro.
+
+O código da aplicação fica em `AncorAI/`. A documentação fica em `Docs/`.
 
 > **Atenção:** `Docs/Pesquisas/TecnologiasDesenvolvimentoAncorAI.md` descreve uma arquitetura **Web com Firebase** que **não é mais vigente**. As seções 2.3, 4.5, 12, 13, 17 e 21 foram superadas pelas ADRs 0001, 0002 e 0003. Consulte as ADRs antes daquele documento.
 
@@ -51,6 +53,7 @@ Processo em `Docs/ADR/TemplatesADR/ProcessoRegistroDecisoesArquitetura.md`; temp
 * Exige ADR toda decisão que altere tecnologia relevante, estrutura do sistema, integração, segurança, persistência ou deploy.
 * Ao substituir uma decisão vigente, **crie uma nova ADR** referenciando a anterior — nunca reescreva o histórico. Uma ADR ainda `Proposto` e não mergeada pode ser corrigida no lugar.
 * Cite nominalmente as seções dos documentos que a decisão supera.
+* Decisões vigentes: **ADR-0001** desktop com Electron; **ADR-0002** persistência NoSQL local; **ADR-0003** credenciais pela interface; **ADR-0004** remoção do Google Drive do MVP.
 
 ### ADRs vigentes
 
@@ -89,21 +92,21 @@ Proposal → Specs → Design → Tasks → Implementação → Archive
 │ Credenciais, rede, cache, banco NoSQL   │
 └───┬──────────────┬──────────────┬───────┘
     ▼              ▼              ▼
-GitHub API   Google Drive API   Banco local
+    GitHub API              Banco local
 ```
 
 ### Regras de segurança
 
 * Toda chamada de rede e todo acesso a segredo ocorrem no processo **main**.
-* Nenhum canal IPC devolve o valor de uma credencial — apenas o **estado** da conexão. Há teste automatizado garantindo isso em `AncorIA/test/fronteira-credenciais.test.ts`.
+* Nenhum canal IPC devolve o valor de uma credencial — apenas o **estado** da conexão. Há teste automatizado garantindo isso em `AncorAI/test/seguranca/fronteira-credenciais.test.ts`.
 * Credenciais são cifradas com `safeStorage`, que usa o chaveiro do sistema operacional. Se a cifragem não estiver disponível, **falhe de forma explícita** em vez de gravar em texto plano.
 * `contextIsolation: true` e `nodeIntegration: false` são obrigatórios.
 
 ### Integrações
 
 * **GitHub:** o inventário de documentos vem da **árvore Git** (`git/trees?recursive=1`), que devolve o repositório inteiro em uma requisição. A Events API **não serve** para descobrir arquivos alterados — o `payload` de `PushEvent` não traz a lista de commits. Use cache revalidado por `ETag` e trate HTTP 403 e 429.
-* **Google Drive:** exige **OAuth 2.0**. Uma chave de API autentica o projeto, não o usuário, e não alcança documentos privados.
-* Falha de uma fonte **nunca** impede a apresentação dos resultados da outra.
+* **Google Drive:** fora do MVP (ADR-0004). Exigiria **OAuth 2.0** — uma chave de API autentica o projeto, não o usuário — e o escopo `drive.readonly` é restrito pelo Google.
+* Falha de uma fonte **nunca** impede a apresentação dos resultados das demais.
 
 ### Persistência
 
@@ -114,7 +117,7 @@ Banco NoSQL orientado a documentos, no processo main, isolado em um único módu
 * **Idioma:** identificadores, comentários e mensagens de interface em **português**. Termos técnicos consagrados permanecem em inglês.
 * **TypeScript estrito**, com `noUncheckedIndexedAccess` ativo.
 * **Comentários explicam o porquê**, não o quê. Comente decisões não óbvias e armadilhas; não narre o que o código já diz.
-* **Testes** com Vitest, em `AncorIA/test/`. Cubra os cenários de erro, não apenas o caminho feliz.
+* **Testes** com Vitest, em `AncorAI/test/`. Cubra os cenários de erro, não apenas o caminho feliz.
 * Antes de concluir: `npx tsc --noEmit` nos dois projetos, `npx vitest run` e `npx electron-vite build`.
 
 ## 8. Organização do repositório
@@ -146,4 +149,4 @@ Não implemente sem decisão da equipe:
 | OpenSpec | `Docs/Organizacao/Processo/OpenSpec/ProcessoArquiteturaOpenSpec.md` |
 | UX no OpenSpec | `Docs/Organizacao/Processo/OpenSpec/ProcessoRegistroUX.md` |
 | Requisitos | `Docs/Requisitos/LevantamentoRequisitosFluxo.md` |
-| Especificação vigente | `Docs/Requisitos/EspecificacaoSistemaAncorIA.md` |
+| Especificação vigente | `Docs/Requisitos/EspecificacaoSistemaAncorAI.md` |

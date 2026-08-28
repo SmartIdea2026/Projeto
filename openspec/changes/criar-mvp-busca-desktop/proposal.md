@@ -14,14 +14,16 @@ O conhecimento do projeto está distribuído entre o GitHub e o Google Drive, se
 
 ## 2. Objetivo
 
-Entregar um MVP funcional de aplicação **desktop** que consulte GitHub e Google Drive via API e permita localizar documentos por nome, com filtros e ordenação, apresentando também os documentos alterados recentemente já na abertura do sistema.
+Entregar um MVP funcional de aplicação **desktop** que consulte o GitHub via API e permita localizar documentos por nome, com filtros e ordenação, apresentando também os documentos alterados recentemente já na abertura do sistema.
+
+O Google Drive integrava o escopo original e foi retirado do MVP pela ADR-0004: o escopo `drive.readonly` é restrito pelo Google e exigiria avaliação de segurança CASA para publicação, ou conviveria com expiração da autorização a cada 7 dias. A arquitetura permanece multi-fonte, e a retomada depende de a instituição dispor de Google Workspace.
 
 ## 3. O que será alterado
 
 Esta é a primeira mudança de implementação do projeto — não há código existente. A mudança cria:
 
 - a aplicação desktop (Electron) e sua tela principal de busca;
-- a camada de integração com GitHub API e Google Drive API;
+- a camada de integração com a GitHub API, construída para receber outras fontes;
 - a configuração de credenciais pela interface, com persistência segura;
 - a rotina de inicialização que lista documentos recentes;
 - a persistência local de links de documentos acessados.
@@ -66,6 +68,5 @@ O documento `Docs/Pesquisas/TecnologiasDesenvolvimentoAncorAI.md` permanece desc
 ### Dependências externas
 
 - GitHub REST API — Personal Access Token com escopo de leitura.
-- Google Drive API — chave de acesso.
 
 Nenhum serviço pago é necessário. A remoção do Cloud Functions elimina a exigência do plano Blaze apontada na pesquisa tecnológica.

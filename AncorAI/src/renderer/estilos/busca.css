@@ -1,0 +1,126 @@
+/* Barra de busca e filtros. */
+
+/* ---------- Área de busca ---------- */
+
+.conteudo {
+  flex: 1;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 28px 64px;
+}
+
+.titulo {
+  text-align: center;
+  font-size: 42px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 12px 0 10px;
+}
+
+.subtitulo {
+  text-align: center;
+  color: var(--texto-suave);
+  margin: 0 0 32px;
+}
+
+.busca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  padding: 6px 8px 6px 22px;
+  box-shadow: var(--sombra);
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.busca:focus-within {
+  border-color: var(--verde-medio);
+  box-shadow: var(--sombra-alta);
+}
+
+.busca__campo {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: var(--texto);
+  padding: 14px 0;
+}
+
+.busca__campo::placeholder {
+  color: var(--texto-suave);
+}
+
+.busca__acao {
+  border: none;
+  background: var(--verde-escuro);
+  color: var(--creme);
+  border-radius: 999px;
+  padding: 11px 24px;
+}
+
+.busca__acao:hover:not(:disabled) {
+  background: var(--verde-medio);
+}
+
+.busca__acao:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ---------- Filtros ---------- */
+
+.filtros {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 20px 0 8px;
+}
+
+.filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 14px;
+  color: var(--texto);
+}
+
+.filtro:hover {
+  border-color: var(--borda-forte);
+  box-shadow: var(--sombra);
+}
+
+/* Filtro ativo se distingue por borda, fundo e um marcador — não só por cor. */
+.filtro--ativo {
+  border-color: var(--verde-medio);
+  background: #eef5f1;
+  font-weight: 600;
+}
+
+.filtro select,
+.filtro input {
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  outline: none;
+}
+
+.filtro__limpar {
+  background: none;
+  border: none;
+  color: var(--verde-medio);
+  padding: 0;
+  font-size: 13px;
+  text-decoration: underline;
+}

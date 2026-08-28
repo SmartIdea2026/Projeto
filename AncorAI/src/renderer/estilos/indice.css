@@ -1,0 +1,11 @@
+/*
+ * Folha de estilo do AncorAI, dividida por área da interface.
+ * A ordem importa: base define os tokens usados pelos demais.
+ */
+
+@import './base.css';
+@import './cabecalho.css';
+@import './busca.css';
+@import './resultados.css';
+@import './estados.css';
+@import './configuracoes.css';
