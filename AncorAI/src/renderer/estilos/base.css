@@ -1,0 +1,75 @@
+/* Tokens da identidade visual, reset e tipografia base. */
+
+/*
+ * Identidade visual do AncorAI (ui-spec, seção 6).
+ *
+ * O fundo creme é o elemento característico e é aplicado à janela inteira, para
+ * que a aplicação não tenha aparência de página web dentro de uma moldura.
+ */
+
+:root {
+  --creme: #f4f2ea;
+  --verde-escuro: #14432f;
+  --verde-medio: #2e7a5a;
+  --superficie: #ffffff;
+  --borda: #e3e0d4;
+  --borda-forte: #cfcbb9;
+
+  /* Contrastes verificados sobre o fundo creme:
+     texto-suave 5.4:1 e verde-medio 4.6:1, ambos acima do mínimo de 4.5:1.
+     O protótipo usava tons mais claros, que não atingiam a proporção. */
+  --texto: #14432f;
+  --texto-suave: #4d5a52;
+  --erro: #8c2f22;
+  --aviso-fundo: #fdf3e7;
+  --aviso-borda: #e0b483;
+
+  --raio: 16px;
+  --sombra: 0 1px 2px rgba(20, 67, 47, 0.04), 0 4px 12px rgba(20, 67, 47, 0.06);
+  --sombra-alta: 0 2px 4px rgba(20, 67, 47, 0.08), 0 8px 20px rgba(20, 67, 47, 0.1);
+  --fonte: 'Poppins', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--creme);
+  color: var(--texto);
+  font-family: var(--fonte);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* Indicador de foco visível em tudo que é acionável (ui-spec, a11y). */
+:focus-visible {
+  outline: 3px solid var(--verde-medio);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Conteúdo visível apenas para leitores de tela. */
+.apenas-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

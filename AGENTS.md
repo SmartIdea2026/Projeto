@@ -12,9 +12,9 @@ Este documento reúne os padrões vigentes do repositório para que qualquer age
 
 ## 2. Contexto do projeto
 
-O **AncorIA** (também chamado Âncora) é uma aplicação **desktop** que centraliza a busca de documentos espalhados entre **GitHub** e **Google Drive**. Serve para contextualizar novos integrantes, localizar documentos de processo e acompanhar o que os stakeholders produziram recentemente.
+O **AncorAI** (também chamado Âncora) é uma aplicação **desktop** que centraliza a busca de documentos espalhados entre **GitHub** e **Google Drive**. Serve para contextualizar novos integrantes, localizar documentos de processo e acompanhar o que os stakeholders produziram recentemente.
 
-O código da aplicação fica em `AncorIA/`. A documentação fica em `Docs/`.
+O código da aplicação fica em `AncorAI/`. A documentação fica em `Docs/`.
 
 > **Atenção:** `Docs/Pesquisas/TecnologiasDesenvolvimentoAncorAI.md` descreve uma arquitetura **Web com Firebase** que **não é mais vigente**. As seções 2.3, 4.5, 12, 13, 17 e 21 foram superadas pelas ADRs 0001, 0002 e 0003. Consulte as ADRs antes daquele documento.
 
@@ -95,7 +95,7 @@ GitHub API   Google Drive API   Banco local
 ### Regras de segurança
 
 * Toda chamada de rede e todo acesso a segredo ocorrem no processo **main**.
-* Nenhum canal IPC devolve o valor de uma credencial — apenas o **estado** da conexão. Há teste automatizado garantindo isso em `AncorIA/test/fronteira-credenciais.test.ts`.
+* Nenhum canal IPC devolve o valor de uma credencial — apenas o **estado** da conexão. Há teste automatizado garantindo isso em `AncorAI/test/seguranca/fronteira-credenciais.test.ts`.
 * Credenciais são cifradas com `safeStorage`, que usa o chaveiro do sistema operacional. Se a cifragem não estiver disponível, **falhe de forma explícita** em vez de gravar em texto plano.
 * `contextIsolation: true` e `nodeIntegration: false` são obrigatórios.
 
@@ -114,7 +114,7 @@ Banco NoSQL orientado a documentos, no processo main, isolado em um único módu
 * **Idioma:** identificadores, comentários e mensagens de interface em **português**. Termos técnicos consagrados permanecem em inglês.
 * **TypeScript estrito**, com `noUncheckedIndexedAccess` ativo.
 * **Comentários explicam o porquê**, não o quê. Comente decisões não óbvias e armadilhas; não narre o que o código já diz.
-* **Testes** com Vitest, em `AncorIA/test/`. Cubra os cenários de erro, não apenas o caminho feliz.
+* **Testes** com Vitest, em `AncorAI/test/`. Cubra os cenários de erro, não apenas o caminho feliz.
 * Antes de concluir: `npx tsc --noEmit` nos dois projetos, `npx vitest run` e `npx electron-vite build`.
 
 ## 8. Organização do repositório
@@ -146,4 +146,4 @@ Não implemente sem decisão da equipe:
 | OpenSpec | `Docs/Organizacao/Processo/OpenSpec/ProcessoArquiteturaOpenSpec.md` |
 | UX no OpenSpec | `Docs/Organizacao/Processo/OpenSpec/ProcessoRegistroUX.md` |
 | Requisitos | `Docs/Requisitos/LevantamentoRequisitosFluxo.md` |
-| Especificação vigente | `Docs/Requisitos/EspecificacaoSistemaAncorIA.md` |
+| Especificação vigente | `Docs/Requisitos/EspecificacaoSistemaAncorAI.md` |

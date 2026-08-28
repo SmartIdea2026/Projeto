@@ -13,7 +13,7 @@ Essa reversão nunca foi registrada como decisão arquitetural, permanecendo ape
 
 ## Decisão Tomada
 
-O AncorIA será desenvolvido como **aplicação desktop utilizando Electron**, com React e TypeScript na camada de interface.
+O AncorAI será desenvolvido como **aplicação desktop utilizando Electron**, com React e TypeScript na camada de interface.
 
 Esta decisão substitui a escolha por aplicação Web registrada nas seções 2.3 e 21 de `Docs/Pesquisas/TecnologiasDesenvolvimentoAncorAI.md`.
 

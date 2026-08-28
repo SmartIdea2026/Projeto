@@ -178,19 +178,24 @@ Todo o acesso ao banco está concentrado em `src/main/banco/indice.ts`, de modo 
 ## 9. Estrutura de pastas prevista
 
 ```text
-AncorIA/
+AncorAI/
 ├── src/
 │   ├── main/
-│   │   ├── credenciais/
-│   │   ├── fontes/
-│   │   │   ├── github.ts
-│   │   │   └── drive.ts
-│   │   ├── banco/
-│   │   └── index.ts
+│   │   ├── index.ts        ciclo de vida
+│   │   ├── janela.ts       criação da janela
+│   │   ├── ipc.ts          canais expostos ao renderer
+│   │   ├── busca/          orquestração e regras de filtro
+│   │   ├── fontes/         github.ts, drive.ts
+│   │   ├── oauth/          fluxo OAuth do Google
+│   │   ├── credenciais/    cofre e validação
+│   │   └── banco/          repositório NoSQL local
 │   ├── preload/
-│   └── renderer/
-│       ├── componentes/
-│       └── telas/
+│   ├── renderer/
+│   │   ├── componentes/
+│   │   ├── telas/
+│   │   └── estilos/        folhas por área da interface
+│   └── compartilhado/
+├── test/                   busca, fontes, persistência, segurança
 ├── package.json
 └── tsconfig.json
 ```

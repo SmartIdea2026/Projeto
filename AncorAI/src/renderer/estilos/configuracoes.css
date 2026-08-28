@@ -1,0 +1,110 @@
+/* Tela de configurações e botões. */
+
+/* ---------- Configurações ---------- */
+
+.modal-fundo {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 67, 47, 0.35);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  z-index: 10;
+}
+
+.modal {
+  background: var(--creme);
+  border-radius: 20px;
+  padding: 28px;
+  width: min(560px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: var(--sombra-alta);
+}
+
+.modal h2 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+
+.modal__descricao {
+  color: var(--texto-suave);
+  margin: 0 0 24px;
+  font-size: 14px;
+}
+
+.campo {
+  margin-bottom: 22px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 18px;
+}
+
+.campo__rotulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.campo__ajuda {
+  color: var(--texto-suave);
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+.campo input {
+  width: 100%;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  padding: 11px 13px;
+  font: inherit;
+  background: var(--creme);
+  color: var(--texto);
+}
+
+.campo input:focus {
+  outline: none;
+  border-color: var(--verde-medio);
+}
+
+.campo__acoes {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.botao {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 9px 18px;
+  font-size: 14px;
+}
+
+.botao--primario {
+  background: var(--verde-escuro);
+  color: var(--creme);
+}
+
+.botao--primario:hover:not(:disabled) {
+  background: var(--verde-medio);
+}
+
+.botao--secundario {
+  background: transparent;
+  border-color: var(--borda-forte);
+  color: var(--texto);
+}
+
+.botao--secundario:hover {
+  background: var(--superficie);
+}
+
+.botao:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

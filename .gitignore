@@ -36,7 +36,7 @@ venv/
 *.tmp
 *.bak
 
-# Build e dependências do AncorIA
-AncorIA/node_modules/
-AncorIA/out/
-AncorIA/release/
+# Build e dependências do AncorAI
+AncorAI/node_modules/
+AncorAI/out/
+AncorAI/release/

@@ -4,7 +4,7 @@
 
 ## 1. Estrutura do projeto
 
-- [x] Inicializar o projeto em `AncorIA/` com Electron, React, TypeScript e Vite
+- [x] Inicializar o projeto em `AncorAI/` com Electron, React, TypeScript e Vite
 - [x] Configurar a separação entre processos *main*, *preload* e *renderer*
 - [x] Configurar o `contextBridge` expondo apenas a API tipada de IPC ao renderer
 - [x] Configurar Vitest e React Testing Library

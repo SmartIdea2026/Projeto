@@ -1,0 +1,68 @@
+/* Carregamento, vazio, aviso e erro. */
+
+/* ---------- Estados ---------- */
+
+.esqueleto {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  height: 104px;
+  position: relative;
+  overflow: hidden;
+}
+
+.esqueleto::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(20, 67, 47, 0.06), transparent);
+  animation: deslizar 1.3s infinite;
+}
+
+@keyframes deslizar {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .esqueleto::after {
+    animation: none;
+  }
+}
+
+.vazio {
+  text-align: center;
+  padding: 56px 24px;
+  color: var(--texto-suave);
+}
+
+.vazio h2 {
+  color: var(--texto);
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--aviso-fundo);
+  border: 1px solid var(--aviso-borda);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.aviso--erro {
+  background: #fbeeec;
+  border-color: #e0a99f;
+  color: var(--erro);
+}
+
+.erro-campo {
+  color: var(--erro);
+  font-size: 13px;
+  margin-top: 6px;
+}
