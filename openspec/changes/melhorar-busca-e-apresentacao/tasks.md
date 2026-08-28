@@ -26,7 +26,7 @@
 
 ## 4. Disposição da interface
 
-- [x] 4.1 Posicionar os filtros abaixo da barra de busca conforme o protótipo — verificar visualmente contra os prints fornecidos
+- [x] 4.1 Posicionar os filtros abaixo da barra de busca conforme o protótipo, com o período recolhido em painel suspenso — verificar visualmente contra os prints fornecidos e com teste de componente
 - [x] 4.2 Posicionar contador à esquerda e ordenação à direita na linha acima da lista — verificar visualmente contra os prints
 - [x] 4.3 Apresentar autor e data de modificação no cartão de resultado, rotulados como última alteração — verificar visualmente e com teste de componente
 - [x] 4.4 Manter a ordem de tabulação seguindo a leitura visual após o rearranjo, sem `tabindex` positivo — verificar com o teste de tabulação existente

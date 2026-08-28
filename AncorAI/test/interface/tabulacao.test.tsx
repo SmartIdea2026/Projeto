@@ -93,11 +93,14 @@ describe('ordem de tabulação da tela principal', () => {
     // A ordem do DOM é a ordem de tabulação, já que não há tabindex positivo.
     // A ordenação fica entre os filtros e a lista, à direita do contador,
     // conforme o protótipo — e a tabulação acompanha essa leitura.
+    //
+    // Os filtros são dois: a extensão e o botão de período. Os campos de data
+    // vivem dentro do painel do período e só entram na tabulação quando ele
+    // está aberto, que é o comportamento correto para conteúdo recolhido.
     expect(focaveis().map(regiaoDe)).toEqual([
       'cabecalho',
       'busca',
       'busca',
-      'filtros',
       'filtros',
       'filtros',
       'ordenacao',

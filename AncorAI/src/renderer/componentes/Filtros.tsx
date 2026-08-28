@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { EXTENSOES_ACEITAS, type Filtros } from '../../compartilhado/tipos';
 
 interface Props {
@@ -15,6 +16,35 @@ interface Props {
 export function Filtros({ filtros, aoAlterar, erroPeriodo }: Props) {
   const tipoAtivo = filtros.extensoes.length > 0;
   const periodoAtivo = Boolean(filtros.dataInicial || filtros.dataFinal);
+
+  const [periodoAberto, setPeriodoAberto] = useState(false);
+  const areaPeriodo = useRef<HTMLDivElement>(null);
+  const botaoPeriodo = useRef<HTMLButtonElement>(null);
+
+  /*
+    O período ficava como dois campos de data soltos na barra de filtros. Cada
+    campo carrega o próprio ícone de calendário, que o navegador ancora à
+    direita do campo — e com os dois lado a lado o ícone acabava distante do
+    rótulo a que pertence. Recolhê-los num painel resolve isso e alinha ao
+    protótipo: a barra fica com um botão, e as datas ganham rótulos visíveis.
+  */
+
+  // Fecha ao clicar fora, comportamento esperado de um painel suspenso.
+  useEffect(() => {
+    if (!periodoAberto) return;
+
+    function aoClicarFora(evento: MouseEvent) {
+      if (!areaPeriodo.current?.contains(evento.target as Node)) setPeriodoAberto(false);
+    }
+
+    document.addEventListener('mousedown', aoClicarFora);
+    return () => document.removeEventListener('mousedown', aoClicarFora);
+  }, [periodoAberto]);
+
+  function fecharPeriodo() {
+    setPeriodoAberto(false);
+    botaoPeriodo.current?.focus();
+  }
 
   return (
     <>
@@ -45,45 +75,81 @@ export function Filtros({ filtros, aoAlterar, erroPeriodo }: Props) {
           </select>
         </label>
 
-        <div className={`filtro ${periodoAtivo ? 'filtro--ativo' : ''}`}>
-          <label>
-            <span className="apenas-leitor">Data inicial</span>
-            <input
-              type="date"
-              value={filtros.dataInicial ?? ''}
-              onChange={(evento) =>
-                aoAlterar({ ...filtros, dataInicial: evento.target.value || undefined })
-              }
-            />
-          </label>
-          <span aria-hidden="true">–</span>
-          <label>
-            <span className="apenas-leitor">Data final</span>
-            <input
-              type="date"
-              value={filtros.dataFinal ?? ''}
-              onChange={(evento) =>
-                aoAlterar({ ...filtros, dataFinal: evento.target.value || undefined })
-              }
-            />
-          </label>
-          {periodoAtivo && (
-            <button
-              type="button"
-              className="filtro__limpar"
-              onClick={() =>
-                aoAlterar({ ...filtros, dataInicial: undefined, dataFinal: undefined })
-              }
-            >
-              limpar
-            </button>
+        <div
+          className="periodo"
+          ref={areaPeriodo}
+          onKeyDown={(evento) => {
+            if (evento.key === 'Escape' && periodoAberto) {
+              evento.stopPropagation();
+              fecharPeriodo();
+            }
+          }}
+        >
+          <button
+            type="button"
+            ref={botaoPeriodo}
+            className={`filtro filtro--botao ${periodoAtivo ? 'filtro--ativo' : ''}`}
+            aria-expanded={periodoAberto}
+            onClick={() => setPeriodoAberto((aberto) => !aberto)}
+          >
+            <span aria-hidden="true">⇅</span>
+            Período
+          </button>
+
+          {periodoAberto && (
+            <div className="periodo__painel" role="group" aria-label="Filtro de período">
+              <p className="periodo__titulo">Período (modificação)</p>
+
+              <div className="periodo__campos">
+                <label className="periodo__campo">
+                  <span>De</span>
+                  <input
+                    type="date"
+                    value={filtros.dataInicial ?? ''}
+                    onChange={(evento) =>
+                      aoAlterar({ ...filtros, dataInicial: evento.target.value || undefined })
+                    }
+                  />
+                </label>
+                <label className="periodo__campo">
+                  <span>Até</span>
+                  <input
+                    type="date"
+                    value={filtros.dataFinal ?? ''}
+                    onChange={(evento) =>
+                      aoAlterar({ ...filtros, dataFinal: evento.target.value || undefined })
+                    }
+                  />
+                </label>
+              </div>
+
+              {erroPeriodo && (
+                <p className="erro-campo" role="alert">
+                  {erroPeriodo}
+                </p>
+              )}
+
+              <button
+                type="button"
+                className="periodo__limpar"
+                disabled={!periodoAtivo}
+                onClick={() =>
+                  aoAlterar({ ...filtros, dataInicial: undefined, dataFinal: undefined })
+                }
+              >
+                Limpar filtros
+              </button>
+            </div>
           )}
         </div>
-
       </div>
 
-      {erroPeriodo && (
-        <p className="erro-campo" role="alert" style={{ textAlign: 'center' }}>
+      {/*
+        O erro também aparece fora do painel: fechá-lo não pode esconder do
+        usuário o motivo de a busca não estar respondendo.
+      */}
+      {erroPeriodo && !periodoAberto && (
+        <p className="erro-campo erro-periodo" role="alert">
           {erroPeriodo}
         </p>
       )}
