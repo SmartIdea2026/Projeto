@@ -107,6 +107,8 @@ Proposal → Specs → Design → Tasks → Implementação → Archive
 * **GitHub:** o inventário de documentos vem da **árvore Git** (`git/trees?recursive=1`), que devolve o repositório inteiro em uma requisição. A Events API **não serve** para descobrir arquivos alterados — o `payload` de `PushEvent` não traz a lista de commits. Use cache revalidado por `ETag` e trate HTTP 403 e 429.
 * **Google Drive:** fora do MVP (ADR-0004). Exigiria **OAuth 2.0** — uma chave de API autentica o projeto, não o usuário — e o escopo `drive.readonly` é restrito pelo Google.
 * Falha de uma fonte **nunca** impede a apresentação dos resultados das demais.
+* **Resultado parcial é dito, não escondido.** Paginação além do teto, árvore truncada e repositório inacessível viram `avisos` — canal separado de `falhas`, porque houve resultado. Nunca engula uma dessas condições em `catch`.
+* **Data do GitHub na busca é aproximada.** A árvore Git não traz data por arquivo, então todo documento herda o `pushed_at` do repositório e carrega `dataAproximada: true`. A lista de recentes vem dos commits e tem data real. O filtro de período avisa quando incide sobre datas aproximadas.
 
 ### Persistência
 

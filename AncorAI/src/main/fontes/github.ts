@@ -100,20 +100,53 @@ interface RepositorioApi {
   pushed_at: string;
 }
 
+const POR_PAGINA = 100;
+
+/** Teto de páginas percorridas, para que um token muito abrangente não gere
+ *  uma sequência ilimitada de requisições. */
+const MAX_PAGINAS = 10;
+
+/** Resultado que pode estar incompleto, com o motivo quando estiver. */
+export interface Parcial<T> {
+  dados: T;
+  /** Mensagem de aviso quando o resultado não é completo; nulo quando é. */
+  aviso: string | null;
+}
+
 /**
  * Repositórios acessíveis pela credencial.
  *
  * Usa `/user/repos` em vez de `/users/{login}/repos` porque o segundo devolve
  * apenas repositórios públicos, deixando de fora os privados aos quais o token
  * tem acesso — limitação registrada no design, seção 2.3.
+ *
+ * A resposta é paginada. Uma única página de 100 cobria a conta usada no
+ * desenvolvimento, mas truncaria em silêncio qualquer conta acima disso, então
+ * as páginas são percorridas até a última. O fim é detectado por uma página
+ * incompleta, e não pelo cabeçalho `Link`, porque cada página tem o próprio
+ * `ETag` e é cacheada de forma independente.
  */
-export async function listarRepositorios(token: string): Promise<RepositorioApi[]> {
-  const { dados } = await requisitar<RepositorioApi[]>(
-    '/user/repos?per_page=100&sort=pushed&affiliation=owner,collaborator,organization_member',
-    token,
-    'github:repos'
-  );
-  return dados;
+export async function listarRepositorios(token: string): Promise<Parcial<RepositorioApi[]>> {
+  const todos: RepositorioApi[] = [];
+
+  for (let pagina = 1; pagina <= MAX_PAGINAS; pagina++) {
+    const { dados } = await requisitar<RepositorioApi[]>(
+      `/user/repos?per_page=${POR_PAGINA}&page=${pagina}` +
+        '&sort=pushed&affiliation=owner,collaborator,organization_member',
+      token,
+      `github:repos:${pagina}`
+    );
+
+    todos.push(...dados);
+    if (dados.length < POR_PAGINA) return { dados: todos, aviso: null };
+  }
+
+  return {
+    dados: todos,
+    aviso:
+      `A busca considerou os ${MAX_PAGINAS * POR_PAGINA} repositórios mais ` +
+      'recentes. Pode haver documentos em repositórios além desse limite.'
+  };
 }
 
 interface ArvoreApi {
@@ -121,18 +154,25 @@ interface ArvoreApi {
   tree: Array<{ path: string; type: string; sha: string }>;
 }
 
-/** Inventário completo de documentos de um repositório, em uma requisição. */
+/**
+ * Inventário de documentos de um repositório, em uma requisição.
+ *
+ * A árvore recursiva vem truncada quando o repositório é grande demais, e a
+ * API sinaliza isso em `truncated`. Nesse caso o inventário está incompleto e
+ * o usuário precisa saber: sem o aviso, um documento ausente do resultado é
+ * indistinguível de um documento inexistente.
+ */
 export async function inventariar(
   token: string,
   repo: RepositorioApi
-): Promise<Documento[]> {
+): Promise<Parcial<Documento[]>> {
   const { dados } = await requisitar<ArvoreApi>(
     `/repos/${repo.full_name}/git/trees/${repo.default_branch}?recursive=1`,
     token,
     `github:tree:${repo.full_name}:${repo.default_branch}`
   );
 
-  return dados.tree
+  const documentos = dados.tree
     .filter((item) => item.type === 'blob' && extensaoEhAceita(item.path))
     .map((item) => {
       const nome = item.path.split('/').pop() ?? item.path;
@@ -145,11 +185,24 @@ export async function inventariar(
         // a melhor aproximação disponível sem uma requisição por arquivo, custo
         // que o design descartou.
         dataModificacao: repo.pushed_at,
+        // A árvore não carrega data por arquivo: todos os documentos do
+        // repositório recebem o `pushed_at` dele. A marca acompanha o
+        // documento para que a interface e o filtro de período não tratem
+        // essa aproximação como data real.
+        dataAproximada: true,
         link: `https://github.com/${repo.full_name}/blob/${repo.default_branch}/${item.path}`,
         caminho: item.path,
         repositorio: repo.full_name
       };
     });
+
+  return {
+    dados: documentos,
+    aviso: dados.truncated
+      ? `O repositório ${repo.full_name} é grande demais para ser listado de ` +
+        'uma vez, e parte dos documentos ficou de fora.'
+      : null
+  };
 }
 
 interface CommitApi {
@@ -172,7 +225,7 @@ export async function recentesDoRepositorio(
   token: string,
   repo: RepositorioApi,
   limiteCommits = 10
-): Promise<Documento[]> {
+): Promise<Parcial<Documento[]>> {
   const { dados: commits } = await requisitar<CommitApi[]>(
     `/repos/${repo.full_name}/commits?per_page=${limiteCommits}`,
     token,
@@ -211,16 +264,28 @@ export async function recentesDoRepositorio(
     }
   }
 
-  return [...encontrados.values()];
+  // Aqui a data é a do commit, e não uma aproximação: os documentos saem sem
+  // a marca `dataAproximada`.
+  return { dados: [...encontrados.values()], aviso: null };
 }
 
-/** Executa uma tarefa por repositório com concorrência limitada. */
+/**
+ * Executa uma tarefa por repositório com concorrência limitada.
+ *
+ * Um repositório inacessível não invalida a busca nos demais, mas também não
+ * some sem deixar rastro: a falha é contada e vira aviso. Antes, o `catch`
+ * engolia o erro e o usuário recebia um resultado menor sem qualquer sinal de
+ * que algo havia ficado para trás. Estouro de cota continua interrompendo,
+ * porque aí o resultado seria arbitrariamente incompleto.
+ */
 async function porRepositorio(
   repos: RepositorioApi[],
   concorrencia: number,
-  tarefa: (repo: RepositorioApi) => Promise<Documento[]>
-): Promise<Documento[]> {
+  tarefa: (repo: RepositorioApi) => Promise<Parcial<Documento[]>>
+): Promise<Parcial<Documento[]>> {
   const resultado: Documento[] = [];
+  const avisos: string[] = [];
+  const inacessiveis: string[] = [];
   const fila = [...repos];
 
   const trabalhadores = Array.from(
@@ -228,30 +293,60 @@ async function porRepositorio(
     async () => {
       for (let repo = fila.shift(); repo; repo = fila.shift()) {
         try {
-          resultado.push(...(await tarefa(repo)));
+          const parcial = await tarefa(repo);
+          resultado.push(...parcial.dados);
+          if (parcial.aviso) avisos.push(parcial.aviso);
         } catch (erro) {
-          // Um repositório inacessível não invalida a busca nos demais.
           if (erro instanceof ErroFonte && erro.limiteExcedido) throw erro;
+          inacessiveis.push(repo.full_name);
         }
       }
     }
   );
 
   await Promise.all(trabalhadores);
-  return resultado;
+
+  if (inacessiveis.length > 0) {
+    const lista = inacessiveis.slice(0, 3).join(', ');
+    const resto = inacessiveis.length > 3 ? ` e outros ${inacessiveis.length - 3}` : '';
+    avisos.push(`Não foi possível consultar ${lista}${resto}.`);
+  }
+
+  return { dados: resultado, aviso: avisos.length > 0 ? avisos.join(' ') : null };
 }
 
-export async function buscarDocumentos(token: string): Promise<Documento[]> {
+/** Junta o aviso da listagem de repositórios ao das consultas por repositório. */
+function juntarAvisos(...partes: Array<string | null>): string | null {
+  const presentes = partes.filter((parte): parte is string => Boolean(parte));
+  return presentes.length > 0 ? presentes.join(' ') : null;
+}
+
+export async function buscarDocumentos(token: string): Promise<Parcial<Documento[]>> {
   const repos = await listarRepositorios(token);
-  return porRepositorio(repos, 4, (repo) => inventariar(token, repo));
+  const documentos = await porRepositorio(repos.dados, 4, (repo) =>
+    inventariar(token, repo)
+  );
+
+  return {
+    dados: documentos.dados,
+    aviso: juntarAvisos(repos.aviso, documentos.aviso)
+  };
 }
 
-export async function documentosRecentes(token: string): Promise<Documento[]> {
+export async function documentosRecentes(token: string): Promise<Parcial<Documento[]>> {
   const repos = await listarRepositorios(token);
   // Apenas os repositórios com atividade mais recente, para conter o custo:
   // cada um exige uma requisição de commits e uma por commit detalhado.
-  const ativos = [...repos]
+  const ativos = [...repos.dados]
     .sort((a, b) => b.pushed_at.localeCompare(a.pushed_at))
     .slice(0, 5);
-  return porRepositorio(ativos, 2, (repo) => recentesDoRepositorio(token, repo, 10));
+
+  const documentos = await porRepositorio(ativos, 2, (repo) =>
+    recentesDoRepositorio(token, repo, 10)
+  );
+
+  // O aviso de paginação não se aplica aqui: a lista de recentes já se limita
+  // aos repositórios de atividade mais recente por desenho, e esses estão
+  // sempre nas primeiras páginas, que vêm ordenadas por `pushed`.
+  return { dados: documentos.dados, aviso: documentos.aviso };
 }

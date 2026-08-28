@@ -41,6 +41,17 @@ export interface Documento {
   dataCriacao?: string;
   /** URL de redirecionamento para a fonte original. */
   link: string;
+  /**
+   * Verdadeiro quando `dataModificacao` é aproximada, e não a data real de
+   * alteração do arquivo.
+   *
+   * A árvore Git não carrega data por arquivo, então a busca no GitHub usa o
+   * `pushed_at` do repositório: todos os documentos de um mesmo repositório
+   * recebem a mesma data. Obter a data real exigiria uma requisição por
+   * arquivo, custo que o design descartou. A lista de recentes não tem essa
+   * limitação, porque vem dos commits.
+   */
+  dataAproximada?: boolean;
   /** Caminho dentro do repositório, quando a fonte é o GitHub. */
   caminho?: string;
   /** Repositório de origem, quando a fonte é o GitHub. */
@@ -96,9 +107,24 @@ export interface FalhaFonte {
   limiteExcedido?: boolean;
 }
 
+/**
+ * Aviso de resultado incompleto ou impreciso.
+ *
+ * Distinto de `FalhaFonte`: a consulta funcionou e trouxe documentos, mas não
+ * necessariamente todos, ou não com a precisão que o filtro pressupõe. A
+ * separação importa porque a interface trata ausência total de resultado e
+ * resultado parcial de formas diferentes.
+ */
+export interface AvisoFonte {
+  fonte: Fonte;
+  mensagem: string;
+}
+
 export interface ResultadoBusca {
   documentos: Documento[];
   falhas: FalhaFonte[];
+  /** Resultados vieram, mas podem estar incompletos ou imprecisos. */
+  avisos: AvisoFonte[];
   /** Verdadeiro quando os dados vieram do cache local, sem consultar a rede. */
   doCache: boolean;
 }

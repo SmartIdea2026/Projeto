@@ -76,6 +76,33 @@ O sistema SHALL respeitar os limites de requisição das APIs externas, reaprove
 - **WHEN** o conteúdo da fonte não sofreu alteração desde então
 - **THEN** o sistema reutiliza o resultado anterior sem consumir nova requisição
 
+## Requirement: Comunicação de resultado parcial
+
+O sistema SHALL informar o usuário quando o resultado apresentado estiver incompleto ou apoiado em data aproximada, distinguindo esse aviso de uma falha.
+
+A distinção é necessária porque um documento ausente do resultado é indistinguível de um documento inexistente para quem observa a tela.
+
+#### Scenario: Inventário truncado pela API
+
+- **GIVEN** que um repositório é grande demais para ser listado em uma requisição
+- **WHEN** a busca é realizada
+- **THEN** o sistema apresenta os documentos obtidos
+- **AND** informa que parte do repositório ficou de fora, identificando-o
+
+#### Scenario: Repositório inacessível entre outros acessíveis
+
+- **GIVEN** que a credencial não alcança um dos repositórios
+- **WHEN** a busca é realizada
+- **THEN** o sistema apresenta os documentos dos repositórios acessíveis
+- **AND** nomeia o repositório que não pôde ser consultado
+
+#### Scenario: Filtro de período sobre data aproximada
+
+- **GIVEN** que os documentos de uma fonte têm data aproximada
+- **WHEN** o usuário aplica um filtro de período
+- **THEN** o sistema informa que a data considerada é a de atividade do repositório
+- **AND** apresenta o resultado sem interromper a busca
+
 ## Requirement: Comunicação de erro ao usuário
 
 O sistema SHALL informar o usuário sempre que ocorrer falha na comunicação com uma API, sem interromper as funcionalidades que não dependem dela.

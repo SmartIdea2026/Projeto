@@ -124,6 +124,7 @@ export function App() {
 
   const documentos = resultado?.documentos ?? [];
   const falhas = resultado?.falhas ?? [];
+  const avisos = resultado?.avisos ?? [];
 
   return (
     <div className="app">
@@ -190,6 +191,21 @@ export function App() {
             <span aria-hidden="true">⚠</span>
             <span>
               <strong>{NOME_FONTE[falha.fonte]}:</strong> {falha.mensagem}
+            </span>
+          </div>
+        ))}
+
+        {/*
+          Avisos são distintos de falhas: houve resultado, mas ele pode estar
+          incompleto ou impreciso. Ficam depois das falhas por serem menos
+          urgentes, e usam ícone e rótulo próprios para não serem lidos como
+          erro.
+        */}
+        {avisos.map((aviso, indice) => (
+          <div key={`${aviso.fonte}-${indice}`} className="aviso aviso--info" role="status">
+            <span aria-hidden="true">ⓘ</span>
+            <span>
+              <strong>Resultado parcial:</strong> {aviso.mensagem}
             </span>
           </div>
         ))}

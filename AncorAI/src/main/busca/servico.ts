@@ -1,4 +1,5 @@
 import type {
+  AvisoFonte,
   Documento,
   EstadoConexao,
   Filtros,
@@ -33,10 +34,11 @@ function mensagemDe(erro: unknown): string {
 /** Executa as consultas às fontes selecionadas, isolando as falhas. */
 async function coletar(
   filtros: Filtros,
-  doGithub: (token: string) => Promise<Documento[]>
+  doGithub: (token: string) => Promise<github.Parcial<Documento[]>>
 ): Promise<ResultadoBusca> {
   const documentos: Documento[] = [];
   const falhas: ResultadoBusca['falhas'] = [];
+  const avisos: AvisoFonte[] = [];
   const tarefas: Array<Promise<void>> = [];
 
   if (fonteSelecionada(filtros, 'github')) {
@@ -45,7 +47,10 @@ async function coletar(
       tarefas.push(
         doGithub(token)
           .then((encontrados) => {
-            documentos.push(...encontrados);
+            documentos.push(...encontrados.dados);
+            if (encontrados.aviso) {
+              avisos.push({ fonte: 'github', mensagem: encontrados.aviso });
+            }
           })
           .catch((erro) => {
             falhas.push({
@@ -61,16 +66,52 @@ async function coletar(
   }
 
   await Promise.all(tarefas);
-  return { documentos: unificar(documentos), falhas, doCache: false };
+  return { documentos: unificar(documentos), falhas, avisos, doCache: false };
+}
+
+/**
+ * Acrescenta o aviso de imprecisão quando o filtro de período incide sobre
+ * documentos de data aproximada.
+ *
+ * A busca no GitHub deriva a data da árvore Git, que não a fornece por arquivo:
+ * todo documento herda o `pushed_at` do repositório. Filtrar por período nesses
+ * documentos filtra, na prática, por atividade do repositório — um arquivo
+ * intocado há um ano dentro de um repositório ativo entra no resultado. Sem
+ * este aviso o usuário não teria como perceber a diferença.
+ */
+function avisarSobrePeriodo(resultado: ResultadoBusca, filtros: Filtros): ResultadoBusca {
+  const temPeriodo = Boolean(filtros.dataInicial || filtros.dataFinal);
+  if (!temPeriodo) return resultado;
+
+  const fontes = new Set(
+    resultado.documentos.filter((doc) => doc.dataAproximada).map((doc) => doc.fonte)
+  );
+  if (fontes.size === 0) return resultado;
+
+  return {
+    ...resultado,
+    avisos: [
+      ...resultado.avisos,
+      ...[...fontes].map((fonte) => ({
+        fonte,
+        mensagem:
+          'O filtro de período usa a data de atividade do repositório, e não a ' +
+          'de cada arquivo. Documentos antigos em repositórios ativos podem ' +
+          'aparecer no resultado.'
+      }))
+    ]
+  };
 }
 
 export async function buscar(filtros: Filtros): Promise<ResultadoBusca> {
   const bruto = await coletar(filtros, (token) => github.buscarDocumentos(token));
 
-  return {
+  const filtrado = {
     ...bruto,
     documentos: ordenar(aplicarFiltros(bruto.documentos, filtros), filtros.ordenacao)
   };
+
+  return avisarSobrePeriodo(filtrado, filtros);
 }
 
 const CHAVE_RECENTES = 'recentes:consolidado';
@@ -97,7 +138,7 @@ export async function recentesDoCache(filtros: Filtros): Promise<ResultadoBusca 
   const entrada = await lerCache<Documento[]>(CHAVE_RECENTES);
   if (!entrada || entrada.payload.length === 0) return null;
   return prepararRecentes(
-    { documentos: entrada.payload, falhas: [], doCache: true },
+    { documentos: entrada.payload, falhas: [], avisos: [], doCache: true },
     filtros
   );
 }
@@ -111,7 +152,7 @@ export async function recentes(filtros: Filtros): Promise<ResultadoBusca> {
     await gravarCache(CHAVE_RECENTES, bruto.documentos, null);
   }
 
-  return prepararRecentes(bruto, filtros);
+  return avisarSobrePeriodo(prepararRecentes(bruto, filtros), filtros);
 }
 
 /** Traduz uma falha de verificação no estado correspondente. */

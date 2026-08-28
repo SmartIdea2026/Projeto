@@ -44,6 +44,10 @@ Organizado por assunto, e não em ordem alfabética: os termos se explicam melho
 
 **Normalização** — a conversão da resposta de uma API para o formato unificado.
 
+**Resultado parcial** — resultado que chegou, mas não completo: a API truncou o inventário, um repositório não pôde ser consultado, ou a varredura parou num teto de páginas. É distinto de falha, e tem canal próprio na resposta (`avisos`), porque a interface trata as duas coisas de forma diferente — resultado nenhum e resultado incompleto não são o mesmo problema.
+
+**Data aproximada** — data de modificação que não é a do arquivo. A árvore Git não informa data por arquivo, então cada documento da busca no GitHub herda o `pushed_at` do repositório, e todos os arquivos de um mesmo repositório ficam com a mesma data. Os documentos assim marcados carregam `dataAproximada: true`, para que a interface e o filtro de período não os tratem como exatos. A lista de recentes não tem essa limitação: vem dos commits.
+
 **Isolamento de falhas** — regra pela qual a falha de uma fonte não impede a exibição dos resultados das demais: cada fonte é consultada de forma independente e os erros viram dado de saída, não exceção.
 
 **ETag** — identificador que a API do GitHub devolve junto de uma resposta. Reenviado na requisição seguinte, permite que o servidor responda "nada mudou" sem retransmitir o conteúdo, e sem consumir cota.

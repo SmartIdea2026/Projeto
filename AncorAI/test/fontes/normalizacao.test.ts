@@ -55,7 +55,7 @@ describe('normalização do GitHub', () => {
       })
     );
 
-    const documentos = await github.buscarDocumentos('token');
+    const { dados: documentos } = await github.buscarDocumentos('token');
 
     expect(documentos).toHaveLength(1);
     const [documento] = documentos;
@@ -97,6 +97,6 @@ describe('normalização do GitHub', () => {
       )
     );
 
-    expect(await github.buscarDocumentos('token')).toHaveLength(0);
+    expect((await github.buscarDocumentos('token')).dados).toHaveLength(0);
   });
 });
