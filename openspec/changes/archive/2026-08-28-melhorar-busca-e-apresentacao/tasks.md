@@ -39,4 +39,4 @@
 - [ ] 5.1 Confirmar na revisão que a reinterpretação de `Nova consulta ao alterar filtros` está correta, já que reescreve um requisito vigente — verificar com aprovação explícita no Pull Request
 - [x] 5.2 Executar a suíte completa, `tsc` nos dois projetos e o build — verificar que tudo passa
 - [x] 5.3 Verificar a correspondência entre as especificações e o código implementado — verificar percorrendo cada requisito dos deltas
-- [ ] 5.4 Executar `/opsx:archive` para incorporar os deltas às especificações principais
+- [x] 5.4 Executar `/opsx:archive` para incorporar os deltas às especificações principais
