@@ -20,7 +20,7 @@
 - [ ] 3.3 Implementar a validação da chave e a distinção entre credencial inválida, cota excedida e falha de comunicação — verificar com teste dos três casos
 - [ ] 3.4 Implementar a fila de submissões com concorrência um, compartilhada por classificação e resumo — verificar com teste que nunca há duas submissões simultâneas
 - [ ] 3.5 Dar precedência na fila ao resumo pedido pelo usuário sobre a classificação de fundo — verificar com teste
-- [ ] 3.6 Implementar a extração de texto dos formatos aceitos, tratando os não extraíveis sem erro — verificar com teste por formato
+- [ ] 3.6 Consumir o texto já armazenado pela mudança `ingerir-conteudo-dos-documentos` em vez de baixar e extrair de novo, tratando sem erro os documentos registrados como sem texto — verificar com teste que nenhuma requisição de conteúdo é feita na submissão à LLM
 
 ## 4. Classificação e busca por contexto
 
@@ -35,7 +35,7 @@
 
 - [ ] 5.1 Criar o arquivo Markdown de instrução de redação do resumo, versionado no repositório — verificar que é lido em tempo de execução e não embutido no código
 - [ ] 5.2 Implementar a geração do resumo aplicando a instrução vigente do arquivo — verificar com teste que a instrução é enviada junto ao conteúdo
-- [ ] 5.3 Gravar o resumo e sua data no índice, sem gravar o conteúdo submetido — verificar com teste
+- [ ] 5.3 Gravar o resumo e sua data no índice, sem duplicar nele o texto submetido — verificar com teste
 - [ ] 5.4 Reutilizar o resumo gravado nas buscas seguintes, sem nova submissão — verificar com teste que nenhuma chamada é feita na segunda busca
 - [ ] 5.5 Assinalar o resumo como desatualizado quando o documento for alterado depois, permitindo regerar — verificar com teste
 - [ ] 5.6 Implementar o painel à direita com nome, fonte e resumo do documento em foco — verificar com teste de componente

@@ -12,14 +12,14 @@ Manter no banco local um registro dos documentos conhecidos das fontes, com seus
 
 O sistema SHALL manter no banco local um registro dos documentos conhecidos, contendo identificação, nome, caminho, fonte, link de redirecionamento e datas.
 
-O índice NÃO SHALL armazenar o conteúdo dos documentos. O conteúdo é obtido quando necessário, usado, e descartado.
+O índice NÃO SHALL duplicar o texto dos documentos. O texto é mantido pela capacidade `conteudo-documentos`, que o obtém das fontes e o armazena localmente; o índice o referencia pelo identificador do documento em vez de guardar uma segunda cópia.
 
 #### Scenario: Documento encontrado nas fontes é registrado
 
 - **GIVEN** que uma consulta às fontes retornou documentos
 - **WHEN** o resultado é processado
 - **THEN** cada documento passa a constar do índice local
-- **AND** apenas seus metadados e link são gravados, nunca o conteúdo
+- **AND** apenas seus metadados, link e classificação são gravados, sem segunda cópia do texto
 
 #### Scenario: Documento já registrado é atualizado
 
