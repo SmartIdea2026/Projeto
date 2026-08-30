@@ -47,15 +47,19 @@ function Meta({
 interface Props {
   documento: Documento;
   aoAbrir: (documento: Documento) => void;
+  /** Traz este documento para o painel de resumo. */
+  aoResumir?: (documento: Documento) => void;
+  /** Verdadeiro quando este é o documento apresentado no painel. */
+  emFoco?: boolean;
 }
 
-export function Cartao({ documento, aoAbrir }: Props) {
+export function Cartao({ documento, aoAbrir, aoResumir, emFoco = false }: Props) {
   const modificacao = formatarData(documento.dataModificacao);
   const criacao = formatarData(documento.dataCriacao);
   const fonte = NOME_FONTE[documento.fonte];
 
   return (
-    <li className="cartao">
+    <li className={`cartao${emFoco ? ' cartao--em-foco' : ''}`}>
       <div className="cartao__icone" aria-hidden="true">
         📄
       </div>
@@ -100,6 +104,22 @@ export function Cartao({ documento, aoAbrir }: Props) {
         </div>
 
         <div className="cartao__acoes">
+          {aoResumir && (
+            <button
+              type="button"
+              className="link-fonte link-fonte--resumo"
+              onClick={() => aoResumir(documento)}
+              /*
+                O estado de foco não é comunicado só pela borda colorida do
+                cartão: o botão também o declara, para quem não distingue a cor
+                e para quem navega por leitor de tela.
+              */
+              aria-pressed={emFoco}
+            >
+              <span aria-hidden="true">✦</span>
+              {emFoco ? 'No painel' : 'Gerar resumo'}
+            </button>
+          )}
           <button
             type="button"
             className="link-fonte"

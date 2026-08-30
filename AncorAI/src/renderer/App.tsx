@@ -4,12 +4,20 @@ import {
   POR_PAGINA,
   type Documento,
   type Filtros as TipoFiltros,
+  type MotivoSemResumo,
   type ResultadoBusca,
-  type StatusFonte
+  type ResumoDocumento,
+  type StatusFonte,
+  type StatusLLM
 } from '../compartilhado/tipos';
 import { ordenar } from '../compartilhado/ordenacao';
 import { Cartao } from './componentes/Cartao';
 import { Filtros } from './componentes/Filtros';
+import {
+  PainelResumo,
+  useEtapaProlongada,
+  type EtapaResumo
+} from './componentes/PainelResumo';
 import { Configuracoes } from './telas/Configuracoes';
 
 const NOME_FONTE = { github: 'GitHub' } as const;
@@ -32,6 +40,28 @@ export function App() {
   const [configAberta, setConfigAberta] = useState(false);
   const campoBusca = useRef<HTMLInputElement>(null);
 
+  const [statusLLM, setStatusLLM] = useState<StatusLLM | null>(null);
+  const [emFoco, setEmFoco] = useState<Documento | null>(null);
+  const [resumo, setResumo] = useState<ResumoDocumento | null>(null);
+  const [etapaBruta, setEtapaBruta] = useState<EtapaResumo | null>(null);
+  const [semResumo, setSemResumo] = useState<{
+    motivo: MotivoSemResumo;
+    mensagem?: string;
+  } | null>(null);
+
+  /**
+   * Documento cuja geração pode substituir o painel.
+   *
+   * Guardado fora do estado do React porque precisa ser lido no instante em que
+   * uma promessa resolve, e não no valor que existia quando ela começou. É o
+   * que impede a resposta atrasada do documento A de sobrescrever o painel
+   * depois que o usuário já pediu o B — defeito que só aparece com a rede
+   * lenta, que é exatamente quando o usuário troca de item.
+   */
+  const focoVigente = useRef<string | null>(null);
+
+  const etapa = useEtapaProlongada(etapaBruta);
+
   const temCredencial = status.some((item) => item.estado === 'conectada');
 
   const periodoInvalido =
@@ -52,21 +82,87 @@ export function App() {
    * A resposta é descartada se outra consulta chegou no meio tempo, para não
    * sobrescrever a lista nova com o detalhe da antiga.
    */
-  const detalharPagina = useCallback(async (base: ResultadoBusca) => {
-    if (base.documentos.length === 0) return;
+  const detalharPagina = useCallback(
+    async (base: ResultadoBusca, criterio: TipoFiltros['ordenacao']) => {
+      if (base.documentos.length === 0) return;
 
-    try {
-      const detalhados = await window.ancorai.detalharDocumentos(base.documentos);
-      setResultado((atual) => {
-        if (!atual || atual.documentos.length !== detalhados.length) return atual;
-        const mesmoConjunto = atual.documentos.every((d, i) => d.id === detalhados[i]?.id);
-        return mesmoConjunto ? { ...atual, documentos: detalhados } : atual;
-      });
-    } catch {
-      // Falhar aqui não muda nada para o usuário: a lista continua na tela sem
-      // os campos de autoria, que são complemento e não requisito.
-    }
-  }, []);
+      try {
+        const detalhados = await window.ancorai.detalharDocumentos(base.documentos);
+        setResultado((atual) => {
+          if (!atual || atual.documentos.length !== detalhados.length) return atual;
+          const mesmoConjunto = atual.documentos.every((d, i) => d.id === detalhados[i]?.id);
+          // A data apresentada muda aqui: o documento precisa mudar de lugar
+          // junto. Uma lista rotulada "Data decrescente" com datas fora de
+          // ordem afirma duas coisas incompatíveis, e quem lê não tem como
+          // saber qual delas vale.
+          return mesmoConjunto ? { ...atual, documentos: ordenar(detalhados, criterio) } : atual;
+        });
+      } catch {
+        // Falhar aqui não muda nada para o usuário: a lista continua na tela sem
+        // os campos de autoria, que são complemento e não requisito.
+      }
+    },
+    []
+  );
+
+  /**
+   * Traz um documento para o painel e obtém seu resumo.
+   *
+   * A ordem importa: primeiro se pergunta ao banco se já existe resumo. Se
+   * existe, ele aparece na hora, sem indicação de carregamento alguma — exibir
+   * "Gerando…" sobre algo já gerado seria afirmar ao usuário uma coisa que não
+   * é, e trocar uma resposta instantânea por uma espera fabricada.
+   */
+  const focarDocumento = useCallback(
+    async (documento: Documento, regerar = false) => {
+      focoVigente.current = documento.id;
+      setEmFoco(documento);
+      setResumo(null);
+      setSemResumo(null);
+      setEtapaBruta(null);
+
+      const vigente = () => focoVigente.current === documento.id;
+
+      if (!regerar) {
+        try {
+          const gravado = await window.ancorai.resumoGravado(documento);
+          if (!vigente()) return;
+          if (gravado && !gravado.desatualizado) {
+            setResumo(gravado);
+            return;
+          }
+        } catch {
+          // Sem resumo guardado a gente simplesmente gera; falhar ao consultar
+          // o banco local não é motivo para desistir do painel.
+        }
+      }
+
+      // Duas etapas, aguardadas separadamente, para que cada mensagem
+      // corresponda a trabalho que está mesmo acontecendo naquele momento.
+      try {
+        setEtapaBruta('lendo');
+        const preparo = await window.ancorai.prepararConteudo(documento);
+        if (!vigente()) return;
+
+        if (!preparo.pronto) {
+          setSemResumo({ motivo: preparo.motivo ?? 'falha', mensagem: preparo.mensagem });
+          return;
+        }
+
+        setEtapaBruta('gerando');
+        const resposta = await window.ancorai.resumoDoDocumento(documento, regerar);
+        if (!vigente()) return;
+
+        if (resposta.resumo) setResumo(resposta.resumo);
+        else setSemResumo({ motivo: resposta.motivo ?? 'falha', mensagem: resposta.mensagem });
+      } catch {
+        if (vigente()) setSemResumo({ motivo: 'falha' });
+      } finally {
+        if (vigente()) setEtapaBruta(null);
+      }
+    },
+    []
+  );
 
   const carregarRecentes = useCallback(
     async (filtrosAtuais: TipoFiltros, emSegundoPlano = false) => {
@@ -77,7 +173,7 @@ export function App() {
         // que o usuário já estava vendo; apenas o aviso é apresentado.
         if (novo.documentos.length > 0 || !emSegundoPlano) setResultado(novo);
         else setResultado((atual) => (atual ? { ...atual, falhas: novo.falhas } : novo));
-        void detalharPagina(novo);
+        void detalharPagina(novo, filtrosAtuais.ordenacao);
       } finally {
         setCarregando(false);
       }
@@ -90,11 +186,30 @@ export function App() {
     try {
       const novo = await window.ancorai.buscar(filtrosAtuais);
       setResultado(novo);
-      void detalharPagina(novo);
+      void detalharPagina(novo, filtrosAtuais.ordenacao);
     } finally {
       setCarregando(false);
     }
   }, [detalharPagina]);
+
+  /**
+   * Reorganiza o resultado já obtido segundo o critério escolhido.
+   *
+   * Quem reordena é o processo principal, porque é ele que tem o resultado
+   * completo: aqui só chegam os dez documentos da página, e ordená-los devolve
+   * a ordem de um recorte arbitrário, não a do resultado.
+   *
+   * Sem indicador de carregamento, de propósito: nada é consultado, e anunciar
+   * espera onde não há espera é inventar trabalho que não existe.
+   */
+  const reordenar = useCallback(
+    async (filtrosAtuais: TipoFiltros) => {
+      const novo = await window.ancorai.reordenar(filtrosAtuais);
+      setResultado(novo);
+      void detalharPagina(novo, filtrosAtuais.ordenacao);
+    },
+    [detalharPagina]
+  );
 
   // Rotina de inicialização: verifica as credenciais e, havendo alguma válida,
   // já apresenta os documentos recentes.
@@ -120,6 +235,48 @@ export function App() {
       }
     })();
   }, [carregarRecentes]);
+
+  /**
+   * O painel acompanha o primeiro documento da página.
+   *
+   * Depende do identificador, e não do objeto: a lista é substituída por outra
+   * instância a cada detalhamento de autoria, e comparar por referência faria
+   * o painel regerar o resumo do mesmo documento a cada atualização.
+   */
+  const primeiroId = resultado?.documentos[0]?.id ?? null;
+
+  useEffect(() => {
+    const primeiro = resultado?.documentos[0];
+    if (!primeiro) {
+      focoVigente.current = null;
+      setEmFoco(null);
+      setResumo(null);
+      setSemResumo(null);
+      setEtapaBruta(null);
+      return;
+    }
+    if (focoVigente.current === primeiro.id) return;
+    void focarDocumento(primeiro);
+    // `resultado` fica de fora das dependências de propósito: o gatilho é a
+    // troca do primeiro documento, não cada nova instância da lista.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [primeiroId, focarDocumento]);
+
+  useEffect(() => {
+    void window.ancorai.statusLLM().then(setStatusLLM);
+  }, []);
+
+  async function responderConsentimento(valor: boolean) {
+    const novo = await window.ancorai.consentirEnvio(valor);
+    setStatusLLM(novo);
+    if (valor && emFoco) void focarDocumento(emFoco);
+    else if (!valor) {
+      setSemResumo({
+        motivo: 'falha',
+        mensagem: 'Os resumos ficam desligados enquanto o envio não for autorizado.'
+      });
+    }
+  }
 
   function aoSubmeter(evento: React.FormEvent) {
     evento.preventDefault();
@@ -160,9 +317,11 @@ export function App() {
     setFiltros(novos);
 
     if (apenasOrdenacaoMudou(novos)) {
-      setResultado((atual) =>
-        atual ? { ...atual, documentos: ordenar(atual.documentos, novos.ordenacao) } : atual
-      );
+      // Volta à primeira página: reorganizado o resultado, a página 4 de antes
+      // já não guarda relação com a de agora.
+      const doInicio = { ...novos, pagina: 1 };
+      setFiltros(doInicio);
+      void reordenar(doInicio);
       return;
     }
 
@@ -288,39 +447,6 @@ export function App() {
           </div>
         ))}
 
-        {/*
-          O contador informa o TOTAL encontrado, não o tamanho da página: dizer
-          "10 resultados" a partir da décima primeira correspondência esconderia
-          justamente a informação que o número existe para dar.
-
-          Ele some quando não há consulta ativa — campo de busca vazio e nenhum
-          filtro aplicado —, que é a tela inicial de documentos recentes.
-        */}
-        <div className="linha-lista" aria-live="polite" aria-atomic="true">
-          {!carregando && temCredencial && consultaAtiva && (
-            <p className="resumo-lista">{total} resultado(s)</p>
-          )}
-          {!carregando && temCredencial && documentos.length > 0 && (
-            <label className="ordenacao">
-              <span className="apenas-leitor">Ordenação</span>
-              <select
-                value={filtros.ordenacao}
-                onChange={(evento) =>
-                  aoAlterarFiltros({
-                    ...filtros,
-                    ordenacao: evento.target.value as TipoFiltros['ordenacao']
-                  })
-                }
-              >
-                <option value="data-desc">Data decrescente</option>
-                <option value="data-asc">Data crescente</option>
-                <option value="a-z">Nome (A–Z)</option>
-                <option value="z-a">Nome (Z–A)</option>
-              </select>
-            </label>
-          )}
-        </div>
-
         {carregando && (
           <ul className="lista" aria-hidden="true">
             {[0, 1, 2, 3].map((indice) => (
@@ -358,11 +484,78 @@ export function App() {
         )}
 
         {!carregando && documentos.length > 0 && (
-          <ul className="lista">
-            {documentos.map((documento) => (
-              <Cartao key={documento.id} documento={documento} aoAbrir={abrir} />
-            ))}
-          </ul>
+          <div className="area-resultados">
+            <div className="coluna-resultados">
+              {/*
+                Contador e ordenação ficam dentro da coluna dos resultados, e
+                não numa faixa da largura da página. O controle governa a lista;
+                alinhá-lo à direita da página o encostaria no painel de resumo,
+                sugerindo uma relação que não existe e afastando-o do que ele de
+                fato altera.
+
+                As condições de antes — não estar carregando, haver documentos —
+                estão implícitas: este bloco só existe quando há resultado.
+
+                O contador informa o TOTAL encontrado, não o tamanho da página:
+                dizer "10 resultados" a partir da décima primeira correspondência
+                esconderia justamente a informação que o número existe para dar.
+                Ele some quando não há consulta ativa — campo vazio e nenhum
+                filtro —, que é a tela inicial de documentos recentes.
+              */}
+              <div className="linha-lista" aria-live="polite" aria-atomic="true">
+                {consultaAtiva && <p className="resumo-lista">{total} resultado(s)</p>}
+                <label className="ordenacao">
+                  <span className="apenas-leitor">Ordenação</span>
+                  <select
+                    value={filtros.ordenacao}
+                    onChange={(evento) =>
+                      aoAlterarFiltros({
+                        ...filtros,
+                        ordenacao: evento.target.value as TipoFiltros['ordenacao']
+                      })
+                    }
+                  >
+                    <option value="data-desc">Data decrescente</option>
+                    <option value="data-asc">Data crescente</option>
+                    <option value="a-z">Nome (A–Z)</option>
+                    <option value="z-a">Nome (Z–A)</option>
+                  </select>
+                </label>
+              </div>
+
+              <ul className="lista">
+                {documentos.map((documento) => (
+                  <Cartao
+                    key={documento.id}
+                    documento={documento}
+                    aoAbrir={abrir}
+                    aoResumir={(alvo) => void focarDocumento(alvo)}
+                    emFoco={emFoco?.id === documento.id}
+                  />
+                ))}
+              </ul>
+            </div>
+
+            {/* Sem documento em foco não há painel — nem moldura vazia. */}
+            {emFoco && (
+              <PainelResumo
+                documento={emFoco}
+                resumo={resumo}
+                etapa={etapa}
+                motivo={
+                  statusLLM && !statusLLM.consentido
+                    ? 'sem-consentimento'
+                    : semResumo?.motivo
+                }
+                mensagem={semResumo?.mensagem}
+                aoAbrir={abrir}
+                aoConsentir={() => void responderConsentimento(true)}
+                aoRecusar={() => void responderConsentimento(false)}
+                aoConfigurar={() => setConfigAberta(true)}
+                aoRegerar={() => void focarDocumento(emFoco, true)}
+              />
+            )}
+          </div>
         )}
 
         {/* A navegação só aparece quando há mais de uma página. */}
@@ -394,6 +587,8 @@ export function App() {
       {configAberta && (
         <Configuracoes
           status={status}
+          statusLLM={statusLLM}
+          aoAtualizarStatusLLM={setStatusLLM}
           aoFechar={() => setConfigAberta(false)}
           aoAtualizarStatus={(novo) => {
             setStatus(novo);

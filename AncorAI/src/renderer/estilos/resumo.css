@@ -1,0 +1,289 @@
+/*
+ * Painel de resumo por IA, à direita da lista de resultados.
+ */
+
+/*
+ * Duas colunas, com a lista mandando na largura.
+ *
+ * Abaixo da largura mínima o painel desce para baixo da lista em vez de as duas
+ * colunas se espremerem: em janela estreita, duas colunas apertadas são piores
+ * que uma coluna inteira.
+ */
+.area-resultados {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1080px) {
+  .area-resultados {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/*
+ * Coluna dos resultados: a linha de contador e ordenação, e a lista.
+ *
+ * Existe para que as duas ocupem a mesma largura. Sem ela, a linha seria irmã
+ * da grade e voltaria a se estender por baixo do painel. `min-width: 0` impede
+ * que um nome de arquivo longo estoure a coluna — item de grade não encolhe
+ * abaixo do próprio conteúdo sem isso.
+ *
+ * Abaixo de 1080px o painel desce para baixo da lista, e a coluna passa a
+ * ocupar a linha inteira: a linha continua acompanhando a lista sem que seja
+ * preciso tratar o caso à parte.
+ */
+.coluna-resultados {
+  min-width: 0;
+}
+
+.painel {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  overflow: hidden;
+  /* Acompanha a rolagem da lista, que é bem mais alta que o painel. */
+  position: sticky;
+  top: 24px;
+}
+
+.painel__topo {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--borda);
+}
+
+.painel__etiqueta {
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--verde-medio);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.painel__nome {
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--texto);
+  /* Nome de arquivo é longo e não tem espaços onde quebrar. */
+  overflow-wrap: anywhere;
+}
+
+.painel__fonte {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--creme);
+  border: 1px solid var(--borda);
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+}
+
+.painel__corpo {
+  padding: 18px 20px;
+}
+
+.painel__classificacao {
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+}
+
+.painel__rotulo {
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.painel__texto {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--texto);
+}
+
+.painel__subtitulo {
+  margin: 20px 0 10px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.painel__destaques {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.painel__destaques li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--texto-suave);
+}
+
+.painel__destaques li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.6em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--verde-medio);
+}
+
+.painel__nota {
+  margin: 14px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--texto-suave);
+}
+
+/*
+ * O aviso não se distingue apenas pela cor: tem borda à esquerda, fundo próprio
+ * e o texto diz o que houve. Quem não separa as cores continua entendendo.
+ */
+.painel__nota--atencao {
+  padding: 10px 12px;
+  border-left: 3px solid var(--aviso-borda);
+  background: var(--aviso-fundo);
+  border-radius: 0 8px 8px 0;
+  color: var(--texto);
+}
+
+.painel__nota--atencao p {
+  margin: 0 0 8px;
+}
+
+.painel__rodape {
+  padding: 16px 20px 20px;
+  border-top: 1px solid var(--borda);
+}
+
+.painel__abrir {
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* --- Estados --- */
+
+.painel__carregando {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.painel__etapa {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.painel__carregando .painel__nota {
+  margin: 0;
+}
+
+.painel__pulso {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.painel__pulso span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--verde-medio);
+  opacity: 0.35;
+  animation: painel-pulso 1.2s ease-in-out infinite;
+}
+
+.painel__pulso span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.painel__pulso span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes painel-pulso {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+/* Quem pediu menos movimento não deve receber três pontos saltando. */
+@media (prefers-reduced-motion: reduce) {
+  .painel__pulso span {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+.painel__consentimento p {
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--texto);
+}
+
+.painel__acoes {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.painel__indisponivel {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.painel__aviso {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--texto-suave);
+}
+
+/*
+ * O cartão em foco é marcado por borda e por um traço à esquerda — e o botão
+ * dele também muda de texto para "No painel". Cor sozinha não comunicaria a
+ * quem não a distingue.
+ */
+.cartao--em-foco {
+  border-color: var(--verde-medio);
+  box-shadow: inset 3px 0 0 var(--verde-medio), var(--sombra);
+}
+
+.link-fonte--resumo {
+  color: var(--verde-medio);
+}
+
+.link-fonte--resumo[aria-pressed='true'] {
+  color: var(--texto-suave);
+  cursor: default;
+}

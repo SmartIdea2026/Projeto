@@ -52,6 +52,20 @@ Organizado por assunto, e não em ordem alfabética: os termos se explicam melho
 
 **ETag** — identificador que a API do GitHub devolve junto de uma resposta. Reenviado na requisição seguinte, permite que o servidor responda "nada mudou" sem retransmitir o conteúdo, e sem consumir cota.
 
+## Conteúdo dos documentos
+
+**Ingestão** — o percurso completo que traz o conteúdo de um documento para dentro do sistema: obter os bytes na fonte, extrair o texto e gravá-lo no banco local. Distingue-se do **inventário**, que só descobre quais documentos existem e quais são seus metadados. Inventariar é barato — uma requisição por repositório; ingerir é caro — uma requisição por arquivo.
+
+**Extração de texto** — a conversão do arquivo para texto simples, específica de cada formato: decodificação direta em `md` e `txt`, análise da estrutura em `pdf`, `docx` e `epub`. Formatos sem extrator disponível são registrados como *sem texto*, com o motivo, e continuam encontráveis pelo nome.
+
+**Blob** — no Git, o objeto que guarda o conteúdo de um arquivo, sem nome nem caminho. A árvore Git associa caminhos a blobs; o conteúdo em si mora no blob.
+
+**`sha` do blob** — o identificador de um blob, que é o *hash* do próprio conteúdo. Muda exatamente quando os bytes do arquivo mudam, e não muda quando o arquivo é apenas tocado por um commit vizinho. É o que o AncorAI usa para saber se o texto guardado ainda vale, em vez da data — que, sendo o `pushed_at` do repositório (ver *data aproximada*), avançaria para todos os arquivos a cada push e forçaria rebaixar o acervo inteiro.
+
+**Confinamento ao processo principal** — regra pela qual um dado sensível nunca é devolvido ao *renderer* por nenhum canal IPC. Vale para as credenciais desde a ADR-0003 e passa a valer para o conteúdo dos documentos com a ADR-0005: o sistema tem acesso ao texto, o usuário final não.
+
+**Truncamento** — corte do texto extraído ao atingir o limite por documento. O registro marca que houve corte, para que quem consuma o texto não trate uma parte como se fosse o todo.
+
 ## Processo
 
 **ADR** (*Architecture Decision Record*) — registro de uma decisão arquitetural, com o contexto que a motivou, as alternativas descartadas e as consequências aceitas. Preserva o *porquê*, que o código sozinho não conta.

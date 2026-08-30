@@ -1,5 +1,5 @@
 import type { Documento } from '../../compartilhado/tipos';
-import { gravarCache, lerCache } from '../banco/repositorio';
+import { type EntradaCache, gravarCache, lerCache } from '../banco/repositorio';
 import { ErroFonte, extensaoDe, extensaoEhAceita } from './comum';
 
 /**
@@ -23,10 +23,14 @@ interface RespostaCache<T> {
   doCache: boolean;
 }
 
-function cabecalhos(token: string, etag?: string | null): HeadersInit {
+function cabecalhos(
+  token: string,
+  etag?: string | null,
+  aceite = 'application/vnd.github+json'
+): HeadersInit {
   const base: Record<string, string> = {
     Authorization: `Bearer ${token}`,
-    Accept: 'application/vnd.github+json',
+    Accept: aceite,
     'X-GitHub-Api-Version': '2022-11-28'
   };
   if (etag) base['If-None-Match'] = etag;
@@ -34,31 +38,39 @@ function cabecalhos(token: string, etag?: string | null): HeadersInit {
 }
 
 /**
- * Requisição com cache por ETag.
+ * Executa a requisição e trata os modos de falha comuns a todo endpoint.
+ *
+ * Devolve `null` quando o chamador deve usar o cache que já tem — seja porque
+ * o GitHub respondeu 304, seja porque a requisição falhou e o cache é o
+ * recurso. Devolve a `Response` quando o corpo precisa ser lido.
+ *
+ * Interpretar o corpo cabe a quem chama: `requisitar` lê JSON e `requisitarBytes`
+ * lê bytes. O que **não** cabe a quem chama é decidir o que fazer com 401, 403,
+ * 429 ou queda de rede: essa decisão é a mesma para todo endpoint, e duplicá-la
+ * faria o tratamento de limite de requisições divergir entre os dois caminhos
+ * sem ninguém perceber.
  *
  * Uma resposta 304 não consome cota de rate limit do GitHub, então revalidar é
  * sempre preferível a repetir a requisição completa.
  */
-async function requisitar<T>(
+async function responder(
   caminho: string,
   token: string,
-  chaveCache?: string
-): Promise<RespostaCache<T>> {
-  const cache = chaveCache ? await lerCache<T>(chaveCache) : null;
+  opcoes: { aceite?: string; etag?: string | null; temCache?: boolean } = {}
+): Promise<Response | null> {
+  const { aceite, etag = null, temCache = false } = opcoes;
 
   let resposta: Response;
   try {
     resposta = await fetch(`${BASE}${caminho}`, {
-      headers: cabecalhos(token, cache?.etag)
+      headers: cabecalhos(token, etag, aceite)
     });
   } catch {
-    if (cache) return { dados: cache.payload, doCache: true };
+    if (temCache) return null;
     throw new ErroFonte('github', 'Não foi possível alcançar o GitHub.');
   }
 
-  if (resposta.status === 304 && cache) {
-    return { dados: cache.payload, doCache: true };
-  }
+  if (resposta.status === 304 && temCache) return null;
 
   if (resposta.status === 401) {
     throw new ErroFonte('github', 'A credencial do GitHub não é válida.');
@@ -67,7 +79,7 @@ async function requisitar<T>(
   if (resposta.status === 403 || resposta.status === 429) {
     const restante = resposta.headers.get('x-ratelimit-remaining');
     const limiteExcedido = restante === '0' || resposta.status === 429;
-    if (cache) return { dados: cache.payload, doCache: true };
+    if (temCache) return null;
     throw new ErroFonte(
       'github',
       limiteExcedido
@@ -78,13 +90,50 @@ async function requisitar<T>(
   }
 
   if (!resposta.ok) {
-    if (cache) return { dados: cache.payload, doCache: true };
+    if (temCache) return null;
     throw new ErroFonte('github', `O GitHub respondeu com o código ${resposta.status}.`);
   }
+
+  return resposta;
+}
+
+/** Requisição de JSON com cache por ETag. */
+async function requisitar<T>(
+  caminho: string,
+  token: string,
+  chaveCache?: string
+): Promise<RespostaCache<T>> {
+  const cache = chaveCache ? await lerCache<T>(chaveCache) : null;
+
+  const resposta = await responder(caminho, token, {
+    etag: cache?.etag,
+    temCache: Boolean(cache)
+  });
+
+  if (!resposta) return { dados: (cache as EntradaCache<T>).payload, doCache: true };
 
   const dados = (await resposta.json()) as T;
   if (chaveCache) await gravarCache(chaveCache, dados, resposta.headers.get('etag'));
   return { dados, doCache: false };
+}
+
+/**
+ * Requisição de bytes, sem cache por ETag.
+ *
+ * Endereçar um blob pelo `sha` já é endereçar por conteúdo: o mesmo `sha`
+ * devolve sempre os mesmos bytes. Revalidar por ETag não teria o que revalidar,
+ * e gravar o resultado em `cache_fontes` colocaria arquivos inteiros numa
+ * coleção com semântica de cache de resposta e vida curta. Quem guarda o
+ * resultado desta chamada é a camada de conteúdo, com regra própria.
+ */
+async function requisitarBytes(
+  caminho: string,
+  token: string,
+  aceite: string
+): Promise<ArrayBuffer> {
+  const resposta = await responder(caminho, token, { aceite });
+  // `responder` só devolve `null` quando há cache a usar, e aqui não há.
+  return (resposta as Response).arrayBuffer();
 }
 
 export async function verificarCredencial(token: string): Promise<string> {
@@ -151,7 +200,11 @@ export async function listarRepositorios(token: string): Promise<Parcial<Reposit
 
 interface ArvoreApi {
   truncated: boolean;
-  tree: Array<{ path: string; type: string; sha: string }>;
+  // `sha` e `size` já vêm nesta resposta, sem custo algum: o `sha` é a
+  // identidade do conteúdo usada para saber se o texto guardado ainda vale, e
+  // o `size` permite descartar um arquivo grande demais sem gastar requisição
+  // para descobrir o tamanho.
+  tree: Array<{ path: string; type: string; sha: string; size?: number }>;
 }
 
 /**
@@ -192,7 +245,9 @@ export async function inventariar(
         dataAproximada: true,
         link: `https://github.com/${repo.full_name}/blob/${repo.default_branch}/${item.path}`,
         caminho: item.path,
-        repositorio: repo.full_name
+        repositorio: repo.full_name,
+        versaoConteudo: item.sha,
+        tamanho: item.size
       };
     });
 
@@ -211,7 +266,11 @@ interface CommitApi {
 }
 
 interface CommitDetalheApi {
-  files?: Array<{ filename: string; status: string }>;
+  // `sha` aqui é o do blob do arquivo naquele commit — a mesma identidade de
+  // conteúdo que a árvore Git devolve. Vem de graça nesta resposta, que já é
+  // buscada de qualquer forma, e é o que torna os documentos recentes
+  // endereçáveis por conteúdo como os do inventário.
+  files?: Array<{ filename: string; status: string; sha?: string }>;
 }
 
 /**
@@ -259,13 +318,16 @@ export async function recentesDoRepositorio(
         dataModificacao: commit.commit.author.date,
         link: `https://github.com/${repo.full_name}/blob/${repo.default_branch}/${arquivo.filename}`,
         caminho: arquivo.filename,
-        repositorio: repo.full_name
+        repositorio: repo.full_name,
+        versaoConteudo: arquivo.sha
       });
     }
   }
 
   // Aqui a data é a do commit, e não uma aproximação: os documentos saem sem
-  // a marca `dataAproximada`.
+  // a marca `dataAproximada`. E saem com `versaoConteudo`, sem o que nenhum
+  // documento da tela inicial poderia ter o conteúdo obtido — a tela inicial
+  // é justamente esta lista.
   return { dados: [...encontrados.values()], aviso: null };
 }
 
@@ -309,6 +371,32 @@ export async function autoriaDoArquivo(
   } catch {
     return null;
   }
+}
+
+/**
+ * Bytes de um arquivo, endereçados pelo `sha` do blob.
+ *
+ * Usa `git/blobs/{sha}` com mídia bruta, e não o endpoint de conteúdo por
+ * caminho, por três razões:
+ *
+ * 1. o `sha` já veio na árvore do inventário — pedir por caminho faria o
+ *    GitHub resolver de novo um caminho que já resolvemos;
+ * 2. endereçar por conteúdo elimina a corrida com um push que entre entre o
+ *    inventário e o download: recebemos exatamente a revisão inventariada, e
+ *    o texto guardado sempre corresponde ao `sha` gravado ao lado dele;
+ * 3. o endpoint de conteúdo entrega no máximo 1 MB na forma JSON, enquanto o
+ *    de blob com mídia bruta vai muito além.
+ */
+export async function conteudoDoArquivo(
+  token: string,
+  repositorio: string,
+  sha: string
+): Promise<ArrayBuffer> {
+  return requisitarBytes(
+    `/repos/${repositorio}/git/blobs/${sha}`,
+    token,
+    'application/vnd.github.raw'
+  );
 }
 
 /**

@@ -75,12 +75,21 @@
 
 /* ---------- Filtros ---------- */
 
+/*
+ * A margem de baixo é maior que a de cima de propósito.
+ *
+ * Os filtros pertencem à barra de busca acima — são todos controles da
+ * consulta —, e o que vem depois é o resultado dela. Com o espaçamento igual
+ * dos dois lados, o seletor de ordenação encostava nos filtros e os dois liam
+ * como um grupo só: são pílulas de peso visual parecido, e nada além da
+ * distância os separa.
+ */
 .filtros {
   display: flex;
   gap: 10px;
   justify-content: center;
   flex-wrap: wrap;
-  margin: 20px 0 8px;
+  margin: 20px 0 24px;
 }
 
 .filtro {

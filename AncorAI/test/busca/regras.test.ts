@@ -153,6 +153,21 @@ describe('desempate da ordenação por data', () => {
     expect(segunda).toEqual(primeira);
   });
 
+  it('desempata pelo identificador quando nome e data empatam', () => {
+    // `README.md` em repositórios diferentes é a regra, não a exceção: sem o
+    // desempate final os dois trocam de lugar entre uma consulta e outra.
+    const mesmoNome = [
+      doc({ id: 'github:org/beta:README.md', nome: 'README.md' }),
+      doc({ id: 'github:org/alfa:README.md', nome: 'README.md' })
+    ];
+
+    const primeira = ordenar(mesmoNome, 'data-desc').map((d) => d.id);
+    const segunda = ordenar([...mesmoNome].reverse(), 'data-desc').map((d) => d.id);
+
+    expect(primeira).toEqual(['github:org/alfa:README.md', 'github:org/beta:README.md']);
+    expect(segunda).toEqual(primeira);
+  });
+
   it('a data continua tendo precedência sobre o nome', () => {
     const datasDistintas = [
       doc({ id: 'a', nome: 'abacate.md', dataModificacao: '2026-01-01T00:00:00Z' }),

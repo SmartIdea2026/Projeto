@@ -20,7 +20,8 @@ const cofre = { obter: vi.fn(), definir: vi.fn(), remover: vi.fn(), existe: vi.f
 const github = {
   buscarDocumentos: vi.fn(),
   documentosRecentes: vi.fn(),
-  verificarCredencial: vi.fn()
+  verificarCredencial: vi.fn(),
+  autoriaDoArquivo: vi.fn()
 };
 
 vi.mock('../../src/main/credenciais/cofre', () => cofre);
@@ -186,7 +187,8 @@ describe('aviso de resultado parcial', () => {
     ]);
   });
 
-  it('avisa que o filtro de período incide sobre data aproximada', async () => {
+  it('avisa quando o período deixa documentos de fora por data não resolvida', async () => {
+    // Sem repositório e caminho, a data real não pode ser obtida.
     github.buscarDocumentos.mockResolvedValue({
       dados: [{ ...documento, dataAproximada: true }],
       aviso: null
@@ -198,8 +200,36 @@ describe('aviso de resultado parcial', () => {
       dataFinal: '2026-09-01'
     });
 
+    // O documento sai do resultado, e a saída é dita: uma ausência silenciosa
+    // é indistinguível de um documento que nunca existiu.
+    expect(resultado.documentos).toHaveLength(0);
+    expect(resultado.total).toBe(0);
     expect(resultado.avisos).toHaveLength(1);
-    expect(resultado.avisos[0]?.mensagem).toContain('atividade do repositório');
+    expect(resultado.avisos[0]?.mensagem).toContain('não pôde ser obtida');
+    // O aviso antigo dizia o contrário: que a data usada era a do repositório.
+    expect(resultado.avisos[0]?.mensagem).not.toContain('atividade do repositório');
+  });
+
+  it('não avisa quando a data real de todos os candidatos foi resolvida', async () => {
+    github.buscarDocumentos.mockResolvedValue({
+      dados: [
+        { ...documento, dataAproximada: true, repositorio: 'o/r', caminho: 'Docs/a.md' }
+      ],
+      aviso: null
+    });
+    github.autoriaDoArquivo.mockResolvedValue({
+      autor: 'Gabi Prajo',
+      dataModificacao: '2026-08-15T00:00:00Z'
+    });
+
+    const resultado = await servico.buscar({
+      ...FILTROS_PADRAO,
+      dataInicial: '2026-07-01',
+      dataFinal: '2026-09-01'
+    });
+
+    expect(resultado.documentos).toHaveLength(1);
+    expect(resultado.avisos).toEqual([]);
   });
 
   it('não avisa sobre período quando nenhum filtro de data está ativo', async () => {

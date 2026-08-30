@@ -6,7 +6,7 @@ O banco local hoje tem duas coleções: `documentos_acessados`, que registra ape
 
 Os campos `resumo` e `resumoEm` já existem reservados no repositório desde a implementação inicial, previstos exatamente para este momento.
 
-A postura vigente de dados é explícita e será invertida: o sistema guarda **apenas o link de redirecionamento, nunca o conteúdo**, e nada do conteúdo deixa a máquina. Passar documentos pela LLM rompe a segunda metade dessa regra.
+A postura de dados já terá mudado uma vez quando esta mudança começar. A mudança `ingerir-conteudo-dos-documentos`, que é pré-requisito desta, faz o sistema armazenar localmente o texto dos documentos, e a ADR-0005 autoriza isso. O que **esta** mudança rompe é a metade restante da regra original: **nada do conteúdo deixa a máquina**. Passar documentos pela LLM envia o texto a um serviço externo, e é essa fronteira — não a do armazenamento — que exige ADR aqui.
 
 ## Goals / Non-Goals
 
@@ -22,14 +22,15 @@ A postura vigente de dados é explícita e será invertida: o sistema guarda **a
 
 - Busca vetorial ou por similaridade semântica — a classificação por etiquetas atende ao caso de uso com custo muito menor
 - Percorrer o conteúdo integral a cada busca
+- Obter o conteúdo das fontes e armazená-lo — isso é a mudança `ingerir-conteudo-dos-documentos`, pré-requisito desta
 - Resumo de todos os documentos automaticamente — só classificação; resumo é sob demanda
 - Retomada do Google Drive, fora do escopo pela ADR-0004
 
 ## Decisions
 
-### 1. Duas coleções novas, conteúdo nunca persistido
+### 1. Duas coleções novas, sem duplicar o texto
 
-O índice é uma coleção de documentos com metadados, classificação (assunto, tipo, etiquetas), resumo e datas de geração. O conteúdo baixado para submissão é usado e descartado — nunca gravado. Isso preserva a parte da ADR-0002 que continua válida: o banco não é repositório de conteúdo.
+O índice é uma coleção de documentos com metadados, classificação (assunto, tipo, etiquetas), resumo e datas de geração. O texto submetido à LLM vem da coleção mantida por `ingerir-conteudo-dos-documentos` e é referenciado pelo identificador do documento — o índice não guarda uma segunda cópia dele. A submissão à LLM lê o texto já armazenado em vez de baixá-lo de novo, o que é justamente o que torna a classificação de todo o acervo viável dentro da cota.
 
 ### 2. Classificação e resumo são operações distintas
 

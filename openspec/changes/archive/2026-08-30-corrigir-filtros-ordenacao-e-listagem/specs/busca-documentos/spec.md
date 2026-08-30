@@ -1,0 +1,165 @@
+## MODIFIED Requirements
+
+### Requirement: Filtro por período
+
+O sistema SHALL permitir definir um período por meio de data inicial e data final, restringindo os resultados aos documentos cuja data esteja dentro do intervalo.
+
+O período SHALL incidir sobre a **data real da última alteração do documento**, e não sobre uma data derivada da atividade do repositório que o contém. Havendo período definido, o sistema SHALL resolver a data real dos documentos candidatos **antes** de aplicar o filtro. A distinção não é de precisão, e sim de significado: um recorte que admite documentos intocados há um ano por estarem em repositório ativo é um recorte por atividade do repositório apresentado ao usuário sob o nome de recorte por data.
+
+Documento cuja data ainda for aproximada e cuja data real não puder ser resolvida NÃO SHALL ser apresentado enquanto houver período definido. Presumi-lo dentro do intervalo contradiz o filtro; presumi-lo fora seria igualmente arbitrário — a diferença é que a omissão pode ser comunicada ao usuário e a inclusão indevida não.
+
+A resolução das datas SHALL ser limitada por um teto de documentos, e o sistema SHALL informar quando o acervo exceder esse teto, identificando o alcance efetivo do filtro.
+
+O período SHALL valer sobre o acervo consultável, e não sobre o conjunto que estava apresentado no momento em que ele foi definido.
+
+O período definido SHALL permanecer em vigor enquanto o usuário não o alterar ou limpar, inclusive ao trocar de página e ao alterar outros filtros.
+
+#### Scenario: Período informado
+
+- **GIVEN** que o usuário definiu data inicial e data final
+- **WHEN** a busca é realizada
+- **THEN** apenas documentos com data dentro do intervalo são apresentados
+
+#### Scenario: Documento cuja data real cai fora do intervalo
+
+- **GIVEN** que um documento pertence a um repositório com atividade dentro do intervalo
+- **AND** que sua data real de última alteração é anterior à data inicial
+- **WHEN** o filtro de período é aplicado
+- **THEN** o documento não é apresentado
+- **AND** o contador não o inclui no total
+
+#### Scenario: Data real não resolvida com período em vigor
+
+- **GIVEN** que há período definido
+- **AND** que a data real de um documento de data aproximada não pôde ser obtida
+- **WHEN** os resultados são apresentados
+- **THEN** o documento não aparece entre eles
+- **AND** o sistema informa que parte do acervo ficou fora do alcance do filtro
+
+#### Scenario: Acervo maior que o teto de resolução de datas
+
+- **GIVEN** que o acervo excede o teto de documentos cuja data é resolvida
+- **WHEN** o usuário define um período
+- **THEN** o sistema apresenta os documentos dentro do intervalo entre os que couberam no teto
+- **AND** informa qual foi o alcance considerado
+
+#### Scenario: Período definido sem termo de busca
+
+- **GIVEN** que o campo de busca está vazio
+- **WHEN** o usuário define um período
+- **THEN** o sistema consulta o acervo e apresenta os documentos daquele intervalo
+- **AND** o resultado não fica restrito ao que estava na tela antes
+
+#### Scenario: Data final anterior à inicial
+
+- **GIVEN** que o usuário informou uma data final anterior à data inicial
+- **WHEN** o período é aplicado
+- **THEN** o sistema informa o erro e não realiza a consulta
+- **AND** os resultados anteriores permanecem visíveis
+
+### Requirement: Ordenação dos resultados
+
+O sistema SHALL permitir ordenar os resultados por A–Z, Z–A, data crescente e data decrescente.
+
+A ordenação SHALL incidir sobre o **resultado completo da consulta vigente**, e não sobre a página apresentada. Ao trocar de critério, o sistema SHALL reorganizar todos os documentos encontrados e recalcular as páginas, de modo que a primeira página passe a conter os documentos de maior precedência segundo o novo critério. Reordenar apenas o que está visível devolve a ordem alfabética de um recorte arbitrário e não a do resultado, contrariando o requisito de paginação.
+
+A alteração da ordenação SHALL reorganizar os resultados já obtidos, sem realizar nova consulta às fontes.
+
+Os critérios de data SHALL usar o nome do documento em ordem A–Z como desempate e, permanecendo o empate, o identificador do documento, que é único. Sem o desempate por nome, documentos que compartilham a mesma data — situação comum no GitHub, onde a busca deriva a data do repositório e não do arquivo — aparecem em ordem arbitrária; sem o desempate final por identificador, documentos de mesmo nome em repositórios diferentes, como `README.md`, continuam trocando de lugar entre consultas sucessivas.
+
+O critério escolhido SHALL permanecer em vigor enquanto o usuário não o alterar, inclusive quando a lista for recarregada por mudança de outro filtro.
+
+#### Scenario: Ordenação alterada
+
+- **GIVEN** que resultados estão sendo exibidos
+- **WHEN** o usuário seleciona outro critério de ordenação
+- **THEN** os resultados são reorganizados conforme o critério
+- **AND** nenhuma nova consulta às fontes é realizada
+
+#### Scenario: Ordenação sobre resultado de várias páginas
+
+- **GIVEN** que a consulta retornou mais documentos do que cabem em uma página
+- **WHEN** o usuário seleciona a ordenação por nome A–Z
+- **THEN** a primeira página apresenta os primeiros documentos em ordem alfabética do resultado inteiro
+- **AND** não os primeiros em ordem alfabética da página que estava visível
+
+#### Scenario: Ordenação alterada fora da primeira página
+
+- **GIVEN** que o usuário está em uma página diferente da primeira
+- **WHEN** ele troca o critério de ordenação
+- **THEN** o resultado reorganizado é apresentado a partir da primeira página
+
+#### Scenario: Documentos com a mesma data
+
+- **GIVEN** que vários documentos compartilham a mesma data de modificação
+- **WHEN** a ordenação por data é aplicada
+- **THEN** esses documentos aparecem entre si em ordem alfabética de nome
+- **AND** a ordem se mantém estável entre consultas sucessivas
+
+#### Scenario: Documentos de mesma data e mesmo nome
+
+- **GIVEN** que dois documentos de repositórios diferentes têm o mesmo nome e a mesma data
+- **WHEN** a ordenação por data é aplicada duas vezes seguidas
+- **THEN** eles aparecem na mesma ordem relativa nas duas vezes
+
+#### Scenario: Ordenação preservada ao recarregar
+
+- **GIVEN** que o usuário escolheu um critério de ordenação
+- **WHEN** a lista é recarregada por alteração de outro filtro
+- **THEN** o critério escolhido continua aplicado ao novo resultado
+
+## ADDED Requirements
+
+### Requirement: Ordem coerente com os dados apresentados
+
+A ordem em que os documentos aparecem SHALL corresponder aos dados que a tela exibe sobre eles. Quando a data apresentada de um documento for substituída depois que a lista já está visível — o que ocorre ao obter a data real de uma alteração —, o sistema SHALL reposicionar o documento segundo o critério de ordenação vigente.
+
+Uma lista rotulada "Data decrescente" cujas datas visíveis estão fora de ordem informa ao usuário duas coisas incompatíveis ao mesmo tempo, e ele não tem como saber qual delas é verdadeira.
+
+#### Scenario: Data real chega depois da lista
+
+- **GIVEN** que a lista está sendo apresentada ordenada por data decrescente
+- **WHEN** a data real de alteração de um documento é obtida e difere da apresentada
+- **THEN** o documento é reposicionado conforme a nova data
+- **AND** a ordem apresentada continua correspondendo às datas exibidas
+
+#### Scenario: Reposicionamento não recarrega a lista
+
+- **GIVEN** que a lista está sendo apresentada
+- **WHEN** os documentos são reposicionados pela chegada das datas reais
+- **THEN** nenhuma nova consulta às fontes é realizada
+- **AND** nenhum indicador de carregamento é apresentado
+
+### Requirement: Posição do controle de ordenação
+
+O controle de ordenação SHALL ser apresentado junto à lista de resultados que ele governa, alinhado à borda direita dessa lista, e NÃO SHALL ocupar a faixa correspondente ao painel de resumo.
+
+O controle governa a lista, não o painel. Apresentá-lo alinhado à direita da página inteira o coloca acima do painel de resumo, sugerindo uma relação que não existe e afastando-o do que ele de fato altera.
+
+O contador de resultados SHALL acompanhar o controle na mesma linha, à esquerda dela.
+
+#### Scenario: Controle apresentado com resultados na tela
+
+- **GIVEN** que há resultados sendo apresentados
+- **WHEN** a tela é exibida
+- **THEN** o controle de ordenação aparece acima da lista, alinhado à borda direita dela
+- **AND** o painel de resumo permanece sem controle sobreposto
+
+#### Scenario: Controle recebe o foco pelo teclado
+
+- **GIVEN** que o controle de ordenação está visível
+- **WHEN** o usuário o alcança pela navegação por teclado
+- **THEN** o foco é visualmente assinalado
+- **AND** o controle é identificado por rótulo acessível
+
+#### Scenario: Sem resultados a ordenar
+
+- **GIVEN** que a consulta não retornou documento algum
+- **WHEN** a tela é apresentada
+- **THEN** o controle de ordenação não é apresentado
+
+#### Scenario: Consulta em andamento
+
+- **GIVEN** que uma consulta está em andamento
+- **WHEN** o indicador de carregamento é apresentado
+- **THEN** o controle de ordenação não é apresentado até que haja resultado

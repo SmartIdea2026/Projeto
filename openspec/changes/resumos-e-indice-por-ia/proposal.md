@@ -18,7 +18,7 @@ Esta é a segunda de duas mudanças. A primeira, `melhorar-busca-e-apresentacao`
 
 - **Índice local de documentos**, com nome, caminho, link, metadados e classificação. A busca passa a consultá-lo primeiro e só recorre às APIs quando o índice não responde ou está defasado.
 - **Classificação por IA na indexação:** cada documento passa uma vez pela LLM, que produz assunto, tipo e etiquetas, gravados no índice. É o que viabiliza a busca por contexto.
-- **BREAKING (postura de dados):** o conteúdo dos documentos passa a ser enviado a um serviço externo (Google Gemini). Até hoje o sistema guarda **apenas o link de redirecionamento, nunca o conteúdo**, e nada do conteúdo deixa a máquina. Exige ADR.
+- **BREAKING (postura de dados):** o conteúdo dos documentos passa a ser **enviado a um serviço externo** (Google Gemini). O armazenamento local do texto já terá sido autorizado pela ADR-0005, na mudança `ingerir-conteudo-dos-documentos`; o que esta rompe é a regra de que nada do conteúdo deixa a máquina. Exige ADR própria.
 - **Chamadas à LLM em série, uma por vez** — nunca em lote paralelo.
 - **Resumo por IA** do documento em foco, apresentado em painel à direita, com o do primeiro resultado gerado assim que a busca retorna.
 - **Botão de gerar resumo em cada resultado**, substituindo o conteúdo do painel.
@@ -40,7 +40,7 @@ Esta é a segunda de duas mudanças. A primeira, `melhorar-busca-e-apresentacao`
 
 ## Impact
 
-**Confidencialidade — o ponto central.** O conteúdo dos documentos passa a ser enviado ao Google. No plano gratuito da API do Gemini o conteúdo submetido pode ser usado para melhorar os produtos do Google e passar por revisão humana; no plano pago, não. A equipe decidiu prosseguir com a chave gratuita, ciente disso, por se tratar de documentos do próprio projeto acadêmico. **Exige ADR**, que deve nomear o risco e registrar a decisão — a ADR-0002 e as especificações vigentes afirmam que o conteúdo nunca é armazenado nem sai da máquina, e essa afirmação deixa de valer.
+**Confidencialidade — o ponto central.** O conteúdo dos documentos passa a ser enviado ao Google. No plano gratuito da API do Gemini o conteúdo submetido pode ser usado para melhorar os produtos do Google e passar por revisão humana; no plano pago, não. A equipe decidiu prosseguir com a chave gratuita, ciente disso, por se tratar de documentos do próprio projeto acadêmico. **Exige ADR**, que deve nomear o risco e registrar a decisão. A ADR-0005 já derrubou a afirmação de que o conteúdo não é armazenado; o que segue de pé, e cai aqui, é a de que ele não deixa a máquina.
 
 **Cota gratuita.** A classificação percorre todos os documentos, uma chamada por documento e uma de cada vez. Para o volume atual do repositório isso é rápido; para um acervo grande, a indexação leva tempo e precisa ser incremental, retomável e informar progresso.
 
