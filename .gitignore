@@ -40,3 +40,6 @@ venv/
 AncorAI/node_modules/
 AncorAI/out/
 AncorAI/release/
+
+# Sobra de compilação acidental (gcc/clang sem -o) na pasta do AncorAI.
+AncorAI/a.out
