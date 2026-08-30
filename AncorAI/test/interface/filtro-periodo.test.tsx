@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { App } from '../../src/renderer/App';
 import type { Documento, ResultadoBusca, StatusFonte } from '../../src/compartilhado/tipos';
+import { CONECTADO, montarApi, instalarApi } from './apoio';
 
 /**
  * Filtro de período em painel suspenso.
@@ -30,25 +31,12 @@ const RESULTADO: ResultadoBusca = {
   doCache: false
 };
 
-const CONECTADO: StatusFonte[] = [{ fonte: 'github', estado: 'conectada', conta: 'equipe' }];
-
-const api = {
-  status: vi.fn(async () => CONECTADO),
-  recentesDoCache: vi.fn(async () => null),
-  recentes: vi.fn(async () => RESULTADO),
-  buscar: vi.fn(async () => RESULTADO),
-  detalharDocumentos: vi.fn(async (docs: Documento[]) => docs),
-  verificarCredenciais: vi.fn(),
-  definirCredencial: vi.fn(),
-  removerCredencial: vi.fn(),
-  abrirDocumento: vi.fn(),
-  documentosAcessados: vi.fn(async () => [])
-};
+const api = montarApi(RESULTADO);
 
 beforeEach(() => {
   vi.clearAllMocks();
   api.recentes.mockResolvedValue(RESULTADO);
-  Object.defineProperty(window, 'ancorai', { value: api, writable: true, configurable: true });
+  instalarApi(api);
 });
 
 async function abrirApp() {
@@ -159,5 +147,76 @@ describe('painel de período', () => {
     // Fechar o painel não pode esconder o motivo de a busca não responder.
     await waitFor(() => expect(screen.queryByLabelText('De')).not.toBeInTheDocument());
     expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
+});
+
+/**
+ * Alcance do filtro de período.
+ *
+ * A rota da coleta — janela de recentes ou acervo — é decidida no processo
+ * principal, por `exigeAcervo`, e coberta por `test/busca/paginacao.test.ts`.
+ * O que cabe verificar aqui é o lado da interface do mesmo contrato: o período
+ * chega à consulta, limpá-lo devolve a tela aos recentes, e a espera é
+ * sinalizada enquanto o acervo é percorrido.
+ */
+describe('período e a consulta ao acervo', () => {
+  it('leva o período à consulta e o retira ao limpar', async () => {
+    const botao = await abrirApp();
+    fireEvent.click(botao);
+
+    fireEvent.change(screen.getByLabelText('De'), { target: { value: '2026-01-01' } });
+    fireEvent.change(screen.getByLabelText('Até'), { target: { value: '2026-01-31' } });
+
+    await waitFor(() => {
+      const ultima = api.recentes.mock.calls.at(-1)![0] as {
+        dataInicial?: string;
+        dataFinal?: string;
+        termo: string;
+      };
+      expect(ultima.dataInicial).toBe('2026-01-01');
+      expect(ultima.dataFinal).toBe('2026-01-31');
+      // Sem termo: é o período, sozinho, que exige o acervo.
+      expect(ultima.termo).toBe('');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+
+    await waitFor(() => {
+      const ultima = api.recentes.mock.calls.at(-1)![0] as {
+        dataInicial?: string;
+        dataFinal?: string;
+      };
+      expect(ultima.dataInicial).toBeUndefined();
+      expect(ultima.dataFinal).toBeUndefined();
+    });
+
+    // A tela volta aos recentes: nenhuma busca por termo foi disparada.
+    expect(api.buscar).not.toHaveBeenCalled();
+  });
+
+  it('apresenta o indicador de carregamento durante a consulta e o remove ao final', async () => {
+    let liberar: (valor: ResultadoBusca) => void = () => {};
+    const botao = await abrirApp();
+    fireEvent.click(botao);
+
+    api.recentes.mockImplementationOnce(
+      () =>
+        new Promise<ResultadoBusca>((resolve) => {
+          liberar = resolve;
+        })
+    );
+
+    fireEvent.change(screen.getByLabelText('De'), { target: { value: '2026-01-01' } });
+
+    await waitFor(() =>
+      expect(document.querySelectorAll('.esqueleto').length).toBeGreaterThan(0)
+    );
+
+    liberar(RESULTADO);
+
+    await waitFor(() => expect(document.querySelectorAll('.esqueleto')).toHaveLength(0));
+    // O nome aparece no cartão e também no painel de resumo: a busca é pelo
+    // cartão, que é o que a lista de resultados apresenta.
+    expect(document.querySelector('.cartao__nome')?.textContent).toBe('ata.md');
   });
 });

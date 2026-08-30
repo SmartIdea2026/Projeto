@@ -207,3 +207,104 @@ describe('enriquecimento para a busca por autor', () => {
     expect(pico).toBeLessThanOrEqual(6);
   });
 });
+
+/**
+ * Resolução da data antes do filtro de período.
+ *
+ * O período é comparado à data, e a data do inventário é a do repositório —
+ * igual para todos os arquivos dele. Filtrar por ela é filtrar por atividade do
+ * repositório sob o nome de recorte por data. Por isso, e só quando há período,
+ * a data real é resolvida antes da filtragem.
+ */
+describe('data real antes do filtro de período', () => {
+  it('descarta o documento cuja data real cai fora do intervalo', async () => {
+    github.buscarDocumentos.mockResolvedValue({
+      dados: [doc('ata.md'), doc('antigo.md')],
+      aviso: null
+    });
+    // Os dois herdaram a data do repositório, que está dentro do intervalo.
+    // Só a data real distingue um do outro.
+    github.autoriaDoArquivo.mockImplementation(async (_t: string, _r: string, caminho: string) =>
+      caminho.includes('ata')
+        ? { autor: 'Gabi Prajo', dataModificacao: '2026-08-10T00:00:00Z' }
+        : { autor: 'Marina Alves', dataModificacao: '2025-02-01T00:00:00Z' }
+    );
+
+    const resultado = await servico.buscar({
+      ...FILTROS_PADRAO,
+      dataInicial: '2026-08-01',
+      dataFinal: '2026-08-31'
+    });
+
+    expect(resultado.documentos.map((d) => d.nome)).toEqual(['ata.md']);
+    // O contador acompanha: o descartado não entra no total.
+    expect(resultado.total).toBe(1);
+  });
+
+  it('resolve a data mesmo sem termo de busca', async () => {
+    github.buscarDocumentos.mockResolvedValue({ dados: [doc('ata.md')], aviso: null });
+    github.autoriaDoArquivo.mockResolvedValue({
+      autor: 'Gabi Prajo',
+      dataModificacao: '2026-08-10T00:00:00Z'
+    });
+
+    await servico.buscar({ ...FILTROS_PADRAO, dataInicial: '2026-08-01' });
+
+    expect(github.autoriaDoArquivo).toHaveBeenCalledTimes(1);
+  });
+
+  it('não consulta os documentos que já têm data real', async () => {
+    github.buscarDocumentos.mockResolvedValue({
+      dados: [
+        doc('do-commit.md', { dataAproximada: undefined }),
+        doc('da-arvore.md')
+      ],
+      aviso: null
+    });
+    github.autoriaDoArquivo.mockResolvedValue({
+      autor: 'Gabi Prajo',
+      dataModificacao: '2026-08-10T00:00:00Z'
+    });
+
+    await servico.buscar({ ...FILTROS_PADRAO, dataInicial: '2026-08-01' });
+
+    // Só o de data aproximada custa requisição: ao outro não falta dado algum.
+    expect(github.autoriaDoArquivo).toHaveBeenCalledTimes(1);
+    expect(github.autoriaDoArquivo.mock.calls[0]![2]).toContain('da-arvore');
+  });
+
+  it('resolve uma vez só quando há termo e período ao mesmo tempo', async () => {
+    github.buscarDocumentos.mockResolvedValue({
+      dados: [doc('ata.md'), doc('requisitos.md')],
+      aviso: null
+    });
+    github.autoriaDoArquivo.mockResolvedValue({
+      autor: 'Gabi Prajo',
+      dataModificacao: '2026-08-10T00:00:00Z'
+    });
+
+    await servico.buscar({
+      ...FILTROS_PADRAO,
+      termo: 'a',
+      dataInicial: '2026-08-01',
+      dataFinal: '2026-08-31'
+    });
+
+    // Autor e data vêm juntos da mesma consulta: pedir os dois separadamente
+    // dobraria o custo sem trazer dado novo.
+    expect(github.autoriaDoArquivo).toHaveBeenCalledTimes(2);
+  });
+
+  it('não resolve nada além da página quando não há termo nem período', async () => {
+    github.documentosRecentes.mockResolvedValue({
+      dados: [doc('ata.md'), doc('requisitos.md')],
+      aviso: null
+    });
+
+    await servico.recentes(FILTROS_PADRAO);
+
+    // O custo fica contido ao caso em que o dado decide quem entra no
+    // resultado; fora dele, a página visível é detalhada depois de apresentada.
+    expect(github.autoriaDoArquivo).not.toHaveBeenCalled();
+  });
+});

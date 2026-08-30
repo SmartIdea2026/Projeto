@@ -18,6 +18,10 @@ export { ordenar } from '../../compartilhado/ordenacao';
  * autor só está preenchido nos documentos que passaram por `detalhar`; os
  * demais continuam encontráveis pelo nome.
  *
+ * O período incide sobre a data real do documento. Documento cuja data ainda
+ * for aproximada é descartado enquanto houver período em vigor: ver o comentário
+ * na própria regra.
+ *
  * O filtro de fonte não é aplicado aqui: ele decide quais fontes chegam a ser
  * consultadas, antes desta etapa.
  */
@@ -42,6 +46,15 @@ export function aplicarFiltros(documentos: Documento[], filtros: Filtros): Docum
     }
 
     if (inicial !== null || final !== null) {
+      // Data aproximada não serve a um recorte por data: ela é a do
+      // repositório, igual para todos os arquivos dele. Presumir o documento
+      // dentro do intervalo contradiz o filtro; presumi-lo fora seria
+      // igualmente arbitrário — a diferença é que a omissão pode ser
+      // comunicada ao usuário, e a inclusão indevida não. Quem resolve a data
+      // antes desta etapa é `enriquecerParaBusca`; o que chega aqui ainda
+      // marcado é o que ficou além do teto ou falhou.
+      if (documento.dataAproximada) return false;
+
       const data = Date.parse(documento.dataModificacao);
       if (Number.isNaN(data)) return false;
       if (inicial !== null && data < inicial) return false;

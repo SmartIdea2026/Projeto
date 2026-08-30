@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { App } from '../../src/renderer/App';
 import type { Documento, ResultadoBusca, StatusFonte } from '../../src/compartilhado/tipos';
+import { CONECTADO, montarApi, instalarApi } from './apoio';
 
 /**
  * Autoria preenchida sem bloquear a lista.
@@ -32,25 +33,12 @@ const RECENTES: ResultadoBusca = {
   doCache: false
 };
 
-const CONECTADO: StatusFonte[] = [{ fonte: 'github', estado: 'conectada', conta: 'equipe' }];
-
-const api = {
-  status: vi.fn(async () => CONECTADO),
-  recentesDoCache: vi.fn(async () => null),
-  recentes: vi.fn(async () => RECENTES),
-  buscar: vi.fn(async () => RECENTES),
-  detalharDocumentos: vi.fn(async (docs: Documento[]) => docs),
-  verificarCredenciais: vi.fn(),
-  definirCredencial: vi.fn(),
-  removerCredencial: vi.fn(),
-  abrirDocumento: vi.fn(),
-  documentosAcessados: vi.fn(async () => [])
-};
+const api = montarApi(RECENTES);
 
 beforeEach(() => {
   vi.clearAllMocks();
   api.recentes.mockResolvedValue(RECENTES);
-  Object.defineProperty(window, 'ancorai', { value: api, writable: true, configurable: true });
+  instalarApi(api);
 });
 
 describe('preenchimento da autoria', () => {
@@ -134,5 +122,71 @@ describe('rótulos dos metadados', () => {
       expect(screen.getByText('Repositório atualizado em')).toBeInTheDocument()
     );
     expect(screen.queryByText('Modificado em')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * A ordem apresentada acompanha as datas apresentadas.
+ *
+ * O detalhamento troca a data aproximada do repositório pela data real do
+ * commit. Substituir o documento sem reposicioná-lo deixa a lista rotulada
+ * "Data decrescente" exibindo datas fora de ordem — duas afirmações
+ * incompatíveis ao mesmo tempo, sem que quem lê tenha como saber qual vale.
+ */
+describe('reposicionamento pela data real', () => {
+  const zebra: Documento = {
+    ...base,
+    id: 'github:o/r:zebra.md',
+    nome: 'zebra.md',
+    caminho: 'Docs/zebra.md'
+  };
+
+  const LISTA: ResultadoBusca = {
+    // Mesma data aproximada do repositório: a ordem inicial desempata por nome.
+    documentos: [base, zebra],
+    total: 2,
+    pagina: 1,
+    falhas: [],
+    avisos: [],
+    doCache: false
+  };
+
+  function nomesNaTela(): string[] {
+    return Array.from(document.querySelectorAll('.cartao__nome')).map(
+      (elemento) => elemento.textContent ?? ''
+    );
+  }
+
+  beforeEach(() => {
+    api.recentes.mockResolvedValue(LISTA);
+  });
+
+  it('move o documento cuja data real o coloca à frente', async () => {
+    api.detalharDocumentos.mockResolvedValue([
+      { ...base, autor: 'Marina Alves', dataModificacao: '2026-03-01T00:00:00Z' },
+      { ...zebra, autor: 'Gabi Prajo', dataModificacao: '2026-08-22T10:00:00Z' }
+    ]);
+
+    render(<App />);
+
+    // A data real põe `zebra.md` na frente, e a lista acompanha.
+    await waitFor(() => expect(nomesNaTela()).toEqual(['zebra.md', 'ata.md']));
+  });
+
+  it('reposiciona sem consultar as fontes e sem indicador de carregamento', async () => {
+    api.detalharDocumentos.mockResolvedValue([
+      { ...base, autor: 'Marina Alves', dataModificacao: '2026-03-01T00:00:00Z' },
+      { ...zebra, autor: 'Gabi Prajo', dataModificacao: '2026-08-22T10:00:00Z' }
+    ]);
+
+    render(<App />);
+
+    await waitFor(() => expect(nomesNaTela()).toEqual(['zebra.md', 'ata.md']));
+
+    // Uma consulta só, a da abertura: o reposicionamento é local.
+    expect(api.recentes).toHaveBeenCalledTimes(1);
+    expect(api.buscar).not.toHaveBeenCalled();
+    expect(api.reordenar).not.toHaveBeenCalled();
+    expect(document.querySelectorAll('.esqueleto')).toHaveLength(0);
   });
 });

@@ -149,7 +149,14 @@
   background: #eef5f1;
 }
 
-/* Linha acima da lista: contador à esquerda, ordenação à direita (protótipo). */
+/*
+ * Linha acima da lista: contador à esquerda, ordenação à direita (protótipo).
+ *
+ * Vive dentro da coluna dos resultados, e não numa faixa da largura da página.
+ * A diferença é o que decide onde a ordenação encosta: na faixa larga, o
+ * alinhamento à direita a levava para cima do painel de resumo — longe da lista
+ * que ela governa.
+ */
 .linha-lista {
   display: flex;
   align-items: center;

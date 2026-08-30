@@ -16,6 +16,13 @@ import type { Documento, Ordenacao } from './tipos';
  * compartilham a mesma data saem em ordem arbitrária — situação comum no
  * GitHub, onde a busca deriva a data do repositório e não do arquivo, deixando
  * um repositório inteiro com a mesma data.
+ *
+ * Todo critério desempata, por último, pelo identificador. Ele é único, então
+ * a ordem resultante é total: dois documentos nunca ficam empatados até o fim,
+ * e a lista sai igual em consultas sucessivas. Sem esse último critério,
+ * documentos de mesmo nome em repositórios diferentes — `README.md`, `ata.md`,
+ * que são a regra e não a exceção — continuam trocando de lugar entre uma
+ * consulta e outra, mesmo com o desempate por nome.
  */
 export function ordenar(documentos: Documento[], criterio: Ordenacao): Documento[] {
   const copia = [...documentos];
@@ -23,19 +30,32 @@ export function ordenar(documentos: Documento[], criterio: Ordenacao): Documento
     a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' });
   const porData = (a: Documento, b: Documento) =>
     Date.parse(a.dataModificacao) - Date.parse(b.dataModificacao);
+  // O identificador desempata sempre no mesmo sentido, inclusive em Z–A: o que
+  // se busca dele é uma ordem estável, não uma ordem com significado próprio.
+  const porId = (a: Documento, b: Documento) => a.id.localeCompare(b.id);
 
-  // O desempate por nome torna a ordem estável entre consultas sucessivas.
+  const desempatar = (
+    a: Documento,
+    b: Documento,
+    diferenca: number,
+    seguinte: (a: Documento, b: Documento) => number
+  ) => (diferenca !== 0 ? diferenca : seguinte(a, b));
+
+  const porNomeDesempatado = (a: Documento, b: Documento, inverso: boolean) =>
+    desempatar(a, b, inverso ? porNome(b, a) : porNome(a, b), porId);
+
   const porDataDesempatada = (a: Documento, b: Documento, inverso: boolean) => {
     const diferenca = porData(a, b);
-    if (diferenca !== 0) return inverso ? -diferenca : diferenca;
-    return porNome(a, b);
+    return desempatar(a, b, inverso ? -diferenca : diferenca, (x, y) =>
+      porNomeDesempatado(x, y, false)
+    );
   };
 
   switch (criterio) {
     case 'a-z':
-      return copia.sort(porNome);
+      return copia.sort((a, b) => porNomeDesempatado(a, b, false));
     case 'z-a':
-      return copia.sort((a, b) => porNome(b, a));
+      return copia.sort((a, b) => porNomeDesempatado(a, b, true));
     case 'data-asc':
       return copia.sort((a, b) => porDataDesempatada(a, b, false));
     case 'data-desc':

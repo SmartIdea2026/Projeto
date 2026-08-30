@@ -3,6 +3,7 @@ import type {
   AvisoFonte,
   Documento,
   EstadoConexao,
+  FalhaFonte,
   Filtros,
   Fonte,
   ResultadoBusca,
@@ -14,6 +15,7 @@ import { ErroFonte } from '../fontes/comum';
 import { aplicarFiltros, fonteSelecionada, ordenar, unificar } from './regras';
 import { gravarValidacao, lerValidacao } from '../credenciais/validacao';
 import { gravarCache, lerCache } from '../banco/repositorio';
+import { comoInterativa } from '../conteudo/prioridade';
 
 /**
  * Orquestra as fontes configuradas.
@@ -100,70 +102,196 @@ function paginar(documentos: Documento[], pagina: number): {
 }
 
 /**
- * Acrescenta o aviso de imprecisão quando o filtro de período incide sobre
- * documentos de data aproximada.
+ * Conjunto filtrado da consulta vigente, retido entre uma interação e outra.
  *
- * A busca no GitHub deriva a data da árvore Git, que não a fornece por arquivo:
- * todo documento herda o `pushed_at` do repositório. Filtrar por período nesses
- * documentos filtra, na prática, por atividade do repositório — um arquivo
- * intocado há um ano dentro de um repositório ativo entra no resultado. Sem
- * este aviso o usuário não teria como perceber a diferença.
+ * Existe para que trocar a ordenação reorganize o **resultado inteiro** sem
+ * consultar as fontes. As duas exigências vêm da especificação e, sozinha,
+ * cada uma tem solução trivial; juntas, obrigam a que alguém guarde o conjunto
+ * completo — o renderer só recebe a página, e reordenar dez documentos devolve
+ * a ordem de um recorte arbitrário, não a do resultado.
+ *
+ * Fica no processo principal, e não no renderer, porque a alternativa seria
+ * mandar o acervo inteiro pela fronteira IPC a cada consulta para usar dez
+ * itens dele — e o número de documentos não tem teto conhecido.
+ *
+ * Não é cache: nenhuma consulta nova é respondida a partir daqui. Qualquer
+ * alteração de termo, tipo, fonte ou período o descarta e vai às fontes, como
+ * a especificação exige. Ele serve a reordenar e repaginar o que já veio.
+ *
+ * Não é persistência: nasce vazio a cada abertura da aplicação e morre com ela.
  */
-function avisarSobrePeriodo(resultado: ResultadoBusca, filtros: Filtros): ResultadoBusca {
-  const temPeriodo = Boolean(filtros.dataInicial || filtros.dataFinal);
-  if (!temPeriodo) return resultado;
+interface ConsultaVigente {
+  filtros: Filtros;
+  /** Todos os documentos que passaram pelos filtros, antes de paginar. */
+  documentos: Documento[];
+  falhas: FalhaFonte[];
+  avisos: AvisoFonte[];
+  doCache: boolean;
+}
 
-  const fontes = new Set(
-    resultado.documentos.filter((doc) => doc.dataAproximada).map((doc) => doc.fonte)
-  );
-  if (fontes.size === 0) return resultado;
+let vigente: ConsultaVigente | null = null;
+
+/** Envelope de uma consulta: o que acompanha os documentos até a tela. */
+type Envelope = Pick<ResultadoBusca, 'falhas' | 'avisos' | 'doCache'>;
+
+/**
+ * Retém o conjunto filtrado e devolve a página pedida, já ordenada.
+ *
+ * Todo caminho que produz resultado passa por aqui, para que não exista
+ * resultado apresentado sem conjunto retido correspondente.
+ */
+function apresentar(
+  documentos: Documento[],
+  filtros: Filtros,
+  envelope: Envelope
+): ResultadoBusca {
+  vigente = { filtros, documentos, ...envelope };
 
   return {
-    ...resultado,
-    avisos: [
-      ...resultado.avisos,
-      ...[...fontes].map((fonte) => ({
-        fonte,
-        mensagem:
-          'O filtro de período usa a data de atividade do repositório, e não a ' +
-          'de cada arquivo. Documentos antigos em repositórios ativos podem ' +
-          'aparecer no resultado.'
-      }))
-    ]
+    ...envelope,
+    ...paginar(ordenar(documentos, filtros.ordenacao), filtros.pagina ?? 1)
   };
 }
 
+/**
+ * Verdadeiro quando dois conjuntos de filtros descrevem a mesma consulta.
+ *
+ * Ordenação e página ficam de fora de propósito: são as duas coisas que o
+ * conjunto retido sabe responder sozinho. Divergindo em qualquer outra, o
+ * conjunto retido descreve outra consulta e não serve de resposta.
+ *
+ * A comparação é campo a campo, e não por serialização: dois objetos com as
+ * mesmas chaves em ordem diferente serializam diferente, e a consequência de
+ * um falso negativo aqui é uma consulta desnecessária às fontes.
+ */
+function mesmaConsulta(a: Filtros, b: Filtros): boolean {
+  const lista = (valores: string[]) => [...valores].sort().join(',');
+
+  return (
+    a.termo.trim() === b.termo.trim() &&
+    (a.dataInicial ?? '') === (b.dataInicial ?? '') &&
+    (a.dataFinal ?? '') === (b.dataFinal ?? '') &&
+    lista(a.extensoes) === lista(b.extensoes) &&
+    lista(a.fontes) === lista(b.fontes)
+  );
+}
+
+/**
+ * Reorganiza o resultado já obtido segundo o critério e a página pedidos.
+ *
+ * Nenhuma fonte é consultada quando o conjunto retido corresponde aos filtros
+ * recebidos. Não correspondendo — primeira interação depois de abrir a
+ * aplicação, ou filtros que mudaram no caminho —, a resposta honesta é
+ * consultar: devolver o conjunto anterior sob filtros novos seria apresentar
+ * como resultado da consulta pedida o resultado de outra.
+ */
+export async function reordenar(filtros: Filtros): Promise<ResultadoBusca> {
+  if (!vigente || !mesmaConsulta(vigente.filtros, filtros)) {
+    // `recentes` roteia sozinho: com termo ou período vai ao acervo, sem eles
+    // fica na janela de recentes.
+    return recentes(filtros);
+  }
+
+  const { documentos, ...envelope } = vigente;
+  return {
+    ...envelope,
+    ...paginar(ordenar(documentos, filtros.ordenacao), filtros.pagina ?? 1)
+  };
+}
+
+/** Verdadeiro quando o usuário definiu ao menos uma das duas datas. */
+function temPeriodo(filtros: Filtros): boolean {
+  return Boolean(filtros.dataInicial || filtros.dataFinal);
+}
+
+/**
+ * Avisa quando o filtro de período deixou documentos de fora por não conhecer
+ * a data deles.
+ *
+ * Substitui o aviso anterior, que informava ao usuário que a data considerada
+ * era a de atividade do repositório. Aquela limitação deixou de existir: o
+ * período agora resolve a data real antes de filtrar. A que permanece é outra
+ * — a resolução é contida por um teto, e uma requisição pode falhar —, e o
+ * efeito dela é o inverso do anterior: em vez de documentos a mais no
+ * resultado, documentos a menos. É justamente o caso que precisa ser dito em
+ * voz alta: um documento ausente é indistinguível de um documento inexistente
+ * para quem olha a tela.
+ */
+function avisarSobreAlcanceDoPeriodo(
+  documentos: Documento[],
+  filtros: Filtros
+): AvisoFonte[] {
+  if (!temPeriodo(filtros)) return [];
+
+  const naoResolvidos = documentos.filter((documento) => documento.dataAproximada);
+  if (naoResolvidos.length === 0) return [];
+
+  const fontes = new Set(naoResolvidos.map((documento) => documento.fonte));
+  return [...fontes].map((fonte) => ({
+    fonte,
+    mensagem:
+      `O filtro de período deixou de fora ${naoResolvidos.length} documento(s) ` +
+      'cuja data de alteração não pôde ser obtida. O filtro alcança ' +
+      `${TETO_DETALHAMENTO_BUSCA} documentos por consulta.`
+  }));
+}
+
+/**
+ * Busca completa nas fontes selecionadas.
+ *
+ * Marcada como interativa: enquanto ela roda, a ingestão de conteúdo cede a
+ * vez, para que o trabalho de fundo não dispute cota do GitHub com o usuário
+ * que está esperando na tela.
+ */
 export async function buscar(filtros: Filtros): Promise<ResultadoBusca> {
+  return comoInterativa(() => executarBusca(filtros));
+}
+
+async function executarBusca(filtros: Filtros): Promise<ResultadoBusca> {
   const bruto = await coletar(filtros, (token) => github.buscarDocumentos(token));
 
-  // A autoria precisa existir antes do filtro: o termo é comparado ao nome e
-  // ao autor, e filtrar antes de conhecê-lo descartaria o que se procura.
+  // Autoria e data precisam existir antes do filtro: o termo é comparado ao
+  // autor e o período à data, e filtrar antes de conhecê-los descartaria o que
+  // se procura — ou admitiria o que não se procura.
   const enriquecido = await enriquecerParaBusca(bruto.documentos, filtros);
 
-  const ordenados = ordenar(aplicarFiltros(enriquecido.documentos, filtros), filtros.ordenacao);
-  const filtrado = {
-    ...bruto,
-    ...paginar(ordenados, filtros.pagina ?? 1),
-    avisos: enriquecido.aviso
-      ? [...bruto.avisos, { fonte: 'github' as const, mensagem: enriquecido.aviso }]
-      : bruto.avisos
-  };
+  const filtrados = aplicarFiltros(enriquecido.documentos, filtros);
 
-  return avisarSobrePeriodo(filtrado, filtros);
+  return apresentar(filtrados, filtros, {
+    falhas: bruto.falhas,
+    doCache: bruto.doCache,
+    avisos: [
+      ...bruto.avisos,
+      ...enriquecido.avisos,
+      ...avisarSobreAlcanceDoPeriodo(enriquecido.documentos, filtros)
+    ]
+  });
 }
 
 const CHAVE_RECENTES = 'recentes:consolidado';
 
-function prepararRecentes(bruto: ResultadoBusca, filtros: Filtros): ResultadoBusca {
-  const ordenados = ordenar(
-    aplicarFiltros(bruto.documentos, { ...filtros, termo: '' }),
-    filtros.ordenacao
-  ).slice(0, 30);
+/** Quantidade máxima de documentos que a lista de recentes apresenta. */
+const TETO_RECENTES = 30;
 
-  return {
-    ...bruto,
-    ...paginar(ordenados, filtros.pagina ?? 1)
-  };
+/**
+ * Recorta e ordena a lista de recentes.
+ *
+ * O recorte vem **antes** da ordenação escolhida, e não depois. O critério do
+ * usuário decide em que ordem os documentos recentes aparecem; ele não decide
+ * quais documentos são considerados recentes. Recortar depois de ordenar por
+ * nome faz "os trinta mais recentes" significar "os trinta primeiros em ordem
+ * alfabética" — troca o conteúdo da lista, e não apenas a ordem dela, sem que
+ * nada na tela indique que isso aconteceu.
+ */
+function prepararRecentes(bruto: ResultadoBusca, filtros: Filtros): ResultadoBusca {
+  const filtrados = aplicarFiltros(bruto.documentos, { ...filtros, termo: '' });
+  const maisRecentes = ordenar(filtrados, 'data-desc').slice(0, TETO_RECENTES);
+
+  return apresentar(maisRecentes, filtros, {
+    falhas: bruto.falhas,
+    avisos: bruto.avisos,
+    doCache: bruto.doCache
+  });
 }
 
 
@@ -191,6 +319,31 @@ export async function recentesDoCache(filtros: Filtros): Promise<ResultadoBusca 
 }
 
 export async function recentes(filtros: Filtros): Promise<ResultadoBusca> {
+  return comoInterativa(() => executarRecentes(filtros));
+}
+
+/**
+ * Verdadeiro quando os filtros vigentes exigem percorrer o acervo.
+ *
+ * A janela de recentes cobre, por desenho, apenas os commits mais recentes de
+ * alguns repositórios. É o recorte certo para abrir a aplicação — barato e com
+ * data real — e o recorte errado para responder a um filtro de período: um
+ * intervalo anterior à janela devolve lista vazia, e uma lista vazia é
+ * indistinguível, para quem olha a tela, de um acervo que realmente não tem
+ * documentos naquele intervalo.
+ *
+ * A condição vive aqui, e só aqui, porque a escolha da rota é uma decisão sobre
+ * o que a consulta precisa alcançar — não sobre o que a tela está exibindo.
+ */
+export function exigeAcervo(filtros: Filtros): boolean {
+  return Boolean(filtros.termo.trim() || filtros.dataInicial || filtros.dataFinal);
+}
+
+async function executarRecentes(filtros: Filtros): Promise<ResultadoBusca> {
+  // Com período definido a consulta deixa de ser "os recentes filtrados" e
+  // passa a ser "o acervo naquele intervalo", que é o que o filtro promete.
+  if (exigeAcervo(filtros)) return executarBusca(filtros);
+
   const bruto = await coletar(filtros, (token) => github.documentosRecentes(token));
 
   // Só substitui o resultado guardado quando a consulta trouxe algo: uma falha
@@ -199,7 +352,7 @@ export async function recentes(filtros: Filtros): Promise<ResultadoBusca> {
     await gravarCache(CHAVE_RECENTES, bruto.documentos, null);
   }
 
-  return avisarSobrePeriodo(prepararRecentes(bruto, filtros), filtros);
+  return prepararRecentes(bruto, filtros);
 }
 
 /** Traduz uma falha de verificação no estado correspondente. */
@@ -292,36 +445,68 @@ export async function detalhar(documentos: Documento[]): Promise<Documento[]> {
   return resultado;
 }
 
-/** Teto de documentos enriquecidos para que a busca alcance o autor. */
-const TETO_AUTORIA_BUSCA = 300;
+/** Teto de documentos detalhados para que os filtros alcancem o que precisam. */
+const TETO_DETALHAMENTO_BUSCA = 300;
 const CONCORRENCIA_AUTORIA = 6;
 
 /**
- * Preenche a autoria antes de filtrar, para que o termo alcance o autor.
+ * Preenche, antes de filtrar, o que os filtros precisam conhecer.
  *
- * Só roda quando há termo: na tela de recentes o autor é usado apenas para
- * exibição, e a página visível já é detalhada depois de apresentada.
+ * Dois filtros dependem de dado que o inventário não traz. O **termo** é
+ * comparado ao autor, e filtrar antes de conhecê-lo descartaria o que se
+ * procura. O **período** é comparado à data, e a data do inventário é a do
+ * repositório: filtrar por ela admitiria no resultado documentos intocados há
+ * um ano dentro de um repositório ativo. Em ambos os casos o dado deixa de ser
+ * complemento e passa a decidir quem entra no resultado — obtê-lo depois da
+ * filtragem seria obtê-lo tarde demais.
+ *
+ * Uma passagem só serve aos dois: `detalhar` devolve autor e data juntos, e
+ * chamá-lo duas vezes dobraria o custo sem trazer dado novo.
+ *
+ * Quando apenas o período exige o detalhamento, os documentos que já têm data
+ * real — os que vêm dos commits — não geram requisição alguma: o dado que
+ * faltava já está lá.
  *
  * O teto existe porque cada documento custa uma requisição. O cache por `ETag`
- * torna as buscas seguintes baratas — um 304 não consome cota —, mas o número
- * de idas à rede continua proporcional ao acervo, e sem teto um acervo grande
- * tornaria a primeira busca inviável.
+ * torna as consultas seguintes baratas — um 304 não consome cota —, mas o
+ * número de idas à rede continua proporcional ao acervo, e sem teto um acervo
+ * grande tornaria a primeira consulta inviável.
  */
 async function enriquecerParaBusca(
   documentos: Documento[],
   filtros: Filtros
-): Promise<{ documentos: Documento[]; aviso: string | null }> {
-  if (!filtros.termo.trim()) return { documentos, aviso: null };
+): Promise<{ documentos: Documento[]; avisos: AvisoFonte[] }> {
+  const porTermo = Boolean(filtros.termo.trim());
+  const porPeriodo = temPeriodo(filtros);
+  if (!porTermo && !porPeriodo) return { documentos, avisos: [] };
 
-  const alcance = documentos.slice(0, TETO_AUTORIA_BUSCA);
-  const excedente = documentos.slice(TETO_AUTORIA_BUSCA);
+  // Com termo, todo documento é candidato: qualquer um pode ter sido alterado
+  // por quem se procura. Só com período, bastam os de data aproximada.
+  const candidatos = porTermo
+    ? documentos
+    : documentos.filter((documento) => documento.dataAproximada);
+
+  const alcance = candidatos.slice(0, TETO_DETALHAMENTO_BUSCA);
+  const excedente = candidatos.length - alcance.length;
+
+  const detalhados = new Map(
+    (await detalhar(alcance)).map((documento) => [documento.id, documento])
+  );
 
   return {
-    documentos: [...(await detalhar(alcance)), ...excedente],
-    aviso:
-      excedente.length > 0
-        ? `A busca por autor considerou os ${TETO_AUTORIA_BUSCA} primeiros ` +
-          'documentos. Os demais foram procurados apenas pelo nome.'
-        : null
+    // A ordem original é preservada: o detalhamento troca o conteúdo dos
+    // documentos, não o lugar deles.
+    documentos: documentos.map((documento) => detalhados.get(documento.id) ?? documento),
+    avisos:
+      porTermo && excedente > 0
+        ? [
+            {
+              fonte: 'github' as const,
+              mensagem:
+                `A busca por autor considerou os ${TETO_DETALHAMENTO_BUSCA} primeiros ` +
+                'documentos. Os demais foram procurados apenas pelo nome.'
+            }
+          ]
+        : []
   };
 }
