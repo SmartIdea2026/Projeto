@@ -5,13 +5,15 @@ import { FILTROS_PADRAO } from '../compartilhado/tipos';
 import { listarAcessados, registrarAcesso } from './banco/repositorio';
 import * as cofre from './credenciais/cofre';
 import * as servico from './busca/servico';
+import { ingerirAcervo } from './conteudo/ingestao';
+import * as resumos from './llm/resumos';
 
 /**
  * Registro dos canais IPC.
  *
  * Este é o único ponto por onde o renderer alcança o processo principal. Cada
  * handler devolve dados já tratados: nenhum deles retorna o valor de uma
- * credencial, conforme a ADR-0003.
+ * credencial (ADR-0003), nem o conteúdo de um documento (ADR-0005).
  */
 export function registrarCanais(): void {
   ipcMain.handle(
@@ -47,8 +49,47 @@ export function registrarCanais(): void {
     servico.recentesDoCache({ ...FILTROS_PADRAO, ...filtros })
   );
 
+  // Reorganiza o conjunto já obtido. Não consulta fonte alguma enquanto os
+  // filtros recebidos descreverem a mesma consulta que o produziu.
+  ipcMain.handle(CANAIS.reordenar, (_evento, filtros: Filtros) =>
+    servico.reordenar({ ...FILTROS_PADRAO, ...filtros })
+  );
+
   ipcMain.handle(CANAIS.detalharDocumentos, (_evento, documentos: Documento[]) =>
     servico.detalhar(documentos)
+  );
+
+  // Devolve o andamento em contagens. O texto ingerido permanece no processo
+  // principal: não há canal que o entregue ao renderer (ADR-0005).
+  ipcMain.handle(CANAIS.indexarConteudo, () => ingerirAcervo());
+
+  ipcMain.handle(CANAIS.llmDefinir, (_evento, valor: string) =>
+    resumos.definirChave(valor)
+  );
+
+  ipcMain.handle(CANAIS.llmRemover, () => resumos.removerChave());
+
+  ipcMain.handle(CANAIS.llmStatus, () => resumos.status());
+
+  ipcMain.handle(CANAIS.llmConsentir, async (_evento, valor: boolean) => {
+    await resumos.registrarConsentimento(valor);
+    return resumos.status();
+  });
+
+  // Devolve o resumo, e nunca o texto de onde ele saiu.
+  ipcMain.handle(
+    CANAIS.resumoDoDocumento,
+    (_evento, documento: Documento, regerar?: boolean) =>
+      resumos.resumoDoDocumento(documento, regerar ?? false)
+  );
+
+  ipcMain.handle(CANAIS.resumoGravado, (_evento, documento: Documento) =>
+    resumos.resumoGravado(documento)
+  );
+
+  // Devolve situação — pronto, tem resumo, motivo — e nunca o texto em si.
+  ipcMain.handle(CANAIS.prepararConteudo, (_evento, documento: Documento) =>
+    resumos.prepararConteudo(documento)
   );
 
   ipcMain.handle(CANAIS.abrirDocumento, async (_evento, documento: Documento) => {

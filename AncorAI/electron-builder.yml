@@ -6,6 +6,19 @@ directories:
 files:
   - out/**
   - package.json
+  # O pdfjs-dist declara @napi-rs/canvas como dependencia opcional, e o npm a
+  # instala por padrao. Sao ~62 MB de binarios do Skia usados apenas para
+  # RENDERIZAR paginas de PDF em canvas. A extracao de texto nao toca nisso, e
+  # sem esta exclusao o pacote carrega 62 MB de codigo nativo que a aplicacao
+  # nunca chama - alem de reintroduzir dependencia nativa no empacotamento,
+  # exatamente o que a escolha por bibliotecas em JavaScript puro evita.
+  - '!node_modules/@napi-rs/**'
+extraResources:
+  # A instrucao de redacao do resumo e lida em tempo de execucao, para que a
+  # equipe possa ajusta-la sem recompilar. Empacotada em `files` ela ficaria
+  # dentro do asar, fora do alcance do caminho que o codigo resolve.
+  - from: instrucoes
+    to: instrucoes
 linux:
   target: [AppImage]
   category: Office

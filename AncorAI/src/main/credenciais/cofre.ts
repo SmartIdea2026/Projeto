@@ -11,7 +11,15 @@ import { safeStorage } from 'electron';
  * devolve o valor lido por `obter`.
  */
 
-export type ChaveCredencial = 'github.token';
+/**
+ * Chaves guardadas no cofre.
+ *
+ * A chave do Gemini recebe exatamente o mesmo tratamento do token do GitHub —
+ * cifrada pelo sistema operacional, gravada em mão única, nunca devolvida ao
+ * renderer. Ela não é uma fonte de documentos, mas é um segredo, e é isso que
+ * decide onde ela mora.
+ */
+export type ChaveCredencial = 'github.token' | 'gemini.chave';
 
 let diretorioCofre = '';
 

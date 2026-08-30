@@ -1,10 +1,14 @@
 /**
  * Nomes dos canais IPC expostos pelo processo main.
  *
- * A fronteira de segurança do sistema é esta lista (ADR-0003): nenhum canal
- * devolve o valor de uma credencial ao renderer. `credenciais:status` retorna
+ * A fronteira de segurança do sistema é esta lista. Nenhum canal devolve o
+ * valor de uma credencial ao renderer (ADR-0003): `credenciais:status` retorna
  * apenas o estado da conexão, e `credenciais:definir` é unidirecional quanto ao
  * segredo — recebe, nunca devolve.
+ *
+ * Nenhum canal devolve o conteúdo ou o texto de um documento (ADR-0005). O
+ * sistema tem acesso ao texto; o usuário final, não. `conteudo:indexar` informa
+ * o andamento em contagens, e nada além disso.
  */
 export const CANAIS = {
   /** Grava uma credencial. Recebe o segredo; devolve apenas o novo status. */
@@ -22,9 +26,54 @@ export const CANAIS = {
   recentes: 'busca:recentes',
   /** Resultado guardado da rotina anterior, para exibição imediata. */
   recentesDoCache: 'busca:recentes-cache',
+  /**
+   * Reorganiza o resultado já obtido, sem consultar as fontes.
+   *
+   * Existe porque a especificação exige duas coisas ao mesmo tempo: que a
+   * ordenação valha para o resultado inteiro e que trocá-la não gaste cota. O
+   * renderer só recebe a página, então quem reordena precisa ser quem tem o
+   * conjunto completo em mãos.
+   */
+  reordenar: 'busca:reordenar',
 
   /** Autoria e data real dos documentos da página apresentada. */
   detalharDocumentos: 'busca:detalhar',
+
+  /**
+   * Dispara a ingestão do conteúdo e devolve **apenas contagens**.
+   *
+   * O conteúdo dos documentos não atravessa esta fronteira em canal algum
+   * (ADR-0005). Este é o único canal que a ingestão expõe, e a resposta dele
+   * é a razão de existir de `ProgressoIngestao`: há o que informar sobre o
+   * andamento sem informar nada sobre o que foi lido.
+   */
+  indexarConteudo: 'conteudo:indexar',
+
+  /** Grava a chave da LLM. Recebe o segredo; devolve apenas o novo status. */
+  llmDefinir: 'llm:definir',
+  /** Remove a chave da LLM. */
+  llmRemover: 'llm:remover',
+  /** Estado do serviço de linguagem. Nunca inclui o valor da chave. */
+  llmStatus: 'llm:status',
+  /** Registra a decisão do usuário sobre enviar conteúdo a serviço externo. */
+  llmConsentir: 'llm:consentir',
+
+  /**
+   * Resumo de um documento, gerando-o se necessário.
+   *
+   * Devolve o resumo produzido pela IA — nunca o texto do documento de onde ele
+   * foi extraído. A distinção é a fronteira da ADR-0005.
+   */
+  resumoDoDocumento: 'resumo:documento',
+  /** Resumo já gravado, sem gerar nada nem consumir cota. */
+  resumoGravado: 'resumo:gravado',
+  /**
+   * Garante o texto do documento localmente e informa se já há resumo.
+   *
+   * Devolve situação, nunca texto. Existe para que a interface distinga a
+   * etapa de leitura da etapa de geração sem inventar a transição.
+   */
+  prepararConteudo: 'resumo:preparar',
 
   /** Abre o documento na fonte original e registra o acesso. */
   abrirDocumento: 'documento:abrir',

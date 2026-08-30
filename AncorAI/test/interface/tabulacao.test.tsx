@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { App } from '../../src/renderer/App';
 import type { Documento, ResultadoBusca, StatusFonte } from '../../src/compartilhado/tipos';
+import { CONECTADO, montarApi, instalarApi } from './apoio';
 
 /**
  * Ordem de tabulação e alcance por teclado (ui-spec, seção 5).
@@ -34,27 +35,14 @@ const RECENTES: ResultadoBusca = {
   doCache: false
 };
 
-const CONECTADO: StatusFonte[] = [{ fonte: 'github', estado: 'conectada', conta: 'equipe' }];
-
-const api = {
-  status: vi.fn(async () => CONECTADO),
-  recentesDoCache: vi.fn(async () => null),
-  recentes: vi.fn(async () => RECENTES),
-  buscar: vi.fn(async () => RECENTES),
-  verificarCredenciais: vi.fn(async () => CONECTADO),
-  definirCredencial: vi.fn(async () => CONECTADO),
-  removerCredencial: vi.fn(async () => CONECTADO),
-  detalharDocumentos: vi.fn(async (docs: unknown[]) => docs),
-  abrirDocumento: vi.fn(),
-  documentosAcessados: vi.fn(async () => [])
-};
+const api = montarApi(RECENTES);
 
 const FOCAVEIS =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  Object.defineProperty(window, 'ancorai', { value: api, writable: true, configurable: true });
+  instalarApi(api);
 });
 
 function focaveis(raiz: ParentNode = document): HTMLElement[] {
@@ -78,6 +66,9 @@ describe('ordem de tabulação da tela principal', () => {
   it('segue a leitura visual: cabeçalho, busca, filtros e depois os resultados', async () => {
     render(<App />);
     await waitFor(() => expect(document.querySelector('.cartao__nome')).not.toBeNull());
+    // O painel chega depois da lista, quando o resumo resolve. Medir antes
+    // disso mediria uma tela intermediária que o usuário mal chega a ver.
+    await waitFor(() => expect(document.querySelector('.painel')).not.toBeNull());
 
     /** Região da tela a que o elemento pertence, pelo contêiner que o envolve. */
     const regiaoDe = (elemento: HTMLElement): string => {
@@ -86,6 +77,7 @@ describe('ordem de tabulação da tela principal', () => {
       if (elemento.closest('.filtros')) return 'filtros';
       if (elemento.closest('.linha-lista')) return 'ordenacao';
       if (elemento.closest('.cartao')) return 'resultados';
+      if (elemento.closest('.painel')) return 'painel';
       if (elemento.closest('.paginacao')) return 'paginacao';
       return 'outro';
     };
@@ -97,6 +89,9 @@ describe('ordem de tabulação da tela principal', () => {
     // Os filtros são dois: a extensão e o botão de período. Os campos de data
     // vivem dentro do painel do período e só entram na tabulação quando ele
     // está aberto, que é o comportamento correto para conteúdo recolhido.
+    //
+    // Cada resultado tem duas ações — gerar resumo e abrir na fonte — e o
+    // painel de resumo vem depois da lista, que é onde ele aparece na tela.
     expect(focaveis().map(regiaoDe)).toEqual([
       'cabecalho',
       'busca',
@@ -104,8 +99,31 @@ describe('ordem de tabulação da tela principal', () => {
       'filtros',
       'filtros',
       'ordenacao',
-      'resultados'
+      'resultados',
+      'resultados',
+      'painel'
     ]);
+  });
+
+  it('o campo da chave de IA entra na tabulação do diálogo, na ordem visual', async () => {
+    render(<App />);
+    await waitFor(() => expect(document.querySelector('.cartao__nome')).not.toBeNull());
+
+    fireEvent.click(screen.getByRole('button', { name: /GitHub conectada/i }));
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
+
+    const dentro = focaveis(screen.getByRole('dialog'));
+    const rotulos = dentro.map((elemento) =>
+      elemento.tagName === 'INPUT'
+        ? (elemento.getAttribute('placeholder') ?? '')
+        : (elemento.textContent ?? '').trim()
+    );
+
+    // GitHub vem antes da IA, como na tela; e o botão de fechar, por último.
+    expect(rotulos.indexOf('ghp_…')).toBeLessThan(
+      rotulos.indexOf('Cole a chave do Google AI Studio')
+    );
+    expect(rotulos.at(-1)).toBe('Fechar');
   });
 
   it('o campo de busca recebe o foco na abertura', async () => {

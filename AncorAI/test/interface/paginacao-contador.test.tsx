@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { App } from '../../src/renderer/App';
 import type { Documento, ResultadoBusca, StatusFonte } from '../../src/compartilhado/tipos';
+import { CONECTADO, montarApi, instalarApi } from './apoio';
 
 /**
  * Paginação e contador na interface.
@@ -33,26 +34,15 @@ function resultado(qtd: number, total: number, pagina = 1): ResultadoBusca {
   };
 }
 
-const CONECTADO: StatusFonte[] = [{ fonte: 'github', estado: 'conectada', conta: 'equipe' }];
-
-const api = {
-  status: vi.fn(async () => CONECTADO),
-  recentesDoCache: vi.fn(async () => null),
-  recentes: vi.fn(async () => resultado(10, 10)),
-  buscar: vi.fn(async () => resultado(10, 25)),
-  verificarCredenciais: vi.fn(),
-  definirCredencial: vi.fn(),
-  removerCredencial: vi.fn(),
-  detalharDocumentos: vi.fn(async (docs: unknown[]) => docs),
-  abrirDocumento: vi.fn(),
-  documentosAcessados: vi.fn(async () => [])
-};
+const api = montarApi(resultado(10, 10), {
+  buscar: vi.fn(async () => resultado(10, 25))
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
   api.recentes.mockResolvedValue(resultado(10, 10));
   api.buscar.mockResolvedValue(resultado(10, 25));
-  Object.defineProperty(window, 'ancorai', { value: api, writable: true, configurable: true });
+  instalarApi(api);
 });
 
 async function buscar(termo: string) {

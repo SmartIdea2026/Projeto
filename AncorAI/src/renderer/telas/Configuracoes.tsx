@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import type { StatusFonte } from '../../compartilhado/tipos';
+import type { StatusFonte, StatusLLM } from '../../compartilhado/tipos';
 
 interface Props {
   status: StatusFonte[];
   aoFechar: () => void;
   aoAtualizarStatus: (status: StatusFonte[]) => void;
+  statusLLM: StatusLLM | null;
+  aoAtualizarStatusLLM: (status: StatusLLM) => void;
 }
 
 /**
@@ -24,14 +26,43 @@ const DESCRICAO_ESTADO: Record<string, string> = {
   verificando: 'Verificando…'
 };
 
-export function Configuracoes({ status, aoFechar, aoAtualizarStatus }: Props) {
+export function Configuracoes({
+  status,
+  aoFechar,
+  aoAtualizarStatus,
+  statusLLM,
+  aoAtualizarStatusLLM
+}: Props) {
   const dialogo = useRef<HTMLDivElement>(null);
   const focoAnterior = useRef<HTMLElement | null>(null);
   const [token, setToken] = useState('');
+  const [chaveLLM, setChaveLLM] = useState('');
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [erro, setErro] = useState<Record<string, string>>({});
 
   const github = status.find((item) => item.fonte === 'github');
+
+  /**
+   * Grava a chave da LLM.
+   *
+   * Separada de `executar` porque o retorno é outro: a LLM não é uma fonte de
+   * documentos, e forçá-la no formato de `StatusFonte` faria a interface tratar
+   * a ausência da chave como fonte indisponível — o que desligaria a busca.
+   */
+  async function executarLLM(acao: () => Promise<StatusLLM>) {
+    setOcupado('llm');
+    setErro((atual) => ({ ...atual, llm: '' }));
+    try {
+      aoAtualizarStatusLLM(await acao());
+      setChaveLLM('');
+    } catch (falha) {
+      const mensagem =
+        falha instanceof Error ? falha.message.replace(/^Error: /, '') : 'Falha inesperada.';
+      setErro((atual) => ({ ...atual, llm: mensagem }));
+    } finally {
+      setOcupado(null);
+    }
+  }
 
   async function executar(chave: string, acao: () => Promise<StatusFonte[]>) {
     setOcupado(chave);
@@ -162,6 +193,81 @@ export function Configuracoes({ status, aoFechar, aoAtualizarStatus }: Props) {
                 onClick={() =>
                   void executar('github', () => window.ancorai.removerCredencial('github'))
                 }
+              >
+                Remover
+              </button>
+            )}
+          </div>
+        </section>
+
+        <section className="campo">
+          <div className="campo__rotulo">
+            <span>Resumos por IA</span>
+            <span>{DESCRICAO_ESTADO[statusLLM?.estado ?? 'nao-configurada']}</span>
+          </div>
+          {/*
+            O aviso fica na tela, e não só no primeiro uso: quem configura hoje
+            pode não ser quem confirmou o envio, e a informação precisa
+            continuar alcançável depois da confirmação.
+          */}
+          <p className="campo__ajuda">
+            Os resumos são gerados pelo Google Gemini. Para isso, o{' '}
+            <strong>texto dos documentos é enviado a esse serviço externo</strong>. Na
+            chave gratuita, o conteúdo enviado pode ser usado pelo Google para melhorar
+            seus produtos e passar por revisão humana.
+          </p>
+          <p className="campo__ajuda">
+            A busca funciona normalmente sem esta chave; apenas o painel de resumo fica
+            indisponível.
+          </p>
+          {/*
+            O modelo é descoberto na API, não fixado no código. Mostrá-lo é o
+            que separa diagnosticar um resumo ruim de adivinhar qual modelo o
+            produziu.
+          */}
+          {statusLLM?.modelo && (
+            <p className="campo__ajuda">
+              Modelo em uso: <strong>{statusLLM.modelo}</strong>
+            </p>
+          )}
+          <label>
+            <span className="apenas-leitor">Chave da API do Gemini</span>
+            <input
+              type="password"
+              value={chaveLLM}
+              /*
+                Sem prefixo de exemplo: o Google emite chaves em mais de um
+                formato — `AIza…` nas antigas e `AQ.Ab8R…` nas novas do AI
+                Studio — e um exemplo desatualizado faz o usuário achar que
+                colou a chave errada. A validação é feita contra a API, não
+                pelo começo do texto.
+              */
+              placeholder="Cole a chave do Google AI Studio"
+              autoComplete="off"
+              onChange={(evento) => setChaveLLM(evento.target.value)}
+            />
+          </label>
+          {erro['llm'] && (
+            <p className="erro-campo" role="alert">
+              {erro['llm']}
+            </p>
+          )}
+          <div className="campo__acoes">
+            <button
+              type="button"
+              className="botao botao--primario"
+              disabled={!chaveLLM.trim() || ocupado === 'llm'}
+              onClick={() =>
+                void executarLLM(() => window.ancorai.definirChaveLLM(chaveLLM.trim()))
+              }
+            >
+              {ocupado === 'llm' ? 'Verificando…' : 'Salvar chave'}
+            </button>
+            {statusLLM?.estado === 'conectada' && (
+              <button
+                type="button"
+                className="botao botao--secundario"
+                onClick={() => void executarLLM(() => window.ancorai.removerChaveLLM())}
               >
                 Remover
               </button>

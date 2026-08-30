@@ -1,7 +1,9 @@
 import { app, BrowserWindow } from 'electron';
 import { abrirBanco, fecharBanco } from './banco/repositorio';
 import { inicializarCofre } from './credenciais/cofre';
+import { ingerirAcervo } from './conteudo/ingestao';
 import { registrarCanais } from './ipc';
+import { inicializarInstrucao } from './llm/instrucao';
 import { criarJanela } from './janela';
 
 /**
@@ -16,8 +18,19 @@ void app.whenReady().then(async () => {
   inicializarCofre(app.getPath('userData'));
   await abrirBanco(app.getPath('userData'));
 
+  // A instrução de redação do resumo é lida do disco, não embutida no código.
+  // Empacotada, ela vem em `resources/`; em desenvolvimento, da raiz do projeto.
+  inicializarInstrucao(process.resourcesPath, app.getAppPath());
+
   registrarCanais();
   criarJanela();
+
+  // A ingestão do conteúdo roda em segundo plano, sem bloquear a abertura.
+  // Ela cede a vez a qualquer busca em andamento, então começar já é seguro:
+  // a rotina de inicialização atende primeiro. Falhas viram `suspensa` no
+  // resultado e não sobem como exceção — um acervo que não pôde ser ingerido
+  // não é motivo para a aplicação deixar de abrir.
+  void ingerirAcervo();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) criarJanela();

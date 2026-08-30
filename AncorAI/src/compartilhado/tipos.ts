@@ -64,6 +64,26 @@ export interface Documento {
   caminho?: string;
   /** Repositório de origem, quando a fonte é o GitHub. */
   repositorio?: string;
+  /**
+   * Identidade do conteúdo do documento na fonte.
+   *
+   * No GitHub é o `sha` do blob, que é o hash do próprio conteúdo: muda
+   * exatamente quando os bytes mudam, e não muda quando o arquivo é apenas
+   * tocado por um commit vizinho. É por isso que ele, e não a data, decide se
+   * o texto já armazenado ainda vale — `dataModificacao` no inventário é o
+   * `pushed_at` do repositório, igual para todos os arquivos dele, e avançaria
+   * para o acervo inteiro a cada push (ver `dataAproximada`).
+   *
+   * Ausente nos documentos que vêm dos commits, que não passam pela árvore.
+   */
+  versaoConteudo?: string;
+  /**
+   * Tamanho do arquivo em bytes, quando a fonte o informa.
+   *
+   * Vem junto do inventário, o que permite descartar um arquivo grande demais
+   * sem gastar requisição alguma para descobrir o tamanho.
+   */
+  tamanho?: number;
 }
 
 export type Ordenacao = 'a-z' | 'z-a' | 'data-asc' | 'data-desc';
@@ -150,6 +170,110 @@ export interface ResultadoBusca {
   avisos: AvisoFonte[];
   /** Verdadeiro quando os dados vieram do cache local, sem consultar a rede. */
   doCache: boolean;
+}
+
+/**
+ * Andamento da ingestão de conteúdo.
+ *
+ * São contagens e mensagens do sistema — nunca texto de documento. O conteúdo
+ * fica confinado ao processo principal (ADR-0005), e este tipo existe
+ * justamente para que haja o que devolver ao renderer sem devolver conteúdo.
+ */
+export interface ProgressoIngestao {
+  /** Documentos do inventário considerados. */
+  total: number;
+  /** Documentos cujo texto foi obtido e gravado agora. */
+  ingeridos: number;
+  /** Documentos cujo registro já estava vigente e foi reaproveitado. */
+  reaproveitados: number;
+  /** Documentos registrados sem texto: formato não lido, vazio ou grande demais. */
+  semTexto: number;
+  /** Documentos em que a obtenção ou a leitura falhou. */
+  falhas: number;
+  suspensa: boolean;
+  /** Mensagem do sistema explicando a suspensão, quando houver. */
+  motivoSuspensao?: string;
+}
+
+/**
+ * Resumo de um documento produzido por modelo de linguagem.
+ *
+ * `tipo`, `assuntos` e `destaques` vêm da **mesma** submissão que produz o
+ * resumo em prosa: pedir separadamente custaria mais cota e abriria espaço
+ * para os quatro discordarem entre si.
+ */
+export interface ResumoDocumento {
+  documentoId: string;
+  resumo: string;
+  tipo: string;
+  assuntos: string[];
+  destaques: string[];
+  /** ISO 8601. */
+  geradoEm: string;
+  /** O conteúdo mudou na fonte depois que o resumo foi gerado. */
+  desatualizado: boolean;
+  /** O texto de origem havia sido cortado no limite por documento. */
+  baseTruncada: boolean;
+}
+
+/**
+ * Por que não há resumo a apresentar.
+ *
+ * Os motivos são distintos porque exigem coisas distintas de quem lê:
+ * configurar uma chave, corrigir uma chave, esperar, ou nada — no caso de um
+ * documento que simplesmente não tem texto.
+ */
+export type MotivoSemResumo =
+  | 'sem-credencial'
+  | 'credencial-invalida'
+  | 'cota-excedida'
+  | 'sem-conexao'
+  | 'sem-consentimento'
+  | 'sem-texto'
+  | 'falha';
+
+/**
+ * Resultado de preparar o texto de um documento para o resumo.
+ *
+ * Existe para que a interface possa distinguir **duas etapas reais** —
+ * obter o texto e submetê-lo à LLM — em vez de inventar a transição entre
+ * elas. Cada uma é aguardada separadamente, então cada mensagem apresentada
+ * corresponde a trabalho efetivamente em curso.
+ */
+export interface PreparoConteudo {
+  pronto: boolean;
+  /** Já existe resumo vigente gravado para este documento. */
+  temResumo: boolean;
+  motivo?: MotivoSemResumo;
+  mensagem?: string;
+}
+
+export interface RespostaResumo {
+  resumo: ResumoDocumento | null;
+  motivo?: MotivoSemResumo;
+  mensagem?: string;
+}
+
+/**
+ * Estado do serviço de linguagem.
+ *
+ * Separado de `StatusFonte` de propósito: a LLM não é uma fonte de documentos.
+ * Ela não fornece nada à busca, e sua ausência não torna fonte alguma
+ * indisponível — apenas desliga o painel de resumo.
+ */
+export interface StatusLLM {
+  estado: EstadoConexao;
+  mensagem?: string;
+  /** O usuário já autorizou o envio de conteúdo a serviço externo. */
+  consentido: boolean;
+  /**
+   * Modelo escolhido nesta execução, quando já resolvido.
+   *
+   * Apresentado na tela de configurações: o modelo é descoberto na API, não
+   * fixado no código, então saber qual está em uso é a diferença entre
+   * diagnosticar um resumo ruim e adivinhar.
+   */
+  modelo?: string;
 }
 
 export interface DocumentoAcessado {
