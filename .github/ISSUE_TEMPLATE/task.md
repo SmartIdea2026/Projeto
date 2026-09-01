@@ -1,9 +1,9 @@
 ---
-name: Template Kamban
-about: 'Template padrão para criação de itens no Kamban '
+name: Task
+about: 'Template padrão para criação de tasks no Kanban '
 title: "[TASK]"
-labels: bug
-assignees: SmartIdea2026
+labels: ''
+assignees: ''
 
 ---
 
