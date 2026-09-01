@@ -20,4 +20,3 @@ assignees: ''
 - [ ] Adicionar os resultados ao comentário da Issue.
 
 ## Horas reais:
-
