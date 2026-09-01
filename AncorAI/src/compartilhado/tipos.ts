@@ -84,6 +84,16 @@ export interface Documento {
    * sem gastar requisição alguma para descobrir o tamanho.
    */
   tamanho?: number;
+  /**
+   * Tipo do documento identificado pela classificação por IA (`indice-local`),
+   * como "ata" ou "especificação". Ausente para documento ainda não
+   * classificado — a busca continua alcançando-o pelo nome.
+   */
+  tipo?: string;
+  /** Assuntos identificados pela classificação por IA, para a busca por contexto. */
+  assuntos?: string[];
+  /** Etiquetas identificadas pela classificação por IA, para a busca por contexto. */
+  etiquetas?: string[];
 }
 
 export type Ordenacao = 'a-z' | 'z-a' | 'data-asc' | 'data-desc';
@@ -274,6 +284,28 @@ export interface StatusLLM {
    * diagnosticar um resumo ruim e adivinhar.
    */
   modelo?: string;
+}
+
+/**
+ * Andamento da classificação por IA do acervo (`indice-local`).
+ *
+ * Mesma disciplina de `ProgressoIngestao`: contagens e mensagens do sistema,
+ * nunca o texto submetido nem o resultado da classificação em si.
+ */
+export interface ProgressoIndexacao {
+  /** Documentos indexados considerados nesta passagem. */
+  total: number;
+  /** Documentos classificados agora. */
+  classificados: number;
+  /** Documentos cuja classificação já estava vigente e foi reaproveitada. */
+  reaproveitados: number;
+  /** Documentos sem texto disponível para classificar. */
+  semTexto: number;
+  falhas: number;
+  suspensa: boolean;
+  motivoSuspensao?: string;
+  /** Verdadeiro enquanto esta passagem ainda está em curso. */
+  emAndamento: boolean;
 }
 
 export interface DocumentoAcessado {

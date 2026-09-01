@@ -5,6 +5,7 @@ import {
   type Documento,
   type Filtros as TipoFiltros,
   type MotivoSemResumo,
+  type ProgressoIndexacao,
   type ResultadoBusca,
   type ResumoDocumento,
   type StatusFonte,
@@ -41,6 +42,7 @@ export function App() {
   const campoBusca = useRef<HTMLInputElement>(null);
 
   const [statusLLM, setStatusLLM] = useState<StatusLLM | null>(null);
+  const [progressoIndice, setProgressoIndice] = useState<ProgressoIndexacao | null>(null);
   const [emFoco, setEmFoco] = useState<Documento | null>(null);
   const [resumo, setResumo] = useState<ResumoDocumento | null>(null);
   const [etapaBruta, setEtapaBruta] = useState<EtapaResumo | null>(null);
@@ -266,6 +268,29 @@ export function App() {
     void window.ancorai.statusLLM().then(setStatusLLM);
   }, []);
 
+  /**
+   * Progresso da indexação (classificação por IA do acervo), consultado
+   * periodicamente.
+   *
+   * Não há evento de conclusão para assinar — o processo principal não
+   * empurra atualização alguma, então quem quer ver o andamento pergunta de
+   * tempos em tempos. A indexação continua rodando de fundo independente
+   * desta tela estar olhando para ela ou não.
+   */
+  useEffect(() => {
+    let cancelado = false;
+    async function consultar() {
+      const progresso = await window.ancorai.progressoIndice();
+      if (!cancelado) setProgressoIndice(progresso);
+    }
+    void consultar();
+    const intervalo = setInterval(() => void consultar(), 3000);
+    return () => {
+      cancelado = true;
+      clearInterval(intervalo);
+    };
+  }, []);
+
   async function responderConsentimento(valor: boolean) {
     const novo = await window.ancorai.consentirEnvio(valor);
     setStatusLLM(novo);
@@ -446,6 +471,21 @@ export function App() {
             </span>
           </div>
         ))}
+
+        {/*
+          A indexação roda de fundo e nunca bloqueia a busca — este aviso só
+          informa que a classificação por assunto ainda não alcançou o acervo
+          inteiro, para que uma correspondência por contexto ausente não pareça
+          um defeito.
+        */}
+        {progressoIndice?.emAndamento && (
+          <div className="aviso aviso--info" role="status">
+            <span aria-hidden="true">ⓘ</span>
+            <span>
+              Classificando o acervo por assunto em segundo plano: {progressoIndice.classificados + progressoIndice.reaproveitados + progressoIndice.semTexto + progressoIndice.falhas} de {progressoIndice.total} documento(s). A busca continua disponível enquanto isso.
+            </span>
+          </div>
+        )}
 
         {carregando && (
           <ul className="lista" aria-hidden="true">

@@ -79,7 +79,7 @@ export async function listarModelos(chave: string): Promise<string[]> {
  * 3. **Completo antes de "lite".** O lite serve, mas resume pior.
  * 4. **Versão maior antes de menor.**
  */
-function classificar(nome: string): number[] {
+function pontuarModelo(nome: string): number[] {
   const versao = /(\d+)(?:[.-](\d+))?/.exec(nome);
   return [
     /preview|exp|experimental/i.test(nome) ? 0 : 1,
@@ -91,8 +91,8 @@ function classificar(nome: string): number[] {
 
 /** Compara dois modelos pelos critérios acima, do mais forte ao mais fraco. */
 function comparar(a: string, b: string): number {
-  const criteriosA = classificar(a);
-  const criteriosB = classificar(b);
+  const criteriosA = pontuarModelo(a);
+  const criteriosB = pontuarModelo(b);
   for (let i = 0; i < criteriosA.length; i += 1) {
     const diferenca = (criteriosB[i] as number) - (criteriosA[i] as number);
     if (diferenca !== 0) return diferenca;
@@ -109,7 +109,7 @@ function comparar(a: string, b: string): number {
  * chave do usuário, e a geração inteira parou.
  *
  * A comparação aceita as variantes do mesmo nome (`-lite`, `-preview`), e entre
- * elas valem os critérios de `classificar`: a versão plena e estável vem antes.
+ * elas valem os critérios de `pontuarModelo`: a versão plena e estável vem antes.
  */
 const PREFERIDO = 'gemini-3.1-flash';
 
@@ -353,4 +353,81 @@ export async function resumir(
   });
 
   return interpretar(extrairTexto(resposta));
+}
+
+/** O que a classificação devolve, em uma resposta só. */
+export interface ResultadoClassificacao {
+  tipo: string;
+  assuntos: string[];
+  etiquetas: string[];
+}
+
+/**
+ * Instrução da classificação, mais enxuta que a do resumo e por isso não
+ * versionada em arquivo à parte: não há redação em prosa a revisar, só três
+ * campos curtos que orientam a busca por contexto (`indice-local`).
+ */
+const INSTRUCAO_CLASSIFICACAO =
+  'Classifique o documento a seguir para viabilizar busca por assunto. ' +
+  'Devolva o tipo do documento (por exemplo: ata, especificação, relatório, ' +
+  'proposta), os principais assuntos tratados e etiquetas curtas que ajudem a ' +
+  'encontrá-lo. Baseie-se apenas no texto recebido.';
+
+const ESQUEMA_CLASSIFICACAO = {
+  type: 'object',
+  properties: {
+    tipo: { type: 'string' },
+    assuntos: { type: 'array', items: { type: 'string' } },
+    etiquetas: { type: 'array', items: { type: 'string' } }
+  },
+  required: ['tipo', 'assuntos', 'etiquetas']
+};
+
+function interpretarClassificacao(texto: string): ResultadoClassificacao {
+  let bruto: unknown;
+  try {
+    bruto = JSON.parse(texto);
+  } catch {
+    throw new ErroLLM('falha', 'O serviço de IA devolveu uma resposta ilegível.');
+  }
+
+  const objeto = bruto as Partial<ResultadoClassificacao>;
+  const lista = (valor: unknown): string[] =>
+    Array.isArray(valor) ? valor.filter((item): item is string => typeof item === 'string') : [];
+
+  return {
+    tipo: typeof objeto.tipo === 'string' ? objeto.tipo.trim() : '',
+    assuntos: lista(objeto.assuntos),
+    etiquetas: lista(objeto.etiquetas)
+  };
+}
+
+/**
+ * Classifica um documento: tipo, assuntos e etiquetas, em uma submissão só.
+ *
+ * Usa o mesmo modelo resolvido para o resumo — a preferência e a escolha
+ * automática são as mesmas, e não há razão para a classificação depender de
+ * um modelo diferente.
+ */
+export async function classificar(
+  chave: string,
+  documento: { nome: string; texto: string }
+): Promise<ResultadoClassificacao> {
+  const modelo = await modeloParaResumo(chave);
+
+  const resposta = await requisitar(`/models/${modelo}:generateContent`, chave, {
+    systemInstruction: { parts: [{ text: INSTRUCAO_CLASSIFICACAO }] },
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: `Arquivo: ${documento.nome}\n\n${documento.texto}` }]
+      }
+    ],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema: ESQUEMA_CLASSIFICACAO
+    }
+  });
+
+  return interpretarClassificacao(extrairTexto(resposta));
 }

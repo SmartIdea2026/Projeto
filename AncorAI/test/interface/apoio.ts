@@ -72,6 +72,15 @@ export function montarApi(resultado: ResultadoBusca, sobrescritas: Sobrescritas 
       falhas: 0,
       suspensa: false
     })),
+    progressoIndice: vi.fn(async () => ({
+      total: 0,
+      classificados: 0,
+      reaproveitados: 0,
+      semTexto: 0,
+      falhas: 0,
+      suspensa: false,
+      emAndamento: false
+    })),
     abrirDocumento: vi.fn(),
     documentosAcessados: vi.fn(async () => []),
 

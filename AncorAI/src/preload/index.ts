@@ -6,6 +6,7 @@ import type {
   Filtros,
   Fonte,
   PreparoConteudo,
+  ProgressoIndexacao,
   ProgressoIngestao,
   RespostaResumo,
   ResultadoBusca,
@@ -55,6 +56,9 @@ const api = {
 
   indexarConteudo: (): Promise<ProgressoIngestao> =>
     ipcRenderer.invoke(CANAIS.indexarConteudo),
+
+  progressoIndice: (): Promise<ProgressoIndexacao> =>
+    ipcRenderer.invoke(CANAIS.progressoIndice),
 
   definirChaveLLM: (valor: string): Promise<StatusLLM> =>
     ipcRenderer.invoke(CANAIS.llmDefinir, valor),

@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import { abrirBanco, fecharBanco } from './banco/repositorio';
 import { inicializarCofre } from './credenciais/cofre';
 import { ingerirAcervo } from './conteudo/ingestao';
+import { indexarAcervo } from './indice/servico';
 import { registrarCanais } from './ipc';
 import { inicializarInstrucao } from './llm/instrucao';
 import { criarJanela } from './janela';
@@ -30,7 +31,12 @@ void app.whenReady().then(async () => {
   // a rotina de inicialização atende primeiro. Falhas viram `suspensa` no
   // resultado e não sobem como exceção — um acervo que não pôde ser ingerido
   // não é motivo para a aplicação deixar de abrir.
-  void ingerirAcervo();
+  //
+  // A indexação (classificação por IA) só começa depois: ela lê o texto que a
+  // ingestão guarda e nunca o baixa de novo, então rodar as duas ao mesmo
+  // tempo faria a maior parte do acervo ser vista "sem texto" na primeira
+  // passagem, à toa.
+  void ingerirAcervo().then(() => indexarAcervo());
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) criarJanela();

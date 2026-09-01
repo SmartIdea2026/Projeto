@@ -161,6 +161,18 @@ describe('nenhum canal devolve conteúdo de documento', () => {
     );
   });
 
+  it('o canal de progresso da indexação devolve apenas contagens e mensagens do sistema', async () => {
+    const handler = handlers.get(CANAIS.progressoIndice);
+    const progresso = (await (handler as () => Promise<Record<string, unknown>>)()) ?? {};
+
+    for (const [campo, valor] of Object.entries(progresso)) {
+      expect(
+        ['number', 'boolean', 'string'].includes(typeof valor),
+        `campo ${campo} deveria ser escalar`
+      ).toBe(true);
+    }
+  });
+
   it('a ingestão realmente gravou texto — o teste acima não passou por vazio', async () => {
     const registro = await banco.lerConteudo(documento.id);
 

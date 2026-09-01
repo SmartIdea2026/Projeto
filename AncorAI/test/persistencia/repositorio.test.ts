@@ -6,9 +6,14 @@ import {
   abrirBanco,
   fecharBanco,
   gravarCache,
+  gravarClassificacao,
+  idsSemClassificacao,
   lerCache,
+  lerClassificacoes,
+  lerIndice,
   listarAcessados,
-  registrarAcesso
+  registrarAcesso,
+  registrarNoIndice
 } from '../../src/main/banco/repositorio';
 import type { Documento } from '../../src/compartilhado/tipos';
 
@@ -98,6 +103,116 @@ describe('armazenamento do conteúdo', () => {
         'nome'
       ]);
     }
+  });
+});
+
+describe('índice local de documentos', () => {
+  // Este arquivo abre um banco só para todos os testes (`beforeAll`), então
+  // cada teste usa ids próprios para não ler o que outro gravou.
+  function doIndice(sufixo: string, extras: Partial<Documento> = {}): Documento {
+    return { ...documento, id: `indice:${sufixo}`, versaoConteudo: `sha-${sufixo}`, ...extras };
+  }
+
+  it('registra metadados sem gravar texto', async () => {
+    const doc = doIndice('1');
+    await registrarNoIndice([doc]);
+    const registro = await lerIndice(doc.id);
+
+    expect(registro).toMatchObject({
+      _id: doc.id,
+      nome: doc.nome,
+      fonte: doc.fonte,
+      link: doc.link
+    });
+    expect(registro).not.toHaveProperty('texto');
+  });
+
+  it('grava apenas os campos previstos no registro do índice', async () => {
+    const doc = doIndice('2');
+    await registrarNoIndice([doc]);
+    const registro = await lerIndice(doc.id);
+
+    expect(Object.keys(registro ?? {}).sort()).toEqual(
+      ['_id', 'atualizadoEm', 'caminho', 'fonte', 'link', 'nome', 'versaoConteudo'].sort()
+    );
+  });
+
+  it('não persiste o conteúdo do documento mesmo que um campo extra chegue junto', async () => {
+    const conteudoSigiloso = 'CONTEUDO-INTEGRAL-DO-DOCUMENTO-NAO-DEVE-SER-GRAVADO';
+    await registrarNoIndice([
+      doIndice('3', { ...({ conteudo: conteudoSigiloso } as Partial<Documento>) })
+    ]);
+
+    const bruto = readFileSync(join(diretorio, 'indice_documentos.db'), 'utf8');
+    expect(bruto).not.toContain(conteudoSigiloso);
+  });
+
+  it('lista os documentos ainda sem classificação', async () => {
+    const classificado = doIndice('4a');
+    const pendente = doIndice('4b');
+    await registrarNoIndice([classificado, pendente]);
+    await gravarClassificacao(classificado.id, {
+      tipo: 'ADR',
+      assuntos: ['arquitetura'],
+      etiquetas: ['decisão']
+    });
+
+    const pendentes = await idsSemClassificacao();
+    expect(pendentes).toContain(pendente.id);
+    expect(pendentes).not.toContain(classificado.id);
+  });
+
+  it('assinala a classificação como desatualizada quando a identidade de conteúdo muda', async () => {
+    const doc = doIndice('5', { versaoConteudo: 'sha-5-v1' });
+    await registrarNoIndice([doc]);
+    await gravarClassificacao(doc.id, {
+      tipo: 'ADR',
+      assuntos: ['arquitetura'],
+      etiquetas: ['decisão']
+    });
+    expect(await idsSemClassificacao()).not.toContain(doc.id);
+
+    await registrarNoIndice([{ ...doc, versaoConteudo: 'sha-5-v2' }]);
+
+    const registro = await lerIndice(doc.id);
+    expect(registro?.tipo).toBeUndefined();
+    expect(await idsSemClassificacao()).toContain(doc.id);
+  });
+
+  it('não desatualiza a classificação de um documento sem identidade de conteúdo', async () => {
+    const semVersao = doIndice('6', { versaoConteudo: undefined });
+    await registrarNoIndice([semVersao]);
+    await gravarClassificacao(semVersao.id, {
+      tipo: 'ADR',
+      assuntos: ['arquitetura'],
+      etiquetas: ['decisão']
+    });
+
+    // Reobtido de novo, ainda sem identidade de conteúdo: nada muda.
+    await registrarNoIndice([semVersao]);
+
+    const registro = await lerIndice(semVersao.id);
+    expect(registro?.tipo).toBe('ADR');
+  });
+
+  it('devolve as classificações vigentes de uma lista de ids, ignorando as ausentes', async () => {
+    const classificado = doIndice('7a');
+    const pendente = doIndice('7b');
+    await registrarNoIndice([classificado, pendente]);
+    await gravarClassificacao(classificado.id, {
+      tipo: 'ADR',
+      assuntos: ['arquitetura'],
+      etiquetas: ['decisão']
+    });
+
+    const classificacoes = await lerClassificacoes([
+      classificado.id,
+      pendente.id,
+      'inexistente'
+    ]);
+
+    expect(classificacoes.size).toBe(1);
+    expect(classificacoes.get(classificado.id)?.tipo).toBe('ADR');
   });
 });
 

@@ -17,6 +17,7 @@ import { estaVigente, ingerirDocumento } from '../conteudo/ingestao';
 import { comoInterativa } from '../conteudo/prioridade';
 import { ErroFonte } from '../fontes/comum';
 import { ErroLLM, modeloEmUso, resumir, verificarChave } from './gemini';
+import { enfileirar } from './fila';
 import { lerInstrucao } from './instrucao';
 
 /**
@@ -28,23 +29,6 @@ import { lerInstrucao } from './instrucao';
  */
 
 export const CHAVE_CONSENTIMENTO = 'resumo.consentimentoEnvio';
-
-/**
- * Fila de submissões com concorrência um.
- *
- * O limite do plano gratuito é por minuto: disparar três cliques rápidos em
- * paralelo transformaria três resumos em três recusas. Serializar troca uma
- * espera um pouco maior por um resultado que efetivamente chega.
- */
-let ultima: Promise<unknown> = Promise.resolve();
-
-function enfileirar<T>(tarefa: () => Promise<T>): Promise<T> {
-  const proxima = ultima.then(tarefa, tarefa);
-  // A cauda ignora o resultado para que uma submissão que falhou não derrube
-  // as seguintes: a fila é de ordem, não de dependência.
-  ultima = proxima.catch(() => undefined);
-  return proxima;
-}
 
 export async function consentiu(): Promise<boolean> {
   return (await lerPreferencia(CHAVE_CONSENTIMENTO)) === true;

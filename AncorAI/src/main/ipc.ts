@@ -6,6 +6,7 @@ import { listarAcessados, registrarAcesso } from './banco/repositorio';
 import * as cofre from './credenciais/cofre';
 import * as servico from './busca/servico';
 import { ingerirAcervo } from './conteudo/ingestao';
+import { progressoIndexacao } from './indice/servico';
 import * as resumos from './llm/resumos';
 
 /**
@@ -62,6 +63,11 @@ export function registrarCanais(): void {
   // Devolve o andamento em contagens. O texto ingerido permanece no processo
   // principal: não há canal que o entregue ao renderer (ADR-0005).
   ipcMain.handle(CANAIS.indexarConteudo, () => ingerirAcervo());
+
+  // Leitura do andamento ao vivo, sem disparar indexação alguma — ela já roda
+  // sozinha ao abrir a aplicação (`index.ts`). Só contagens, nunca o que foi
+  // classificado.
+  ipcMain.handle(CANAIS.progressoIndice, () => progressoIndexacao());
 
   ipcMain.handle(CANAIS.llmDefinir, (_evento, valor: string) =>
     resumos.definirChave(valor)

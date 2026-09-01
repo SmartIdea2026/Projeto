@@ -49,6 +49,14 @@ export const CANAIS = {
    */
   indexarConteudo: 'conteudo:indexar',
 
+  /**
+   * Andamento, ao vivo, da indexação (classificação por IA) do acervo.
+   *
+   * Só contagens e mensagens do sistema, na mesma disciplina de
+   * `conteudo:indexar` — nada do que foi classificado atravessa este canal.
+   */
+  progressoIndice: 'indice:progresso',
+
   /** Grava a chave da LLM. Recebe o segredo; devolve apenas o novo status. */
   llmDefinir: 'llm:definir',
   /** Remove a chave da LLM. */

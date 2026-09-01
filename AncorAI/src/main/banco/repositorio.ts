@@ -75,8 +75,34 @@ export interface RegistroConteudo {
   resumoEm?: string;
 }
 
+/**
+ * Registro do índice local de documentos (`indice-local`).
+ *
+ * Guarda metadados e a classificação por IA (assunto, tipo, etiquetas), nunca
+ * o texto — que continua vivendo só em `conteudo_documentos`. A classificação
+ * envelhece pela mesma identidade de conteúdo que invalida o texto e o resumo:
+ * `versaoConteudo` mudou, a classificação anterior já não descreve o documento
+ * atual. Documentos sem identidade de conteúdo (os que vêm dos commits) não
+ * são invalidados por esta via — sem uma versão para comparar, afirmar
+ * desatualização seria afirmar algo que o sistema não sabe.
+ */
+export interface RegistroIndice {
+  _id: string;
+  nome: string;
+  caminho?: string;
+  fonte: Fonte;
+  link: string;
+  versaoConteudo?: string;
+  atualizadoEm: string;
+  tipo?: string;
+  assuntos?: string[];
+  etiquetas?: string[];
+  classificadoEm?: string;
+}
+
 let acessos: Datastore<RegistroAcesso> | null = null;
 let cache: Datastore<RegistroCache> | null = null;
+let indice: Datastore<RegistroIndice> | null = null;
 
 /**
  * Coleção de conteúdo, aberta sob demanda e não na inicialização.
@@ -112,6 +138,7 @@ export function fecharBanco(): void {
   cache = null;
   conteudo = null;
   preferencias = null;
+  indice = null;
   diretorioBanco = null;
 }
 
@@ -248,6 +275,113 @@ export async function totalDeCaracteres(): Promise<number> {
 export async function descartarConteudoAusente(idsVigentes: string[]): Promise<number> {
   const colecao = await colecaoDeConteudo();
   return colecao.removeAsync({ _id: { $nin: idsVigentes } }, { multi: true });
+}
+
+/**
+ * Abre a coleção de índice na primeira vez que alguém precisa dela.
+ *
+ * Mesma disciplina de `colecaoDeConteudo`: aberta sob demanda, para que ligar
+ * a aplicação e listar acessados não paguem por uma coleção que nenhuma das
+ * duas usa.
+ */
+async function colecaoDeIndice(): Promise<Datastore<RegistroIndice>> {
+  if (indice) return indice;
+  if (!diretorioBanco) throw new Error('Banco de dados não foi inicializado.');
+
+  const nova = new Datastore<RegistroIndice>({
+    filename: join(diretorioBanco, 'indice_documentos.db'),
+    autoload: false
+  });
+  await nova.loadDatabaseAsync();
+  indice = nova;
+  return nova;
+}
+
+/** Registro do índice para um documento, ou `null` se ainda não indexado. */
+export async function lerIndice(id: string): Promise<RegistroIndice | null> {
+  const colecao = await colecaoDeIndice();
+  return colecao.findOneAsync({ _id: id });
+}
+
+/**
+ * Registra ou atualiza no índice os metadados de documentos obtidos das
+ * fontes, sem gravar texto algum.
+ *
+ * Quando a identidade de conteúdo (`versaoConteudo`) de um documento já
+ * indexado muda, a classificação anterior é assinalada como desatualizada —
+ * mesma disciplina de `gravarConteudo` para o resumo: `$set` só toca os
+ * campos que nomeia, então sem esta limpeza uma classificação antiga
+ * sobreviveria ao lado de um documento que já não é o mesmo. Um documento sem
+ * identidade de conteúdo disponível não é invalidado por esta via.
+ */
+export async function registrarNoIndice(documentos: Documento[]): Promise<void> {
+  const colecao = await colecaoDeIndice();
+
+  for (const documento of documentos) {
+    const anterior = await colecao.findOneAsync({ _id: documento.id });
+    const classificacaoObsoleta =
+      anterior !== null &&
+      Boolean(anterior.versaoConteudo) &&
+      Boolean(documento.versaoConteudo) &&
+      anterior.versaoConteudo !== documento.versaoConteudo;
+
+    await colecao.updateAsync(
+      { _id: documento.id },
+      {
+        $set: {
+          nome: documento.nome,
+          ...(documento.caminho ? { caminho: documento.caminho } : {}),
+          fonte: documento.fonte,
+          link: documento.link,
+          ...(documento.versaoConteudo ? { versaoConteudo: documento.versaoConteudo } : {}),
+          atualizadoEm: new Date().toISOString()
+        },
+        ...(classificacaoObsoleta
+          ? { $unset: { tipo: true, assuntos: true, etiquetas: true, classificadoEm: true } }
+          : {})
+      },
+      { upsert: true }
+    );
+  }
+}
+
+/** Grava a classificação por IA produzida para um documento já indexado. */
+export async function gravarClassificacao(
+  id: string,
+  dados: { tipo: string; assuntos: string[]; etiquetas: string[] }
+): Promise<void> {
+  const colecao = await colecaoDeIndice();
+  await colecao.updateAsync(
+    { _id: id },
+    { $set: { ...dados, classificadoEm: new Date().toISOString() } }
+  );
+}
+
+/** Documentos indexados que ainda não têm classificação vigente. */
+export async function idsSemClassificacao(): Promise<string[]> {
+  const colecao = await colecaoDeIndice();
+  const registros = await colecao
+    .findAsync({ classificadoEm: { $exists: false } })
+    .projection({ _id: 1 });
+  return registros.map((registro) => registro._id);
+}
+
+/**
+ * Classificação vigente dos documentos informados, indexada por id.
+ *
+ * Usada para enriquecer resultados de busca já obtidos das fontes com
+ * assunto, tipo e etiquetas — sem requisição alguma às APIs, e sem devolver
+ * registros que ainda não têm classificação.
+ */
+export async function lerClassificacoes(
+  ids: string[]
+): Promise<Map<string, RegistroIndice>> {
+  const colecao = await colecaoDeIndice();
+  const registros = await colecao.findAsync({
+    _id: { $in: ids },
+    classificadoEm: { $exists: true }
+  });
+  return new Map(registros.map((registro) => [registro._id, registro]));
 }
 
 /**
