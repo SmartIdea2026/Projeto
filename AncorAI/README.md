@@ -6,18 +6,21 @@ O Google Drive integrava o escopo e foi retirado do MVP pela [ADR-0004](../Docs/
 
 ## O que a aplicação faz
 
-- **Busca por nome ou autor.** O termo casa com o nome do arquivo e com quem realizou a última alteração, então procurar pelo nome de um integrante encontra o que ele produziu.
+- **Busca por nome ou autor.** O termo casa com o nome do arquivo e com quem realizou a última alteração, então procurar pelo nome de um integrante encontra o que ele produziu. A busca com termo ou período é respondida a partir do **snapshot local** gravado pela última sincronização (ver *Sincronização do acervo*), sem consultar o GitHub documento a documento — o que a mantinha lenta. Um documento criado, renomeado ou removido no GitHub só entra ou sai da busca depois de sincronizar; enquanto não houver snapshot, a busca consulta o GitHub ao vivo.
+- **Busca no conteúdo, opcional.** A caixa **"Buscar no conteúdo"** (desligada por padrão) faz o termo casar também com o **texto já armazenado** do documento (ver *Sincronização do acervo*), de forma aditiva a nome e autor. É opcional porque a correspondência pelo texto alcança qualquer documento que mencione o termo no corpo. No conteúdo o termo casa como palavra inteira. Um resultado que casou apenas pelo conteúdo é assinalado no cartão, sem mostrar o trecho; e a busca avisa quando parte do acervo ainda não foi sincronizada.
 - **Filtros de extensão e período.** O período fica recolhido em um painel, aberto pelo botão abaixo da barra de busca. Ele recorta pela **data real de alteração do documento**: definir um intervalo faz a aplicação percorrer o acervo — e não a janela estreita dos recentes — e resolver a data de cada candidato antes de filtrar. Documento cuja data não puder ser obtida fica de fora, e a aplicação diz quantos ficaram.
 - **Ordenação** por data ou nome, com desempate por nome A–Z e, permanecendo o empate, pelo identificador do documento. O critério vale para o **resultado inteiro**, não para a página visível: trocá-lo reorganiza tudo o que foi encontrado, recalcula as páginas e devolve a primeira — sem nova consulta às fontes. O controle fica acima da lista, alinhado à direita dela.
 - **Paginação** de 10 documentos por página, com o total encontrado exibido à esquerda, na mesma linha do controle de ordenação.
 - **Documentos recentes** na abertura, a partir do resultado guardado da execução anterior, atualizado em segundo plano. A lista traz os mais recentes primeiro; escolher outro critério muda a ordem em que eles aparecem, nunca quais documentos são considerados recentes.
 - **Autoria e data da última alteração** em cada resultado, obtidas para a página apresentada — e, quando há termo ou período, para os candidatos antes da filtragem, porque aí o dado decide quem entra no resultado. Chegada a data real, o documento é reposicionado: a ordem apresentada nunca contradiz as datas apresentadas.
-- **Avisos de resultado parcial** quando a listagem foi truncada, um repositório ficou inacessível, a busca por autor excedeu o alcance de uma consulta, ou o filtro de período deixou documentos de fora por não ter sido possível determinar a data deles.
+- **Avisos de resultado parcial** quando a listagem foi truncada, um repositório ficou inacessível, a busca por autor excedeu o alcance de uma consulta ao vivo, o filtro de período deixou documentos de fora por não ter sido possível determinar a data deles, a correspondência pelo conteúdo alcançou apenas parte do acervo, ou o snapshot ainda tem documentos sem autoria sincronizada.
 
-### Em segundo plano
+### Sincronização do acervo
 
-- **Ingestão do conteúdo.** Além dos metadados, o sistema baixa os documentos do inventário, extrai o texto e o guarda no banco local. Roda em segundo plano ao abrir a aplicação, é retomável, e cede a vez a qualquer busca — o trabalho de fundo nunca disputa cota do GitHub com quem está esperando na tela.
-- **O texto fica acessível ao sistema, não ao usuário.** Nada disso aparece na interface: o documento continua sendo aberto por redirecionamento à fonte original, e nenhum canal devolve conteúdo ao renderer. A ingestão existe para viabilizar resumo, classificação e busca por contexto, que virão depois.
+- **Ingestão do conteúdo.** Além dos metadados, o sistema baixa os documentos do inventário, extrai o texto e o guarda no banco local. Roda ao abrir a aplicação, é incremental e retomável, e cede a vez a qualquer busca — o trabalho de fundo nunca disputa cota do GitHub com quem está esperando na tela.
+- **Snapshot do inventário e da autoria.** A mesma varredura grava localmente quais documentos existem e resolve a autoria e a data real de alteração de cada um, reaproveitando o que já resolveu (pelo `sha` do blob). É desse snapshot que a busca com termo ou período é servida — antes, cada busca resolvia a autoria consultando o GitHub uma vez por documento, e era isso que a deixava lenta.
+- **Botão "Sincronizar" no cabeçalho**, ao lado do acesso às configurações. Dispara a mesma varredura sob comando: reaproveita o texto e a autoria já vigentes (pelo `sha` do blob) e busca só o que falta ou mudou. É uma varredura de cada vez — acionar o botão durante uma em andamento não inicia outra. O botão apresenta o andamento em contagens e o estado: **parada**, **em andamento**, **concluída** ou **suspensa** com o motivo (limite de requisições, limite de armazenamento, credencial ausente ou falha ao obter o inventário).
+- **O texto fica acessível ao sistema, não ao usuário.** O documento continua sendo aberto por redirecionamento à fonte original, e nenhum canal devolve conteúdo ao renderer (ADR-0005): a busca pelo conteúdo roda no processo principal e só devolve a marca de correspondência, nunca o trecho. A ingestão também viabiliza resumo e classificação por IA, que virão depois.
 
 Formatos com texto extraído: `md`, `txt`, `pdf`, `docx` e `epub`. Planilhas (`xls`, `xlsx`) e o `.doc` antigo continuam sendo encontrados pelo nome, mas têm o conteúdo registrado como não lido — o motivo está em `src/main/conteudo/extracao.ts`.
 
@@ -102,9 +105,9 @@ src/
 └── compartilhado/        Tipos, canais e ordenação comuns aos processos
 
 test/
-├── busca/                Regras de filtro, ordenação, paginação, reordenação e falhas
+├── busca/                Filtro, ordenação, paginação, reordenação, falhas, busca pelo conteúdo e pelo snapshot
 ├── fontes/               Normalização das respostas das APIs e autoria
-├── conteudo/             Obtenção, extração, persistência e ingestão do texto
+├── conteudo/             Obtenção, extração, persistência, ingestão e estado da sincronização
 ├── interface/            Componentes: tabulação, paginação, filtros, ordenação e autoria
 ├── persistencia/         Banco local
 └── seguranca/            Fronteira entre renderer e processo principal
@@ -114,15 +117,16 @@ Credenciais, chamadas de rede e o conteúdo dos documentos vivem **apenas no pro
 
 ### O que fica no banco local
 
-Três coleções, todas NoSQL orientadas a documentos (ADR-0002):
+Quatro coleções, todas NoSQL orientadas a documentos (ADR-0002):
 
 | Coleção | Conteúdo |
 | --- | --- |
 | `documentos_acessados` | identificação, nome, fonte, link e data do acesso |
 | `cache_fontes` | respostas das APIs com seu `ETag` |
 | `conteudo_documentos` | texto extraído de cada documento, com o `sha` do blob e o estado da extração |
+| `acervo_documentos` | snapshot do inventário: metadados de cada documento e a autoria/data real quando já resolvidas, com o `sha` do blob contra o qual a autoria vale |
 
-A terceira é aberta **sob demanda**, e não na inicialização: o NeDB lê a base inteira para a memória ao abrir uma coleção, e é a única que pode crescer para dezenas de megabytes.
+As duas últimas são abertas **sob demanda** — na primeira ingestão ou na primeira busca —, e não na inicialização: o NeDB lê a base inteira para a memória ao abrir uma coleção. `conteudo_documentos` é a única que pode crescer para dezenas de megabytes; `acervo_documentos` guarda só metadados. A busca com termo ou período é servida de `acervo_documentos`; a busca pelo conteúdo lê o texto de `conteudo_documentos`. Nenhum dos dois textos é devolvido ao renderer.
 
 Os bytes originais dos arquivos não são guardados em lugar algum — o sistema guarda texto, não arquivos. O texto fica **em claro no disco**, sem cifragem: a aplicação é local e monousuário, então quem alcança o perfil do sistema operacional alcança o texto. A ADR-0005 registra esse risco e a decisão de aceitá-lo.
 

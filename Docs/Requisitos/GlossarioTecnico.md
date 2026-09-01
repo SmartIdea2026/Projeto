@@ -66,6 +66,18 @@ Organizado por assunto, e não em ordem alfabética: os termos se explicam melho
 
 **Truncamento** — corte do texto extraído ao atingir o limite por documento. O registro marca que houve corte, para que quem consuma o texto não trate uma parte como se fosse o todo.
 
+**Busca pelo conteúdo** — extensão da correspondência de termo que passa a considerar também o texto já ingerido do documento, além do nome e do autor. **Opcional**, ativada pela caixa "Buscar no conteúdo" (desligada por padrão): a correspondência pelo texto alcança qualquer documento que mencione o termo no corpo. É **aditiva** — o documento entra por qualquer uma das vias — e **literal**, sem acento nem caixa, sem busca por similaridade. No conteúdo o termo casa como **palavra inteira** (nome e autor casam por substring). Roda no processo principal e devolve apenas a marca `apenasConteudo` quando o termo casou só pelo texto — nunca o trecho (ver *confinamento ao processo principal*).
+
+**Sincronização do acervo** — a varredura do inventário inteiro, com gatilho visível: roda ao abrir a aplicação e pode ser reexecutada pelo botão "Sincronizar" no cabeçalho. Faz três coisas por documento: baixa e extrai o **texto**, resolve **autoria e data real** da última alteração, e grava o **snapshot do inventário**. Reaproveita o que já está vigente pelo `sha` do blob e busca só o que falta ou mudou. É uma varredura de cada vez — um segundo disparo junta-se à que está em curso em vez de iniciar outra.
+
+**Snapshot do inventário** — a coleção `acervo_documentos`, gravada pela sincronização: um registro por documento existente na fonte, com os metadados e, quando resolvidas, a autoria e a data real. A busca com termo ou período é servida dele, sem consultar a fonte documento a documento — o que a tornava lenta em proporção ao tamanho do acervo. O preço é a **defasagem**: a busca reflete a última sincronização, não a fonte no instante da consulta. Enquanto o snapshot está vazio, a busca cai numa consulta ao vivo.
+
+**Estado da sincronização** — o retrato do andamento que o cabeçalho apresenta, em contagens e num de quatro estados: *parada* (nenhuma varredura desde a abertura), *em andamento*, *concluída* e *suspensa*. A suspensão traz o motivo — limite de requisições da fonte, limite de armazenamento, credencial do GitHub ausente ou falha ao obter o inventário. Trafega pelo canal `sincronizacao:estado`, que devolve só contagens e estado, nunca texto.
+
+**Alcance parcial da busca pelo conteúdo** — caso de *resultado parcial* emitido quando há termo e nem todo documento do inventário tem registro de conteúdo vigente: os que ficaram fora foram procurados apenas por nome e autor. Traz a contagem do que ficou de fora e desaparece quando a sincronização cobre todo o inventário.
+
+**Autoria pendente no snapshot** — caso análogo, emitido quando a busca é servida do *snapshot do inventário* e ainda há documentos sem autoria resolvida: eles foram procurados apenas pelo nome. Substitui, nesse caminho, o aviso de "considerou os N primeiros" da consulta ao vivo — ali há um teto por consulta; no snapshot a autoria é resolvida pela sincronização para todo o acervo. Some quando a sincronização termina.
+
 ## Processo
 
 **ADR** (*Architecture Decision Record*) — registro de uma decisão arquitetural, com o contexto que a motivou, as alternativas descartadas e as consequências aceitas. Preserva o *porquê*, que o código sozinho não conta.

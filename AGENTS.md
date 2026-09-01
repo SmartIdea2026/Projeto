@@ -108,12 +108,14 @@ Proposal → Specs → Design → Tasks → Implementação → Archive
 * **GitHub:** o inventário de documentos vem da **árvore Git** (`git/trees?recursive=1`), que devolve o repositório inteiro em uma requisição. A Events API **não serve** para descobrir arquivos alterados — o `payload` de `PushEvent` não traz a lista de commits. Use cache revalidado por `ETag` e trate HTTP 403 e 429.
 * **Google Drive:** fora do MVP (ADR-0004). Exigiria **OAuth 2.0** — uma chave de API autentica o projeto, não o usuário — e o escopo `drive.readonly` é restrito pelo Google.
 * Falha de uma fonte **nunca** impede a apresentação dos resultados das demais.
-* **Resultado parcial é dito, não escondido.** Paginação além do teto, árvore truncada e repositório inacessível viram `avisos` — canal separado de `falhas`, porque houve resultado. Nunca engula uma dessas condições em `catch`.
-* **Data do GitHub na busca é aproximada.** A árvore Git não traz data por arquivo, então todo documento herda o `pushed_at` do repositório e carrega `dataAproximada: true`. A lista de recentes vem dos commits e tem data real. O filtro de período avisa quando incide sobre datas aproximadas.
+* **Resultado parcial é dito, não escondido.** Paginação além do teto, árvore truncada, repositório inacessível, cobertura parcial da busca pelo conteúdo e autoria ainda não sincronizada no snapshot viram `avisos` — canal separado de `falhas`, porque houve resultado. Nunca engula uma dessas condições em `catch`.
+* **A busca pode alcançar o conteúdo.** A caixa "Buscar no conteúdo" (`filtros.buscarConteudo`, **desligada por padrão**) faz o termo casar também com o texto já ingerido dos documentos (`conteudo_documentos`), de forma aditiva a nome e autor. No conteúdo o casamento é por **palavra inteira** (não substring — "ata" não casa "tratamento"); nome e autor seguem por substring. A correspondência roda no processo **main** e devolve só a marca `apenasConteudo` — nunca o trecho (ADR-0005). Com a caixa desligada, `servico.ts` nem abre a coleção de conteúdo. Documentos sem texto vigente continuam encontráveis por nome e autor; a busca avisa quando o alcance pelo conteúdo ficou parcial. A varredura do acervo que alimenta isso tem gatilho no cabeçalho (botão "Sincronizar") e uma guarda de execução única.
+* **A busca com termo ou período é servida do snapshot local.** A sincronização grava `acervo_documentos` — o inventário com autoria e data real resolvidas por documento (reaproveitadas pelo `sha` do blob). `busca/servico.ts` monta o resultado desse snapshot (`inventarioSincronizado()`), sem `coletar` nem `enriquecerParaBusca` no GitHub; a consulta ao vivo só é usada enquanto o snapshot está vazio. Consequência: a busca reflete a última sincronização — documento novo/renomeado/removido na fonte só entra/sai depois de sincronizar. Não reintroduza a resolução de autoria por documento no caminho da busca.
+* **Data do GitHub é aproximada até a sincronização resolver.** A árvore Git não traz data por arquivo, então todo documento entra no inventário com o `pushed_at` do repositório e `dataAproximada: true`. A sincronização resolve a data real e a grava no snapshot; a lista de recentes vem dos commits e já tem data real. O filtro de período avisa quando ainda incide sobre datas aproximadas.
 
 ### Persistência
 
-Banco NoSQL orientado a documentos, no processo main, isolado em um único módulo. Armazena apenas o **link de redirecionamento** dos documentos acessados — **nunca o conteúdo**. Os campos de resumo já existem, reservados para a IA futura.
+Banco NoSQL orientado a documentos, no processo main, isolado em um único módulo (`banco/repositorio.ts`). Coleções: `documentos_acessados` (só o link de redirecionamento), `cache_fontes` (respostas de API com `ETag`), `conteudo_documentos` (texto extraído, ADR-0005) e `acervo_documentos` (snapshot do inventário com autoria/data resolvidas). O texto e os bytes originais nunca chegam ao renderer; os bytes não são guardados em lugar nenhum. Os campos de resumo já existem, reservados para a IA futura.
 
 ## 7. Convenções de código
 
@@ -139,7 +141,7 @@ Não implemente sem decisão da equipe:
 
 * **Resumos por IA** (RF13–RF19, RN12–RN21) — adiados, mas o banco já reserva os campos.
 * **Autenticação, login e perfil** — fora de escopo.
-* **Busca por conteúdo (full-text)** — issues #49 e #55.
+* **Índice de documentos e busca por assunto/etiquetas** — proposto na mudança `resumos-e-indice-por-ia`. Não confundir com a busca por conteúdo literal, que já está implementada (ver seção 6).
 * **Autor nos resultados** — custo de uma requisição adicional por arquivo no GitHub.
 
 ## 10. Referências
