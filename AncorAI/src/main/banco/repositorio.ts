@@ -111,6 +111,7 @@ export function fecharBanco(): void {
   acessos = null;
   cache = null;
   conteudo = null;
+  acervo = null;
   preferencias = null;
   diretorioBanco = null;
 }
@@ -232,6 +233,35 @@ export async function idsComConteudo(): Promise<string[]> {
   return registros.map((registro) => registro._id);
 }
 
+/**
+ * O que a busca por conteúdo precisa saber do acervo já ingerido.
+ *
+ * - `textos`: o texto extraído, por documento — só os registros em estado
+ *   `extraido`, que são os únicos com o que casar.
+ * - `versoes`: o `versaoConteudo` de **todo** registro, qualquer que seja o
+ *   estado. Serve para aferir cobertura: um documento do inventário sem entrada
+ *   aqui, ou com `versaoConteudo` diferente, ainda não foi alcançado pela
+ *   sincronização.
+ *
+ * O texto não sai daqui por canal algum (ADR-0005): alimenta o casamento de
+ * termo em `busca/regras.ts`, no processo principal, e nada mais.
+ */
+export async function conteudoParaBusca(): Promise<{
+  textos: Map<string, string>;
+  versoes: Map<string, string>;
+}> {
+  const colecao = await colecaoDeConteudo();
+  const registros = await colecao.findAsync({});
+
+  const textos = new Map<string, string>();
+  const versoes = new Map<string, string>();
+  for (const registro of registros) {
+    versoes.set(registro._id, registro.versaoConteudo);
+    if (registro.estado === 'extraido') textos.set(registro._id, registro.texto);
+  }
+  return { textos, versoes };
+}
+
 /** Total de caracteres de texto armazenados, para o teto do acervo. */
 export async function totalDeCaracteres(): Promise<number> {
   const colecao = await colecaoDeConteudo();
@@ -248,6 +278,196 @@ export async function totalDeCaracteres(): Promise<number> {
 export async function descartarConteudoAusente(idsVigentes: string[]): Promise<number> {
   const colecao = await colecaoDeConteudo();
   return colecao.removeAsync({ _id: { $nin: idsVigentes } }, { multi: true });
+}
+
+/**
+ * Snapshot local do inventário, gravado pela sincronização.
+ *
+ * A busca com termo ou período é servida daqui, em vez de consultar a fonte um
+ * documento por vez a cada consulta (design da mudança
+ * `sincronizar-acervo-e-buscar-por-conteudo`, decisão 8). Guarda os metadados de
+ * cada documento do inventário e, quando já resolvida, a autoria e a data real
+ * da última alteração.
+ *
+ * Aberta sob demanda como `conteudo_documentos`, mas por outro motivo: esta é
+ * pequena — metadados, não texto —, e o adiamento serve só para não pesar a
+ * inicialização de quem nunca sincronizou. Depois da primeira leitura fica em
+ * memória, então a busca não relê o arquivo a cada consulta.
+ */
+interface RegistroAcervo {
+  _id: string;
+  nome: string;
+  extensao: string;
+  fonte: Fonte;
+  link: string;
+  /** Data do inventário (o `pushed_at` do repositório) até a autoria ser resolvida. */
+  dataModificacao: string;
+  dataAproximada?: boolean | null;
+  caminho?: string | null;
+  repositorio?: string | null;
+  versaoConteudo?: string | null;
+  tamanho?: number | null;
+  /** Autor do último commit que tocou o arquivo, quando a fonte o informou. */
+  autor?: string | null;
+  /** Data real da última alteração, quando resolvida. */
+  dataReal?: string | null;
+  /**
+   * O `versaoConteudo` para o qual a autoria já foi resolvida. Difere do
+   * `versaoConteudo` atual quando o arquivo mudou na fonte desde então, e a
+   * autoria precisa ser resolvida de novo — a mesma lógica de vigência que o
+   * texto usa pelo `sha` do blob. Ausente enquanto a varredura não conseguiu a
+   * autoria, caso em que a próxima varredura tenta de novo.
+   */
+  versaoAutoria?: string | null;
+  sincronizadoEm: string;
+}
+
+let acervo: Datastore<RegistroAcervo> | null = null;
+
+async function colecaoDeAcervo(): Promise<Datastore<RegistroAcervo>> {
+  if (acervo) return acervo;
+  if (!diretorioBanco) throw new Error('Banco de dados não foi inicializado.');
+
+  const nova = new Datastore<RegistroAcervo>({
+    filename: join(diretorioBanco, 'acervo_documentos.db'),
+    autoload: false
+  });
+  await nova.loadDatabaseAsync();
+  acervo = nova;
+  return nova;
+}
+
+/**
+ * Verdadeiro quando a varredura já resolveu a autoria para a versão vigente do
+ * arquivo.
+ *
+ * Uma resolução malsucedida não grava `versaoAutoria`: o documento continua
+ * pendente e a varredura seguinte tenta de novo.
+ */
+function autoriaVigente(registro: RegistroAcervo): boolean {
+  if (!registro.versaoAutoria) return false;
+  // Sem identidade de conteúdo não há como reverificar — o gravado é o melhor
+  // que há, como em `estaVigente` para o texto.
+  if (!registro.versaoConteudo) return true;
+  return registro.versaoAutoria === registro.versaoConteudo;
+}
+
+/** Recompõe o `Documento` a partir do registro do snapshot. */
+function reconstruirDocumento(registro: RegistroAcervo): Documento {
+  const documento: Documento = {
+    id: registro._id,
+    nome: registro.nome,
+    extensao: registro.extensao,
+    fonte: registro.fonte,
+    link: registro.link,
+    dataModificacao: registro.dataModificacao
+  };
+
+  if (registro.caminho) documento.caminho = registro.caminho;
+  if (registro.repositorio) documento.repositorio = registro.repositorio;
+  if (registro.versaoConteudo) documento.versaoConteudo = registro.versaoConteudo;
+  if (typeof registro.tamanho === 'number') documento.tamanho = registro.tamanho;
+
+  if (autoriaVigente(registro) && registro.autor) {
+    // Autoria resolvida: a data real substitui a aproximada, e a marca sai — o
+    // filtro de período passa a poder recortar este documento.
+    documento.autor = registro.autor;
+    if (registro.dataReal) documento.dataModificacao = registro.dataReal;
+  } else if (registro.dataAproximada) {
+    documento.dataAproximada = true;
+  }
+
+  return documento;
+}
+
+/**
+ * Grava o snapshot do inventário: um registro por documento, e a remoção dos
+ * que saíram.
+ *
+ * Toca apenas os campos do inventário — `autor`, `dataReal` e `versaoAutoria`
+ * são de `gravarAutoria` e não são apagados aqui, para que a autoria já
+ * resolvida sobreviva a uma nova varredura do inventário.
+ */
+export async function sincronizarInventario(documentos: Documento[]): Promise<void> {
+  const colecao = await colecaoDeAcervo();
+
+  for (const documento of documentos) {
+    await colecao.updateAsync(
+      { _id: documento.id },
+      {
+        $set: {
+          nome: documento.nome,
+          extensao: documento.extensao,
+          fonte: documento.fonte,
+          link: documento.link,
+          dataModificacao: documento.dataModificacao,
+          dataAproximada: documento.dataAproximada ?? false,
+          caminho: documento.caminho ?? null,
+          repositorio: documento.repositorio ?? null,
+          versaoConteudo: documento.versaoConteudo ?? null,
+          tamanho: documento.tamanho ?? null,
+          sincronizadoEm: new Date().toISOString()
+        }
+      },
+      { upsert: true }
+    );
+  }
+
+  await colecao.removeAsync(
+    { _id: { $nin: documentos.map((documento) => documento.id) } },
+    { multi: true }
+  );
+}
+
+/**
+ * Grava a autoria resolvida de um documento do snapshot.
+ *
+ * Sem `upsert`: a passagem do inventário (`sincronizarInventario`) já criou o
+ * registro. `versaoAutoria` fixa contra qual versão do arquivo esta autoria
+ * vale, para que a varredura seguinte só a refaça se o `sha` do blob mudou.
+ */
+export async function gravarAutoria(
+  id: string,
+  autoria: { autor: string; dataModificacao: string; versaoAutoria: string | null }
+): Promise<void> {
+  const colecao = await colecaoDeAcervo();
+  await colecao.updateAsync(
+    { _id: id },
+    {
+      $set: {
+        autor: autoria.autor,
+        dataReal: autoria.dataModificacao,
+        versaoAutoria: autoria.versaoAutoria
+      }
+    }
+  );
+}
+
+/**
+ * O inventário do snapshot local, cada documento já com autoria e data real
+ * quando resolvidas.
+ *
+ * Devolve `[]` quando a coleção nunca foi preenchida — nenhuma sincronização
+ * desde a instalação. Nesse caso a busca cai na consulta ao vivo à fonte.
+ */
+export async function inventarioSincronizado(): Promise<Documento[]> {
+  const colecao = await colecaoDeAcervo();
+  const registros = await colecao.findAsync({});
+  return registros.map(reconstruirDocumento);
+}
+
+/** Ids do snapshot cuja autoria a varredura ainda precisa resolver ou refazer. */
+export async function idsComAutoriaPendente(): Promise<string[]> {
+  const colecao = await colecaoDeAcervo();
+  const registros = await colecao.findAsync({});
+  return registros
+    .filter((registro) => !autoriaVigente(registro))
+    .map((registro) => registro._id);
+}
+
+/** Quantos documentos do snapshot ainda estão sem autoria resolvida. */
+export async function documentosSemAutoria(): Promise<number> {
+  return (await idsComAutoriaPendente()).length;
 }
 
 /**

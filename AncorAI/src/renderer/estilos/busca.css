@@ -125,6 +125,24 @@
   outline: none;
 }
 
+/* O checkbox mantém a aparência nativa: a regra acima o apagaria. */
+.filtro--check {
+  cursor: pointer;
+}
+
+.filtro--check input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--verde-medio);
+  cursor: pointer;
+}
+
+.filtro--check input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--verde-medio);
+  outline-offset: 2px;
+}
+
 .filtro__limpar {
   background: none;
   border: none;

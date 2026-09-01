@@ -49,6 +49,15 @@ export const CANAIS = {
    */
   indexarConteudo: 'conteudo:indexar',
 
+  /**
+   * Retrato do andamento da sincronização do acervo.
+   *
+   * Canal de leitura: devolve estado e contagens (`RetratoSincronizacao`), e
+   * nada além disso. Como `indexarConteudo`, não atravessa a fronteira da
+   * ADR-0005 — o que foi lido dos documentos não acompanha o retrato.
+   */
+  sincronizacaoEstado: 'sincronizacao:estado',
+
   /** Grava a chave da LLM. Recebe o segredo; devolve apenas o novo status. */
   llmDefinir: 'llm:definir',
   /** Remove a chave da LLM. */

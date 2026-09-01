@@ -5,7 +5,7 @@ import { FILTROS_PADRAO } from '../compartilhado/tipos';
 import { listarAcessados, registrarAcesso } from './banco/repositorio';
 import * as cofre from './credenciais/cofre';
 import * as servico from './busca/servico';
-import { ingerirAcervo } from './conteudo/ingestao';
+import { estadoDaSincronizacao, ingerirAcervo } from './conteudo/ingestao';
 import * as resumos from './llm/resumos';
 
 /**
@@ -62,6 +62,10 @@ export function registrarCanais(): void {
   // Devolve o andamento em contagens. O texto ingerido permanece no processo
   // principal: não há canal que o entregue ao renderer (ADR-0005).
   ipcMain.handle(CANAIS.indexarConteudo, () => ingerirAcervo());
+
+  // Retrato do andamento — estado e contagens. O texto ingerido não acompanha
+  // (ADR-0005); ver a nota do canal em `compartilhado/canais.ts`.
+  ipcMain.handle(CANAIS.sincronizacaoEstado, () => estadoDaSincronizacao());
 
   ipcMain.handle(CANAIS.llmDefinir, (_evento, valor: string) =>
     resumos.definirChave(valor)

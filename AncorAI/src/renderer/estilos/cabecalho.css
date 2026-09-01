@@ -44,9 +44,72 @@
   text-transform: uppercase;
 }
 
+.cabecalho__acoes {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
 .conexoes {
   display: flex;
   gap: 10px;
+}
+
+/* ---------- Sincronização do acervo ---------- */
+
+.sincronizacao {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  max-width: 260px;
+}
+
+.sincronizar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--borda);
+  background: var(--superficie);
+  font-size: 13px;
+  color: var(--texto);
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.sincronizar:hover:not(:disabled) {
+  border-color: var(--borda-forte);
+  box-shadow: var(--sombra);
+}
+
+.sincronizar:disabled {
+  cursor: default;
+  color: var(--texto-suave);
+}
+
+/* O foco visível vem da regra global `:focus-visible` de base.css. */
+
+/* O estado nunca é comunicado apenas por cor: a nota textual acompanha. */
+.sincronizacao__nota {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: right;
+  color: var(--texto-suave);
+}
+
+.sincronizacao__nota--erro {
+  color: var(--erro);
+}
+
+.sincronizacao__contagens {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: right;
+  color: var(--texto-suave);
 }
 
 .conexao {
