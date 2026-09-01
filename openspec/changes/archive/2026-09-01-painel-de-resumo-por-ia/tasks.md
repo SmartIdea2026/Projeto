@@ -2,10 +2,10 @@
 
 ## 1. Decisão registrada antes do código
 
-- [ ] 1.1 Escrever a ADR que autoriza enviar o texto dos documentos a serviço externo, nomeando o tratamento do plano gratuito do Gemini e distinguindo esta fronteira da autorizada pela ADR-0005 — verificar que a ADR diz explicitamente que guardar na máquina e enviar para fora são decisões distintas
-- [ ] 1.2 Recortar a mudança pendente `resumos-e-indice-por-ia`, removendo dela os deltas `resumos-por-ia` e `configuracao-credenciais` e ajustando proposta, design e tarefas ao que lhe resta — verificar com `openspec validate --strict` e com `grep` que nenhum artefato dela ainda descreve o painel
-- [ ] 1.3 Registrar no `GlossarioTecnico.md` os termos introduzidos aqui (LLM, saída estruturada, resumo desatualizado) — verificar que cada termo novo usado nos artefatos tem entrada
-- [ ] 1.4 Atualizar o `AGENTS.md` e o `README.md` quanto à postura de dados, que deixa de ser "o conteúdo não sai da máquina" — verificar que nenhum documento do repositório continua afirmando isso
+- [x] 1.1 Escrever a ADR que autoriza enviar o texto dos documentos a serviço externo, nomeando o tratamento do plano gratuito do Gemini e distinguindo esta fronteira da autorizada pela ADR-0005 — verificar que a ADR diz explicitamente que guardar na máquina e enviar para fora são decisões distintas
+- [x] 1.2 Recortar a mudança pendente `resumos-e-indice-por-ia`, removendo dela os deltas `resumos-por-ia` e `configuracao-credenciais` e ajustando proposta, design e tarefas ao que lhe resta — verificar com `openspec validate --strict` e com `grep` que nenhum artefato dela ainda descreve o painel
+- [x] 1.3 Registrar no `GlossarioTecnico.md` os termos introduzidos aqui (LLM, saída estruturada, resumo desatualizado) — verificar que cada termo novo usado nos artefatos tem entrada
+- [x] 1.4 Atualizar o `AGENTS.md` e o `README.md` quanto à postura de dados, que deixa de ser "o conteúdo não sai da máquina" — verificar que nenhum documento do repositório continua afirmando isso
 
 ## 2. Credencial da LLM
 
@@ -81,4 +81,4 @@
 
 - [x] 10.1 Executar a suíte completa, `tsc` nos dois projetos e o build — verificar que tudo passa
 - [x] 10.2 Percorrer cada requisito dos deltas conferindo a correspondência com o código, cenário a cenário — verificar que nenhum cenário ficou sem contrapartida implementada
-- [ ] 10.3 Executar `/opsx:archive` para incorporar os deltas às especificações principais
+- [x] 10.3 Executar `/opsx:archive` para incorporar os deltas às especificações principais
