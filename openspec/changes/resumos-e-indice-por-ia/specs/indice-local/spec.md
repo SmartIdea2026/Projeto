@@ -14,6 +14,8 @@ O sistema SHALL manter no banco local um registro dos documentos conhecidos, con
 
 O índice NÃO SHALL duplicar o texto dos documentos. O texto é mantido pela capacidade `conteudo-documentos`, que o obtém das fontes e o armazena localmente; o índice o referencia pelo identificador do documento em vez de guardar uma segunda cópia.
 
+A desatualização da classificação SHALL ser detectada pela identidade de conteúdo do documento (`versaoConteudo`), e não pela data de modificação. A data de modificação do GitHub é, para a maioria dos documentos, a do último *push* do repositório — igual para todos os arquivos dele — e usá-la marcaria o acervo inteiro como desatualizado a cada alteração em qualquer arquivo do mesmo repositório. Um documento sem identidade de conteúdo disponível (os que vêm dos commits) NÃO SHALL ter sua classificação marcada como desatualizada por essa via: sem uma versão para comparar, afirmar desatualização seria afirmar algo que o sistema não sabe.
+
 #### Scenario: Documento encontrado nas fontes é registrado
 
 - **GIVEN** que uma consulta às fontes retornou documentos
@@ -23,10 +25,17 @@ O índice NÃO SHALL duplicar o texto dos documentos. O texto é mantido pela ca
 
 #### Scenario: Documento já registrado é atualizado
 
-- **GIVEN** que um documento já consta do índice
-- **WHEN** ele é obtido novamente com data de modificação mais recente
+- **GIVEN** que um documento já consta do índice, com identidade de conteúdo registrada
+- **WHEN** ele é obtido novamente com identidade de conteúdo diferente da registrada
 - **THEN** o registro é atualizado
 - **AND** a classificação anterior é assinalada como desatualizada
+
+#### Scenario: Documento sem identidade de conteúdo não é assinalado por engano
+
+- **GIVEN** que um documento consta do índice sem identidade de conteúdo (vindo dos commits)
+- **WHEN** ele é obtido novamente, com data de modificação diferente
+- **THEN** a classificação existente permanece vigente
+- **AND** não é assinalada como desatualizada
 
 ### Requirement: Precedência do índice sobre as APIs
 

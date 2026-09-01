@@ -10,40 +10,33 @@ Encontrar um documento pelo nome não diz o que há dentro dele. Quem busca "req
 
 ## Objetivo
 
-Permitir que a busca alcance documentos pelo assunto, além do nome literal, e apresentar um resumo gerado por IA do documento em foco.
+Permitir que a busca alcance documentos pelo assunto, além do nome literal, classificando todo o acervo por IA.
 
-Esta é a segunda de duas mudanças. A primeira, `melhorar-busca-e-apresentacao`, trata de filtros, ordenação, paginação e autoria, e não depende desta.
+Esta é a terceira de três mudanças relacionadas. `melhorar-busca-e-apresentacao` tratou de filtros, ordenação, paginação e autoria, e não depende desta. `painel-de-resumo-por-ia` recortou desta o resumo do documento em foco — capacidade `resumos-por-ia` — e a credencial da LLM, por entregarem valor visível de forma independente e mais rápida; esta mudança depende daquela para a integração com a LLM já existente (chave, cliente HTTP, fila de submissões) e a reaproveita em vez de reconstruí-la.
 
 ## What Changes
 
 - **Índice local de documentos**, com nome, caminho, link, metadados e classificação. A busca passa a consultá-lo primeiro e só recorre às APIs quando o índice não responde ou está defasado.
 - **Classificação por IA na indexação:** cada documento passa uma vez pela LLM, que produz assunto, tipo e etiquetas, gravados no índice. É o que viabiliza a busca por contexto.
-- **BREAKING (postura de dados):** o conteúdo dos documentos passa a ser **enviado a um serviço externo** (Google Gemini). O armazenamento local do texto já terá sido autorizado pela ADR-0005, na mudança `ingerir-conteudo-dos-documentos`; o que esta rompe é a regra de que nada do conteúdo deixa a máquina. Exige ADR própria.
-- **Chamadas à LLM em série, uma por vez** — nunca em lote paralelo.
-- **Resumo por IA** do documento em foco, apresentado em painel à direita, com o do primeiro resultado gerado assim que a busca retorna.
-- **Botão de gerar resumo em cada resultado**, substituindo o conteúdo do painel.
-- **Reuso do resumo:** uma vez gravado no índice, o resumo é reaproveitado nas buscas seguintes, sem nova chamada à LLM.
-- **Arquivo de instrução versionado** no repositório, definindo como a LLM deve redigir o resumo — revisável como qualquer outro documento do projeto.
-- **Chave da API do Gemini** configurável na tela de configurações, protegida como as demais credenciais.
+- **Classificação em série, uma por vez**, reaproveitando a fila de submissões de concorrência um que `painel-de-resumo-por-ia` já implementou para o resumo — a mesma fila, o mesmo limite de requisições por minuto.
+- **Precedência do trabalho interativo** (busca, resumo) sobre a classificação de fundo, pelo mesmo mecanismo (`prioridade.ts`) que já dá precedência à busca sobre a ingestão.
 
 ## Capabilities
 
 ### New Capabilities
 
 - `indice-local`: índice de documentos no banco local, sua atualização incremental, a classificação por IA que o enriquece e a precedência do índice sobre as consultas às APIs.
-- `resumos-por-ia`: geração, armazenamento, reuso e apresentação dos resumos, incluindo o arquivo de instrução que orienta a LLM.
 
 ### Modified Capabilities
 
 - `busca-documentos`: a correspondência deixa de considerar apenas o nome do arquivo e passa a alcançar assunto, tipo e etiquetas registrados no índice.
-- `configuracao-credenciais`: passa a haver uma terceira credencial, a chave da API do Gemini, com o mesmo tratamento de proteção das demais.
 
 ## Impact
 
-**Confidencialidade — o ponto central.** O conteúdo dos documentos passa a ser enviado ao Google. No plano gratuito da API do Gemini o conteúdo submetido pode ser usado para melhorar os produtos do Google e passar por revisão humana; no plano pago, não. A equipe decidiu prosseguir com a chave gratuita, ciente disso, por se tratar de documentos do próprio projeto acadêmico. **Exige ADR**, que deve nomear o risco e registrar a decisão. A ADR-0005 já derrubou a afirmação de que o conteúdo não é armazenado; o que segue de pé, e cai aqui, é a de que ele não deixa a máquina.
+**Recorte para `painel-de-resumo-por-ia`.** Esta mudança continha originalmente as capacidades `resumos-por-ia` e o delta de `configuracao-credenciais` (a chave da API do Gemini). As duas passaram para `painel-de-resumo-por-ia`, que as entrega de forma independente. Esta mudança fica com o que de fato lhe resta: o índice local, a classificação de **todo** o acervo e a busca por contexto — e depende da integração com a LLM que aquela mudança constrói (chave, cliente HTTP, fila de concorrência um), reaproveitando-a em vez de reconstruí-la.
 
-**Cota gratuita.** A classificação percorre todos os documentos, uma chamada por documento e uma de cada vez. Para o volume atual do repositório isso é rápido; para um acervo grande, a indexação leva tempo e precisa ser incremental, retomável e informar progresso.
+**Confidencialidade.** O envio do conteúdo dos documentos a um serviço externo (Google Gemini) já foi decidido e registrado pela ADR-0006, na mudança `painel-de-resumo-por-ia`. A classificação em massa desta mudança usa a mesma autorização e as mesmas condições — plano gratuito, consentimento prévio já obtido, submissão mínima — sem exigir ADR própria.
 
-**Código:** módulo novo de LLM no processo principal, `banco/repositorio.ts` (coleção de índice, campos `resumo` e `resumoEm` já reservados), `busca/servico.ts` (precedência do índice), `credenciais/cofre.ts` e `ipc.ts` (chave nova, canais de resumo e indexação), e o painel lateral no renderer.
+**Cota gratuita.** A classificação percorre todos os documentos, uma chamada por documento e uma de cada vez, na mesma fila que atende ao resumo interativo. Para o volume atual do repositório isso é rápido; para um acervo grande, a indexação leva tempo e precisa ser incremental, retomável e informar progresso.
 
-**Dependência nova:** API do Google Gemini, acessada por HTTP direto, sem SDK — mesma disciplina adotada para GitHub e Drive.
+**Código:** `banco/repositorio.ts` (coleção de índice), `busca/servico.ts` (precedência do índice), e o módulo de LLM já criado por `painel-de-resumo-por-ia` (cliente do Gemini, fila de submissões), estendido para também classificar.
