@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Manter no banco local um registro dos documentos conhecidos das fontes, com seus metadados e a classificação produzida por IA, de modo que a busca responda a partir dele e recorra às APIs externas apenas quando necessário.
+Manter no banco local um registro dos documentos conhecidos das fontes, com seus metadados e a classificação por assunto, tipo e etiquetas produzida por IA, obtida em segundo plano sem competir com o trabalho interativo. A busca ainda não consulta este índice — ele existe como base para isso, entregue à parte.
 
 ## ADDED Requirements
 
@@ -13,6 +13,8 @@ Manter no banco local um registro dos documentos conhecidos das fontes, com seus
 O sistema SHALL manter no banco local um registro dos documentos conhecidos, contendo identificação, nome, caminho, fonte, link de redirecionamento e datas.
 
 O índice NÃO SHALL duplicar o texto dos documentos. O texto é mantido pela capacidade `conteudo-documentos`, que o obtém das fontes e o armazena localmente; o índice o referencia pelo identificador do documento em vez de guardar uma segunda cópia.
+
+A desatualização da classificação SHALL ser detectada pela identidade de conteúdo do documento (`versaoConteudo`), e não pela data de modificação. A data de modificação do GitHub é, para a maioria dos documentos, a do último *push* do repositório — igual para todos os arquivos dele — e usá-la marcaria o acervo inteiro como desatualizado a cada alteração em qualquer arquivo do mesmo repositório. Um documento sem identidade de conteúdo disponível (os que vêm dos commits) NÃO SHALL ter sua classificação marcada como desatualizada por essa via: sem uma versão para comparar, afirmar desatualização seria afirmar algo que o sistema não sabe.
 
 #### Scenario: Documento encontrado nas fontes é registrado
 
@@ -23,39 +25,17 @@ O índice NÃO SHALL duplicar o texto dos documentos. O texto é mantido pela ca
 
 #### Scenario: Documento já registrado é atualizado
 
-- **GIVEN** que um documento já consta do índice
-- **WHEN** ele é obtido novamente com data de modificação mais recente
+- **GIVEN** que um documento já consta do índice, com identidade de conteúdo registrada
+- **WHEN** ele é obtido novamente com identidade de conteúdo diferente da registrada
 - **THEN** o registro é atualizado
 - **AND** a classificação anterior é assinalada como desatualizada
 
-### Requirement: Precedência do índice sobre as APIs
+#### Scenario: Documento sem identidade de conteúdo não é assinalado por engano
 
-A busca SHALL consultar o índice local antes de recorrer às APIs das fontes.
-
-O sistema SHALL recorrer às APIs quando o índice não contiver resultado para a consulta, ou quando o índice estiver defasado em relação à fonte.
-
-O índice NÃO SHALL ser tratado como substituto permanente da fonte: uma busca que responde apenas pelo índice deve deixar claro ao usuário que os dados podem não refletir alterações recentes.
-
-#### Scenario: Consulta atendida pelo índice
-
-- **GIVEN** que o índice contém documentos correspondentes à consulta
-- **WHEN** a busca é realizada
-- **THEN** o resultado é apresentado a partir do índice
-- **AND** nenhuma requisição às APIs é necessária para montá-lo
-
-#### Scenario: Consulta sem correspondência no índice
-
-- **GIVEN** que o índice não contém documento correspondente à consulta
-- **WHEN** a busca é realizada
-- **THEN** o sistema consulta as APIs das fontes
-- **AND** registra no índice os documentos obtidos
-
-#### Scenario: Índice defasado
-
-- **GIVEN** que a fonte registra alterações posteriores à última atualização do índice
-- **WHEN** a busca é realizada
-- **THEN** o sistema consulta a fonte e atualiza o índice
-- **AND** apresenta o resultado atualizado
+- **GIVEN** que um documento consta do índice sem identidade de conteúdo (vindo dos commits)
+- **WHEN** ele é obtido novamente, com data de modificação diferente
+- **THEN** a classificação existente permanece vigente
+- **AND** não é assinalada como desatualizada
 
 ### Requirement: Classificação dos documentos por IA
 
@@ -82,31 +62,29 @@ Um documento já classificado NÃO SHALL ser reclassificado enquanto não for al
 #### Scenario: Documento já classificado
 
 - **GIVEN** que um documento já possui classificação vigente no índice
-- **WHEN** uma nova busca o alcança
+- **WHEN** a indexação o alcança novamente
 - **THEN** a classificação existente é reaproveitada
 - **AND** nenhuma submissão à LLM é realizada
 
 ### Requirement: Indexação incremental e retomável
 
-A indexação SHALL ser incremental e retomável: interrompê-la NÃO SHALL exigir recomeçar do início, e o que já foi classificado permanece utilizável.
+A indexação SHALL ser incremental e retomável: interrompê-la NÃO SHALL exigir recomeçar do início, e o que já foi classificado permanece gravado.
 
-O sistema SHALL informar o progresso da indexação enquanto ela ocorre, e SHALL permitir o uso da busca durante o processo.
-
-Documentos ainda não classificados SHALL continuar encontráveis pelo nome.
+O sistema SHALL informar, na interface, que a indexação está em andamento, e a busca NÃO SHALL esperar por ela: buscar, filtrar, paginar e abrir documentos seguem funcionando normalmente enquanto a indexação roda de fundo.
 
 #### Scenario: Indexação interrompida e retomada
 
 - **GIVEN** que a indexação classificou parte dos documentos e foi interrompida
 - **WHEN** ela é retomada
 - **THEN** apenas os documentos ainda não classificados são submetidos
-- **AND** os já classificados permanecem disponíveis para busca
+- **AND** os já classificados permanecem gravados no índice
 
 #### Scenario: Busca durante a indexação
 
 - **GIVEN** que a indexação está em andamento
 - **WHEN** o usuário realiza uma busca
-- **THEN** o resultado é apresentado com o que já está indexado
-- **AND** o sistema informa que a indexação ainda não terminou
+- **THEN** a busca responde normalmente, sem esperar a indexação terminar
+- **AND** a interface informa que a indexação ainda está em andamento
 
 #### Scenario: Limite de requisições da LLM atingido
 
