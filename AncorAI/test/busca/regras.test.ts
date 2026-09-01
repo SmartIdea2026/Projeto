@@ -3,6 +3,7 @@ import { extensaoDe, extensaoEhAceita } from '../../src/main/fontes/comum';
 import {
   aplicarFiltros,
   fonteSelecionada,
+  normalizar,
   ordenar,
   unificar
 } from '../../src/main/busca/regras';
@@ -50,6 +51,117 @@ describe('filtro por termo', () => {
 
   it('devolve tudo quando o termo está vazio', () => {
     expect(aplicarFiltros(documentos, FILTROS_PADRAO)).toHaveLength(2);
+  });
+
+  it('ignora acento no termo e no nome', () => {
+    const comAcento = [doc({ id: '1', nome: 'orçamento-2026.md' })];
+    expect(
+      aplicarFiltros(comAcento, { ...FILTROS_PADRAO, termo: 'orcamento' }).map((d) => d.id)
+    ).toEqual(['1']);
+  });
+});
+
+describe('busca pelo conteúdo armazenado', () => {
+  const documentos = [
+    doc({ id: 'nome', nome: 'plano-de-marketing.md' }),
+    doc({ id: 'conteudo', nome: 'ata-reuniao.md' }),
+    doc({ id: 'nenhum', nome: 'requisitos.md' })
+  ];
+  const textos = new Map([
+    ['nome', 'Texto qualquer sem o termo.'],
+    ['conteudo', 'Discutimos o cronograma de marketing para o próximo trimestre.'],
+    ['nenhum', 'Nada de relevante aqui.']
+  ]);
+
+  it('traz o documento cujo termo aparece só no conteúdo', () => {
+    const encontrados = aplicarFiltros(
+      documentos,
+      { ...FILTROS_PADRAO, termo: 'cronograma' },
+      textos
+    );
+    expect(encontrados.map((d) => d.id)).toEqual(['conteudo']);
+  });
+
+  it('mantém a correspondência aditiva: nome OU conteúdo, num resultado só', () => {
+    // "marketing" está no nome do primeiro e no conteúdo do segundo.
+    const encontrados = aplicarFiltros(
+      documentos,
+      { ...FILTROS_PADRAO, termo: 'marketing' },
+      textos
+    );
+    expect(encontrados.map((d) => d.id)).toEqual(['nome', 'conteudo']);
+  });
+
+  it('assinala apenas o resultado que casou só pelo conteúdo, sem trecho algum', () => {
+    const encontrados = aplicarFiltros(
+      documentos,
+      { ...FILTROS_PADRAO, termo: 'marketing' },
+      textos
+    );
+    const porNome = encontrados.find((d) => d.id === 'nome');
+    const porConteudo = encontrados.find((d) => d.id === 'conteudo');
+
+    expect(porNome?.apenasConteudo).toBeUndefined();
+    expect(porConteudo?.apenasConteudo).toBe(true);
+    // O texto onde o termo ocorreu não acompanha o resultado.
+    expect(JSON.stringify(porConteudo)).not.toContain('cronograma');
+    expect(JSON.stringify(porConteudo)).not.toContain('trimestre');
+  });
+
+  it('ignora acento e caixa também no conteúdo', () => {
+    const encontrados = aplicarFiltros(
+      documentos,
+      { ...FILTROS_PADRAO, termo: 'PROXIMO' },
+      textos
+    );
+    expect(encontrados.map((d) => d.id)).toEqual(['conteudo']);
+  });
+
+  it('documento sem texto armazenado continua encontrável pelo nome', () => {
+    const encontrados = aplicarFiltros(
+      documentos,
+      { ...FILTROS_PADRAO, termo: 'requisitos' },
+      textos
+    );
+    expect(encontrados.map((d) => d.id)).toEqual(['nenhum']);
+    expect(encontrados[0]?.apenasConteudo).toBeUndefined();
+  });
+
+  it('sem o mapa de textos, a busca segue casando por nome e autor', () => {
+    const encontrados = aplicarFiltros(documentos, { ...FILTROS_PADRAO, termo: 'ata' });
+    expect(encontrados.map((d) => d.id)).toEqual(['conteudo']);
+  });
+
+  it('casa o termo no conteúdo só como palavra inteira, não como substring', () => {
+    const docs = [
+      doc({ id: 'palavra', nome: 'notas.md' }),
+      doc({ id: 'substring', nome: 'outro.md' })
+    ];
+    const mapa = new Map([
+      ['palavra', 'A ata da reunião foi aprovada.'],
+      // "ata" aparece dentro de "tratamento" e "plataforma" — não deve casar.
+      ['substring', 'O tratamento na plataforma segue o combinado.']
+    ]);
+
+    const encontrados = aplicarFiltros(docs, { ...FILTROS_PADRAO, termo: 'ata' }, mapa);
+
+    expect(encontrados.map((d) => d.id)).toEqual(['palavra']);
+  });
+
+  it('a palavra no conteúdo casa mesmo cercada por pontuação', () => {
+    const docs = [doc({ id: 'x', nome: 'x.md' })];
+    const mapa = new Map([['x', 'Pauta: (design), cronograma e riscos.']]);
+
+    expect(
+      aplicarFiltros(docs, { ...FILTROS_PADRAO, termo: 'design' }, mapa).map((d) => d.id)
+    ).toEqual(['x']);
+  });
+});
+
+describe('normalizar', () => {
+  it('remove acento e caixa, preservando o resto', () => {
+    expect(normalizar('Ação de Márketing')).toBe('acao de marketing');
+    expect(normalizar('CÉU')).toBe('ceu');
   });
 });
 

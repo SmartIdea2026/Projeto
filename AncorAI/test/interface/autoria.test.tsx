@@ -41,6 +41,19 @@ beforeEach(() => {
   instalarApi(api);
 });
 
+/**
+ * Nomes dos documentos na lista — e só na lista.
+ *
+ * O painel de resumo também apresenta o nome do primeiro documento, então uma
+ * busca global por "ata.md" casa com dois elementos assim que o resumo resolve.
+ * Estas verificações são sobre a lista; a consulta acompanha isso.
+ */
+function nomesNaLista(): string[] {
+  return Array.from(document.querySelectorAll('.cartao__nome')).map(
+    (elemento) => elemento.textContent ?? ''
+  );
+}
+
 describe('preenchimento da autoria', () => {
   it('apresenta a lista antes de a autoria chegar', async () => {
     let liberar: (docs: Documento[]) => void = () => {};
@@ -51,7 +64,7 @@ describe('preenchimento da autoria', () => {
     render(<App />);
 
     // O documento está na tela com a consulta de autoria ainda pendente.
-    await waitFor(() => expect(screen.getByText('ata.md')).toBeInTheDocument());
+    await waitFor(() => expect(nomesNaLista()).toContain('ata.md'));
     expect(screen.queryByText('Autor:')).not.toBeInTheDocument();
 
     liberar([{ ...base, autor: 'GustavoMairinck', dataModificacao: '2026-08-22T10:00:00Z' }]);
@@ -65,7 +78,7 @@ describe('preenchimento da autoria', () => {
 
     render(<App />);
 
-    await waitFor(() => expect(screen.getByText('ata.md')).toBeInTheDocument());
+    await waitFor(() => expect(nomesNaLista()).toContain('ata.md'));
     // Sem autoria e sem erro: os campos são complemento, não requisito.
     expect(screen.queryByText('Autor:')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -78,7 +91,7 @@ describe('preenchimento da autoria', () => {
     );
 
     render(<App />);
-    await waitFor(() => expect(screen.getByText('ata.md')).toBeInTheDocument());
+    await waitFor(() => expect(nomesNaLista()).toContain('ata.md'));
 
     // Chega o detalhe de um conjunto que não é mais o exibido.
     liberar([
@@ -86,7 +99,7 @@ describe('preenchimento da autoria', () => {
       { ...base, id: 'github:o/r:mais.md', nome: 'mais.md', autor: 'Ciclano' }
     ]);
 
-    await waitFor(() => expect(screen.getByText('ata.md')).toBeInTheDocument());
+    await waitFor(() => expect(nomesNaLista()).toEqual(['ata.md']));
     expect(screen.queryByText('outro.md')).not.toBeInTheDocument();
   });
 });

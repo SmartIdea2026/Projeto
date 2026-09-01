@@ -4,11 +4,18 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   abrirBanco,
+  conteudoParaBusca,
+  documentosSemAutoria,
   fecharBanco,
+  gravarAutoria,
+  gravarConteudo,
   gravarCache,
+  idsComAutoriaPendente,
+  inventarioSincronizado,
   lerCache,
   listarAcessados,
-  registrarAcesso
+  registrarAcesso,
+  sincronizarInventario
 } from '../../src/main/banco/repositorio';
 import type { Documento } from '../../src/compartilhado/tipos';
 
@@ -98,6 +105,143 @@ describe('armazenamento do conteúdo', () => {
         'nome'
       ]);
     }
+  });
+});
+
+describe('conteúdo para a busca', () => {
+  it('só entrega texto dos registros extraídos, mas a versão de todos', async () => {
+    await gravarConteudo({
+      _id: 'github:x:com-texto.md',
+      versaoConteudo: 'sha-a',
+      estado: 'extraido',
+      texto: 'Conteúdo do documento para a busca.',
+      truncado: false
+    });
+    await gravarConteudo({
+      _id: 'github:x:sem-texto.pdf',
+      versaoConteudo: 'sha-b',
+      estado: 'sem-texto',
+      texto: '',
+      truncado: false
+    });
+    await gravarConteudo({
+      _id: 'github:x:grande.md',
+      versaoConteudo: 'sha-c',
+      estado: 'excedente',
+      texto: '',
+      truncado: false,
+      motivo: 'O arquivo excede o limite.'
+    });
+
+    const { textos, versoes } = await conteudoParaBusca();
+
+    // O texto só existe para o que foi extraído.
+    expect([...textos.keys()]).toEqual(['github:x:com-texto.md']);
+    expect(textos.get('github:x:com-texto.md')).toBe('Conteúdo do documento para a busca.');
+
+    // A versão acompanha todo registro, para aferir cobertura da sincronização.
+    expect(versoes.get('github:x:com-texto.md')).toBe('sha-a');
+    expect(versoes.get('github:x:sem-texto.pdf')).toBe('sha-b');
+    expect(versoes.get('github:x:grande.md')).toBe('sha-c');
+  });
+});
+
+describe('snapshot do inventário', () => {
+  const doInventario = (id: string, extra: Partial<Documento> = {}): Documento => ({
+    id,
+    nome: id.split(':').pop() ?? id,
+    extensao: 'md',
+    fonte: 'github',
+    dataModificacao: '2026-08-01T00:00:00Z',
+    dataAproximada: true,
+    link: `https://github.com/x/${id}`,
+    caminho: `docs/${id}.md`,
+    repositorio: 'x/x',
+    versaoConteudo: `sha-${id}`,
+    ...extra
+  });
+
+  it('vazio antes da primeira sincronização', async () => {
+    expect(await inventarioSincronizado()).toEqual([]);
+  });
+
+  it('guarda os documentos do inventário e remove os que saíram', async () => {
+    await sincronizarInventario([doInventario('a'), doInventario('b')]);
+    expect((await inventarioSincronizado()).map((d) => d.id).sort()).toEqual([
+      'a',
+      'b'
+    ]);
+
+    await sincronizarInventario([doInventario('a'), doInventario('c')]);
+    expect((await inventarioSincronizado()).map((d) => d.id).sort()).toEqual([
+      'a',
+      'c'
+    ]);
+  });
+
+  it('devolve o documento com data aproximada enquanto a autoria não foi resolvida', async () => {
+    await sincronizarInventario([doInventario('sem-autor')]);
+    const [documento] = await inventarioSincronizado();
+
+    expect(documento?.autor).toBeUndefined();
+    expect(documento?.dataAproximada).toBe(true);
+    expect(await documentosSemAutoria()).toBe(1);
+  });
+
+  it('aplica a autoria resolvida: autor, data real e sem marca de aproximada', async () => {
+    await sincronizarInventario([doInventario('com-autor')]);
+    await gravarAutoria('com-autor', {
+      autor: 'gabi',
+      dataModificacao: '2026-08-15T09:00:00Z',
+      versaoAutoria: 'sha-com-autor'
+    });
+
+    const [documento] = await inventarioSincronizado();
+    expect(documento?.autor).toBe('gabi');
+    expect(documento?.dataModificacao).toBe('2026-08-15T09:00:00Z');
+    expect(documento?.dataAproximada).toBeUndefined();
+    expect(await documentosSemAutoria()).toBe(0);
+  });
+
+  it('preserva a autoria resolvida ao regravar o inventário', async () => {
+    await sincronizarInventario([doInventario('mantem')]);
+    await gravarAutoria('mantem', {
+      autor: 'ana',
+      dataModificacao: '2026-08-10T00:00:00Z',
+      versaoAutoria: 'sha-mantem'
+    });
+
+    await sincronizarInventario([doInventario('mantem')]);
+
+    const [documento] = await inventarioSincronizado();
+    expect(documento?.autor).toBe('ana');
+  });
+
+  it('volta a exigir autoria quando o sha do blob muda', async () => {
+    await sincronizarInventario([doInventario('mudou')]);
+    await gravarAutoria('mudou', {
+      autor: 'ze',
+      dataModificacao: '2026-08-10T00:00:00Z',
+      versaoAutoria: 'sha-mudou'
+    });
+
+    await sincronizarInventario([
+      doInventario('mudou', { versaoConteudo: 'sha-novo' })
+    ]);
+
+    const [documento] = await inventarioSincronizado();
+    expect(documento?.autor).toBeUndefined();
+    expect(documento?.dataAproximada).toBe(true);
+    expect(await documentosSemAutoria()).toBe(1);
+  });
+
+  it('deixa o documento pendente quando a autoria não foi obtida', async () => {
+    await sincronizarInventario([doInventario('anonimo')]);
+    // Nenhuma chamada a gravarAutoria: a varredura não conseguiu a autoria.
+
+    const [documento] = await inventarioSincronizado();
+    expect(documento?.autor).toBeUndefined();
+    expect(await idsComAutoriaPendente()).toEqual(['anonimo']);
   });
 });
 

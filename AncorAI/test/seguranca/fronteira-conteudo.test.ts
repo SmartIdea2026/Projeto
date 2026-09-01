@@ -69,7 +69,9 @@ beforeEach(async () => {
     _id: documento.id,
     versaoConteudo: 'sha-1',
     estado: 'extraido',
-    texto: `Ata de reunião. ${MARCA}. Fim da ata.`,
+    // "planejamento" só existe no texto — não no nome do arquivo nem no autor —,
+    // então uma busca por esse termo só casa pela via do conteúdo.
+    texto: `Ata de reunião sobre planejamento. ${MARCA}. Fim da ata.`,
     truncado: false
   });
 
@@ -113,7 +115,11 @@ afterEach(() => {
 const ARGUMENTOS: Record<string, unknown[]> = {
   [CANAIS.credenciaisDefinir]: ['github', 'ghp_token_qualquer'],
   [CANAIS.credenciaisRemover]: ['github'],
-  [CANAIS.buscar]: [{ termo: '', fontes: [], extensoes: [], ordenacao: 'data-desc' }],
+  // Termo que só casa pelo conteúdo: é o caminho por onde o texto poderia
+  // voltar disfarçado de trecho ou de campo repassado inteiro.
+  [CANAIS.buscar]: [
+    { termo: 'planejamento', fontes: [], extensoes: [], ordenacao: 'data-desc', buscarConteudo: true }
+  ],
   [CANAIS.recentes]: [{ termo: '', fontes: [], extensoes: [], ordenacao: 'data-desc' }],
   [CANAIS.recentesDoCache]: [
     { termo: '', fontes: [], extensoes: [], ordenacao: 'data-desc' }
@@ -165,6 +171,39 @@ describe('nenhum canal devolve conteúdo de documento', () => {
     const registro = await banco.lerConteudo(documento.id);
 
     expect(registro?.texto).toContain(MARCA);
+  });
+
+  it('a busca pelo conteúdo devolve a marca, e nunca o trecho', async () => {
+    const handler = handlers.get(CANAIS.buscar) as (...args: unknown[]) => Promise<unknown>;
+    const resposta = await handler({}, {
+      termo: 'planejamento',
+      fontes: [],
+      extensoes: [],
+      ordenacao: 'data-desc',
+      buscarConteudo: true
+    });
+
+    const serial = JSON.stringify(resposta);
+    // A correspondência aconteceu de fato — o documento veio assinalado…
+    expect(serial).toContain('apenasConteudo');
+    // …mas nada do texto de onde ela saiu.
+    expect(serial).not.toContain(MARCA);
+    expect(serial).not.toContain('Ata de reunião sobre');
+  });
+
+  it('o canal de estado da sincronização devolve só estado e contagens', async () => {
+    const handler = handlers.get(CANAIS.sincronizacaoEstado) as () => Promise<
+      Record<string, unknown>
+    >;
+    const retrato = (await handler()) ?? {};
+
+    for (const [campo, valor] of Object.entries(retrato)) {
+      expect(
+        ['number', 'boolean', 'string'].includes(typeof valor),
+        `campo ${campo} deveria ser escalar`
+      ).toBe(true);
+    }
+    expect(JSON.stringify(retrato)).not.toContain(MARCA);
   });
 });
 

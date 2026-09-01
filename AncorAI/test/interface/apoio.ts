@@ -72,6 +72,15 @@ export function montarApi(resultado: ResultadoBusca, sobrescritas: Sobrescritas 
       falhas: 0,
       suspensa: false
     })),
+    estadoSincronizacao: vi.fn(async () => ({
+      estado: 'parada' as const,
+      total: 0,
+      ingeridos: 0,
+      reaproveitados: 0,
+      semTexto: 0,
+      falhas: 0,
+      suspensa: false
+    })),
     abrirDocumento: vi.fn(),
     documentosAcessados: vi.fn(async () => []),
 
