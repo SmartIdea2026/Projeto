@@ -4,6 +4,7 @@ about: 'Template padrão para criação de tasks no Kanban '
 title: "[TASK]"
 labels: ''
 assignees: ''
+type: Task
 
 ---
 
