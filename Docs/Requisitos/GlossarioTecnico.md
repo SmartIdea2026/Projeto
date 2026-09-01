@@ -66,6 +66,14 @@ Organizado por assunto, e não em ordem alfabética: os termos se explicam melho
 
 **Truncamento** — corte do texto extraído ao atingir o limite por documento. O registro marca que houve corte, para que quem consuma o texto não trate uma parte como se fosse o todo.
 
+## Resumo por IA
+
+**LLM** (*Large Language Model*, modelo de linguagem) — sistema de IA treinado sobre grandes volumes de texto, capaz de produzir prosa a partir de uma instrução e de um conteúdo de entrada. No AncorAI é o que lê o texto de um documento e produz o resumo, o tipo, os assuntos e os destaques apresentados no painel. É um serviço externo: usar um LLM de terceiro é o que a ADR-0006 autoriza, em fronteira distinta da que a ADR-0005 abriu para o armazenamento local.
+
+**Saída estruturada** (*structured output*) — recurso de API de LLM pelo qual a resposta é forçada a obedecer a um formato definido — no caso do AncorAI, um JSON com campos fixos para resumo, tipo, assuntos e destaques — em vez de prosa livre que precisaria ser interpretada depois. É o que permite obter os quatro elementos do resumo em uma única chamada, sem heurística adicional sobre o texto de resposta.
+
+**Resumo desatualizado** — resumo cuja geração é anterior à última alteração do conteúdo do documento na fonte. O sistema o reconhece pela mesma identidade de conteúdo (o `sha` do blob) que também invalida o texto armazenado, e o assinala como tal em vez de apresentá-lo como se ainda descrevesse o documento atual. Regenerar é sempre por pedido do usuário, nunca automático — regerar sozinho gastaria cota sem que ninguém tivesse pedido.
+
 ## Processo
 
 **ADR** (*Architecture Decision Record*) — registro de uma decisão arquitetural, com o contexto que a motivou, as alternativas descartadas e as consequências aceitas. Preserva o *porquê*, que o código sozinho não conta.
