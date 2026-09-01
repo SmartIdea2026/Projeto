@@ -2,8 +2,8 @@
 name: Template Kamban
 about: 'Template padrão para criação de itens no Kamban '
 title: "[TASK]"
-labels: ''
-assignees: ''
+labels: bug
+assignees: SmartIdea2026
 
 ---
 

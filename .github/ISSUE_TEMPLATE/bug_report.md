@@ -1,42 +1,42 @@
 ---
 name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
+about: Template padrão para criação de itens  de report de bugs
+title: "[BUG]"
+labels: bug
 assignees: ''
+type: Bug
 
 ---
 
-## Descrição do problema
+**Descreva o bug**
+Uma descrição clara e objetiva do problema encontrado.
 
-<!-- Descreva claramente o problema encontrado. -->
+**Como reproduzir**
+Passos para reproduzir o comportamento:
 
-## Passos para reproduzir
+1. Acesse `'...'`
+2. Clique em `'....'`
+3. Role a página para baixo até `'....'`
+4. Observe o erro
 
-1.
-2.
-3.
+**Comportamento esperado**
+Uma descrição clara e objetiva do que você esperava que acontecesse.
 
-## Comportamento atual
+**Capturas de tela**
+Se aplicável, adicione capturas de tela para ajudar a explicar o problema.
 
-<!-- O que está acontecendo atualmente? -->
+**Desktop (preencha as informações a seguir):**
 
-## Comportamento esperado
+* **Sistema operacional:** [ex.: Windows, Linux, macOS]
+* **Navegador:** [ex.: Chrome, Safari, Firefox]
+* **Versão:** [ex.: 22]
 
-<!-- O que deveria acontecer? -->
+**Smartphone (preencha as informações a seguir):**
 
-## Ambiente
+* **Dispositivo:** [ex.: iPhone 6]
+* **Sistema operacional:** [ex.: iOS 8.1, Android 14]
+* **Navegador:** [ex.: navegador padrão, Safari, Chrome]
+* **Versão:** [ex.: 22]
 
-- Sistema operacional:
-- Versão da aplicação:
-- Navegador:
-- Versão do navegador:
-- Dispositivo:
-
-## Logs / Screenshots
-
-<!-- Adicione logs, prints, vídeos ou outras evidências, quando aplicável. -->
-
-## Informações adicionais
-
-<!-- Qualquer informação que possa ajudar na investigação. -->
+**Contexto adicional**
+Adicione qualquer outra informação relevante sobre o problema aqui.
