@@ -25,14 +25,6 @@ import { Configuracoes } from './telas/Configuracoes';
 
 const NOME_FONTE = { github: 'GitHub' } as const;
 
-const ROTULO_ESTADO: Record<string, string> = {
-  conectada: 'conectada',
-  invalida: 'credencial inválida',
-  'nao-configurada': 'não configurada',
-  'sem-conexao': 'sem conexão',
-  verificando: 'verificando'
-};
-
 export function App() {
   const [status, setStatus] = useState<StatusFonte[]>([]);
   const [filtros, setFiltros] = useState<TipoFiltros>(FILTROS_PADRAO);
@@ -438,25 +430,19 @@ export function App() {
           <BotaoSincronizar />
 
           <div className="conexoes">
-            {(['github'] as const).map((fonte) => {
-              const item = status.find((atual) => atual.fonte === fonte);
-              const estado = item?.estado ?? 'nao-configurada';
-              return (
-                <button
-                  key={fonte}
-                  type="button"
-                  className="conexao"
-                  onClick={() => setConfigAberta(true)}
-                >
-                  <span
-                    className={`conexao__ponto conexao__ponto--${estado}`}
-                    aria-hidden="true"
-                  />
-                  {/* O estado vai também em texto, não apenas na cor do ponto. */}
-                  {NOME_FONTE[fonte]} {ROTULO_ESTADO[estado]}
-                </button>
-              );
-            })}
+            {/*
+              Só o acesso às configurações. O estado de conexão da fonte é
+              apresentado dentro da tela de configurações, não aqui
+              (openspec/specs/configuracao-credenciais).
+            */}
+            <button
+              type="button"
+              className="conexao"
+              aria-label="Configurações"
+              onClick={() => setConfigAberta(true)}
+            >
+              <span aria-hidden="true">⚙</span>
+            </button>
           </div>
         </div>
       </header>
