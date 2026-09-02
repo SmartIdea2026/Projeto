@@ -149,6 +149,40 @@ describe('ordem de tabulação da tela principal', () => {
     expect(focaveis(cartao).length).toBeGreaterThan(0);
   });
 
+  it('os itens da pilha de relacionados entram na tabulação, dentro do painel', async () => {
+    const comPilha = montarApi(RECENTES, {
+      relacionadosDoDocumento: vi.fn(async () => ({
+        pilha: [
+          {
+            id: 'github:o/r:guia.md',
+            nome: 'guia.md',
+            fonte: 'github' as const,
+            link: 'https://github.com/o/r/blob/main/guia.md',
+            score: 0.5
+          }
+        ],
+        semClassificacao: false
+      }))
+    });
+    instalarApi(comPilha);
+    render(<App />);
+    await waitFor(() => expect(document.querySelector('.painel')).not.toBeNull());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /guia\.md/ })).toBeInTheDocument()
+    );
+
+    const item = screen.getByRole('button', { name: /guia\.md/ });
+    // Sem tabindex: entra pela posição no documento, dentro do painel.
+    expect(item).not.toHaveAttribute('tabindex');
+    expect(item.closest('.painel')).not.toBeNull();
+    expect(focaveis()).toContain(item);
+
+    // O painel vem depois da lista: o item da pilha também.
+    const ordem = focaveis();
+    const ultimoCartao = [...ordem].reverse().find((e) => e.closest('.cartao'));
+    expect(ordem.indexOf(item)).toBeGreaterThan(ordem.indexOf(ultimoCartao as HTMLElement));
+  });
+
   it('o botão de sincronização é alcançável por teclado, com rótulo acessível', async () => {
     render(<App />);
     await waitFor(() => expect(api.recentes).toHaveBeenCalled());
