@@ -49,7 +49,7 @@
 
 - [x] 8.1 Executar a suíte completa, `npx tsc --noEmit` nos dois projetos e `npx electron-vite build` — verificar que tudo passa
 - [x] 8.2 Percorrer cada requisito dos deltas `busca-documentos` e `conteudo-documentos` conferindo a correspondência com o código, cenário a cenário — verificar que nenhum cenário ficou sem contrapartida
-- [ ] 8.3 Executar `/opsx:archive` para incorporar os deltas às especificações principais
+- [x] 8.3 Executar `/opsx:archive` para incorporar os deltas às especificações principais
 
 ## 9. Ajuste pós-uso: casamento no conteúdo
 
