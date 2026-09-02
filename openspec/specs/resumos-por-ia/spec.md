@@ -129,11 +129,13 @@ O resumo SHALL ser assinalado como desatualizado quando o conteúdo do documento
 
 ### Requirement: Painel de resumo
 
-O sistema SHALL apresentar um painel à direita da lista de resultados, contendo o nome do documento, a fonte de onde ele vem, o resumo em prosa, os destaques principais e uma ação que abre o documento na fonte original.
+O sistema SHALL apresentar um painel à direita da lista de resultados, contendo o nome do documento, a fonte de onde ele vem, o resumo em prosa, os destaques principais, a pilha de documentos relacionados e uma ação que abre o documento na fonte original.
 
 Ao concluir uma busca com resultados, o painel SHALL passar a apresentar o **primeiro** documento da página.
 
 Cada resultado SHALL oferecer uma ação de gerar o resumo. Acioná-la SHALL substituir o conteúdo do painel pelo daquele documento, **sem alterar a lista de resultados** nem a posição de rolagem dela.
+
+Acionar um item da pilha de documentos relacionados SHALL ter o mesmo efeito: substituir o conteúdo do painel pelo daquele documento, sem alterar a lista de resultados nem a posição de rolagem dela.
 
 O painel NÃO SHALL ser apresentado quando não houver documento em foco.
 
@@ -150,6 +152,13 @@ A ação de abrir o documento SHALL ter o mesmo efeito do link no resultado: red
 - **GIVEN** que o painel apresenta um documento
 - **WHEN** o usuário aciona a geração de resumo em outro resultado
 - **THEN** o painel passa a apresentar o documento escolhido
+- **AND** a lista de resultados permanece inalterada
+
+#### Scenario: Navegação por um documento relacionado
+
+- **GIVEN** que o painel apresenta um documento e sua pilha de relacionados
+- **WHEN** o usuário aciona um item da pilha
+- **THEN** o painel passa a apresentar o documento daquele item
 - **AND** a lista de resultados permanece inalterada
 
 #### Scenario: Painel identifica a origem do documento
@@ -243,7 +252,7 @@ O sistema SHALL distinguir credencial ausente, credencial inválida, limite de r
 
 ### Requirement: Alcance do painel por teclado e por leitores de tela
 
-O painel e a ação de gerar resumo em cada resultado SHALL ser alcançáveis por teclado, na ordem de leitura visual.
+O painel, a ação de gerar resumo em cada resultado e cada item da pilha de documentos relacionados SHALL ser alcançáveis por teclado, na ordem de leitura visual.
 
 A troca do conteúdo do painel SHALL ser anunciada por leitores de tela, assim como a conclusão de uma geração.
 
@@ -253,7 +262,7 @@ A informação apresentada no painel NÃO SHALL depender apenas de cor para ser 
 
 - **GIVEN** que a lista de resultados e o painel estão apresentados
 - **WHEN** o usuário percorre a tela pelo teclado
-- **THEN** a ação de gerar resumo de cada resultado e as ações do painel são alcançadas
+- **THEN** a ação de gerar resumo de cada resultado, as ações do painel e os itens da pilha de relacionados são alcançados
 - **AND** a ordem segue a leitura visual da tela
 
 #### Scenario: Troca de conteúdo anunciada

@@ -49,7 +49,7 @@
 
 - [x] 8.1 Executar a suíte completa, `npx tsc --noEmit` nos dois projetos e `npx electron-vite build` — verificar que tudo passa
 - [x] 8.2 Percorrer cada requisito dos deltas `analise-relacoes` e `resumos-por-ia`, cenário a cenário, conferindo a contrapartida no código — verificar que nenhum cenário ficou sem cobertura
-- [ ] 8.3 Executar `/opsx:archive` para incorporar os deltas às especificações principais
+- [x] 8.3 Executar `/opsx:archive` para incorporar os deltas às especificações principais
 
 ## 9. Ajuste pós-implementação: pilha só com nomes
 
