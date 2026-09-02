@@ -14,7 +14,13 @@ import * as github from '../fontes/github';
 import { ErroFonte } from '../fontes/comum';
 import { aplicarFiltros, fonteSelecionada, ordenar, unificar } from './regras';
 import { gravarValidacao, lerValidacao } from '../credenciais/validacao';
-import { gravarCache, lerCache } from '../banco/repositorio';
+import {
+  conteudoParaBusca,
+  documentosSemAutoria,
+  gravarCache,
+  inventarioSincronizado,
+  lerCache
+} from '../banco/repositorio';
 import { comoInterativa } from '../conteudo/prioridade';
 
 /**
@@ -172,7 +178,8 @@ function mesmaConsulta(a: Filtros, b: Filtros): boolean {
     (a.dataInicial ?? '') === (b.dataInicial ?? '') &&
     (a.dataFinal ?? '') === (b.dataFinal ?? '') &&
     lista(a.extensoes) === lista(b.extensoes) &&
-    lista(a.fontes) === lista(b.fontes)
+    lista(a.fontes) === lista(b.fontes) &&
+    Boolean(a.buscarConteudo) === Boolean(b.buscarConteudo)
   );
 }
 
@@ -247,7 +254,59 @@ export async function buscar(filtros: Filtros): Promise<ResultadoBusca> {
   return comoInterativa(() => executarBusca(filtros));
 }
 
+/**
+ * Verdadeiro quando há termo E o usuário pediu a busca no conteúdo.
+ *
+ * O texto armazenado só entra no caminho da busca nessas condições (design,
+ * decisão 2): abrir a coleção custa memória, e a correspondência no corpo
+ * alcança todo documento que mencione o termo — nem sempre o que se quer.
+ */
+function querBuscaNoConteudo(filtros: Filtros): boolean {
+  return Boolean(filtros.termo.trim() && filtros.buscarConteudo);
+}
+
+/**
+ * Escolhe entre servir a busca do snapshot local e consultar a fonte ao vivo.
+ *
+ * O snapshot é gravado pela sincronização e já traz autoria e data real de cada
+ * documento (design, decisão 8): servindo dele, a busca com termo ou período
+ * deixa de gastar uma requisição por documento a cada consulta. Enquanto ele
+ * está vazio — nenhuma sincronização desde a instalação —, a busca cai na
+ * consulta ao vivo de sempre, sem alarde.
+ */
 async function executarBusca(filtros: Filtros): Promise<ResultadoBusca> {
+  const snapshot = await inventarioSincronizado();
+  return snapshot.length > 0
+    ? buscarNoSnapshot(snapshot, filtros)
+    : buscarAoVivo(filtros);
+}
+
+/**
+ * Busca servida do snapshot local: sem `coletar`, sem `enriquecerParaBusca`,
+ * sem rede. Autoria e data já vêm resolvidas de cada documento; o filtro de
+ * período recorta pela data real, e o que ainda não tem data resolvida cai no
+ * aviso de alcance parcial do período, como no caminho ao vivo.
+ */
+async function buscarNoSnapshot(
+  documentos: Documento[],
+  filtros: Filtros
+): Promise<ResultadoBusca> {
+  const conteudo = querBuscaNoConteudo(filtros) ? await conteudoParaBusca() : null;
+  const filtrados = aplicarFiltros(documentos, filtros, conteudo?.textos);
+
+  return apresentar(filtrados, filtros, {
+    falhas: [],
+    doCache: true,
+    avisos: [
+      ...avisarSobreAlcanceDoPeriodo(documentos, filtros),
+      ...(await avisarSobreAutoriaPendente(filtros)),
+      ...avisarSobreAlcanceDoConteudo(documentos, conteudo?.versoes)
+    ]
+  });
+}
+
+/** Busca consultando a fonte ao vivo, resolvendo autoria e data no momento. */
+async function buscarAoVivo(filtros: Filtros): Promise<ResultadoBusca> {
   const bruto = await coletar(filtros, (token) => github.buscarDocumentos(token));
 
   // Autoria e data precisam existir antes do filtro: o termo é comparado ao
@@ -255,7 +314,13 @@ async function executarBusca(filtros: Filtros): Promise<ResultadoBusca> {
   // se procura — ou admitiria o que não se procura.
   const enriquecido = await enriquecerParaBusca(bruto.documentos, filtros);
 
-  const filtrados = aplicarFiltros(enriquecido.documentos, filtros);
+  const conteudo = querBuscaNoConteudo(filtros) ? await conteudoParaBusca() : null;
+
+  const filtrados = aplicarFiltros(
+    enriquecido.documentos,
+    filtros,
+    conteudo?.textos
+  );
 
   return apresentar(filtrados, filtros, {
     falhas: bruto.falhas,
@@ -263,9 +328,70 @@ async function executarBusca(filtros: Filtros): Promise<ResultadoBusca> {
     avisos: [
       ...bruto.avisos,
       ...enriquecido.avisos,
-      ...avisarSobreAlcanceDoPeriodo(enriquecido.documentos, filtros)
+      ...avisarSobreAlcanceDoPeriodo(enriquecido.documentos, filtros),
+      ...avisarSobreAlcanceDoConteudo(enriquecido.documentos, conteudo?.versoes)
     ]
   });
+}
+
+/**
+ * Avisa quando a busca servida do snapshot ainda tem documentos sem autoria
+ * resolvida — eles são procurados só pelo nome.
+ *
+ * Substitui, no caminho do snapshot, o aviso de "considerou os N primeiros" do
+ * caminho ao vivo: ali há um teto por consulta; aqui a autoria é resolvida pela
+ * sincronização para todo o acervo, e o que falta some quando ela completa.
+ */
+async function avisarSobreAutoriaPendente(filtros: Filtros): Promise<AvisoFonte[]> {
+  if (!filtros.termo.trim()) return [];
+
+  const pendentes = await documentosSemAutoria();
+  if (pendentes === 0) return [];
+
+  return [
+    {
+      fonte: 'github',
+      mensagem:
+        `${pendentes} documento(s) ainda sem autoria sincronizada foram ` +
+        'procurados apenas pelo nome. Sincronize o acervo para alcançá-los.'
+    }
+  ];
+}
+
+/**
+ * Avisa quando a correspondência pelo conteúdo cobriu apenas parte do acervo.
+ *
+ * Enquanto a sincronização não passou por todo o inventário — ou para
+ * documentos cujo texto mudou na fonte —, esses documentos só são procurados
+ * por nome e autor. O aviso diz quantos ficaram fora do alcance pelo conteúdo,
+ * pelo mesmo canal de "resultado parcial" já usado para árvore truncada e
+ * repositório inacessível. Some sozinho quando a cobertura fica total.
+ */
+function avisarSobreAlcanceDoConteudo(
+  documentos: Documento[],
+  versoes: ReadonlyMap<string, string> | undefined
+): AvisoFonte[] {
+  if (!versoes) return [];
+
+  const foraDoAlcance = documentos.filter((documento) => {
+    // Documento sem identidade de conteúdo não é endereçável — nunca terá texto
+    // e não é o que a sincronização vai alcançar. Fica fora da conta: contá-lo
+    // manteria o aviso na tela para sempre.
+    if (!documento.versaoConteudo) return false;
+    const versao = versoes.get(documento.id);
+    return versao === undefined || versao !== documento.versaoConteudo;
+  }).length;
+
+  if (foraDoAlcance === 0) return [];
+
+  return [
+    {
+      fonte: 'github',
+      mensagem:
+        `A busca pelo conteúdo alcançou parte do acervo: ${foraDoAlcance} documento(s) ` +
+        'ainda sem texto sincronizado foram procurados apenas por nome e autor.'
+    }
+  ];
 }
 
 const CHAVE_RECENTES = 'recentes:consolidado';

@@ -55,6 +55,25 @@ export function Filtros({ filtros, aoAlterar, erroPeriodo }: Props) {
           mudança seguinte. Rotular este como "Tipo" colidiria com aquele.
         */}
         <span className="filtros__rotulo">FILTROS</span>
+
+        {/*
+          Amplia onde o termo é procurado: além de nome e autor, o texto já
+          armazenado do documento. Desligado por padrão — a busca no conteúdo
+          alcança qualquer documento que mencione o termo no corpo.
+        */}
+        <label
+          className={`filtro filtro--check ${filtros.buscarConteudo ? 'filtro--ativo' : ''}`}
+        >
+          <input
+            type="checkbox"
+            checked={Boolean(filtros.buscarConteudo)}
+            onChange={(evento) =>
+              aoAlterar({ ...filtros, buscarConteudo: evento.target.checked })
+            }
+          />
+          <span>Buscar no conteúdo</span>
+        </label>
+
         <label className={`filtro ${tipoAtivo ? 'filtro--ativo' : ''}`}>
           <span>Extensão:</span>
           <select

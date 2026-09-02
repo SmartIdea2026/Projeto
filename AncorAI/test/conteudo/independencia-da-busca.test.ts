@@ -80,8 +80,19 @@ describe('a busca não obtém conteúdo', () => {
     expect(baixar).not.toHaveBeenCalled();
   });
 
-  it('não carrega a coleção de conteúdo em memória para buscar', async () => {
-    await servico.buscar({ ...FILTROS_PADRAO, termo: 'ata' });
+  it('lê o texto já armazenado para casar o termo, sem baixar conteúdo', async () => {
+    const baixar = vi.spyOn(github, 'conteudoDoArquivo');
+
+    await servico.buscar({ ...FILTROS_PADRAO, termo: 'ata', buscarConteudo: true });
+
+    // Com termo, a busca por conteúdo abre a coleção local (design, decisão 3),
+    // mas não faz requisição de conteúdo alguma.
+    expect(banco.conteudoCarregado()).toBe(true);
+    expect(baixar).not.toHaveBeenCalled();
+  });
+
+  it('não abre a coleção de conteúdo quando a consulta não tem termo', async () => {
+    await servico.buscar({ ...FILTROS_PADRAO, termo: '' });
 
     expect(banco.conteudoCarregado()).toBe(false);
   });

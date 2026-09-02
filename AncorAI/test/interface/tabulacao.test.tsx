@@ -72,6 +72,7 @@ describe('ordem de tabulação da tela principal', () => {
 
     /** Região da tela a que o elemento pertence, pelo contêiner que o envolve. */
     const regiaoDe = (elemento: HTMLElement): string => {
+      if (elemento.closest('.cabecalho')) return 'cabecalho';
       if (elemento.closest('.conexoes')) return 'cabecalho';
       if (elemento.closest('.busca')) return 'busca';
       if (elemento.closest('.filtros')) return 'filtros';
@@ -93,9 +94,13 @@ describe('ordem de tabulação da tela principal', () => {
     // Cada resultado tem duas ações — gerar resumo e abrir na fonte — e o
     // painel de resumo vem depois da lista, que é onde ele aparece na tela.
     expect(focaveis().map(regiaoDe)).toEqual([
+      // Botão de sincronização e acesso às configurações, nesta ordem.
+      'cabecalho',
       'cabecalho',
       'busca',
       'busca',
+      // Buscar no conteúdo, extensão e período.
+      'filtros',
       'filtros',
       'filtros',
       'ordenacao',
@@ -142,6 +147,25 @@ describe('ordem de tabulação da tela principal', () => {
 
     const cartao = document.querySelector('.cartao')!;
     expect(focaveis(cartao).length).toBeGreaterThan(0);
+  });
+
+  it('o botão de sincronização é alcançável por teclado, com rótulo acessível', async () => {
+    render(<App />);
+    await waitFor(() => expect(api.recentes).toHaveBeenCalled());
+
+    // Rótulo acessível: o botão é encontrável pelo nome acessível, não só pelo
+    // ícone.
+    const botao = screen.getByRole('button', {
+      name: 'Sincronizar o acervo de documentos'
+    });
+
+    // Sem tabindex: entra na ordem de tabulação pela posição no documento.
+    expect(botao).not.toHaveAttribute('tabindex');
+    expect(focaveis()).toContain(botao);
+
+    // Recebe o foco — o indicador visível vem da regra global `:focus-visible`.
+    botao.focus();
+    expect(document.activeElement).toBe(botao);
   });
 });
 

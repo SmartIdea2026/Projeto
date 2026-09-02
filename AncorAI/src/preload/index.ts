@@ -7,6 +7,7 @@ import type {
   Fonte,
   PreparoConteudo,
   ProgressoIngestao,
+  RetratoSincronizacao,
   RespostaResumo,
   ResultadoBusca,
   ResumoDocumento,
@@ -55,6 +56,9 @@ const api = {
 
   indexarConteudo: (): Promise<ProgressoIngestao> =>
     ipcRenderer.invoke(CANAIS.indexarConteudo),
+
+  estadoSincronizacao: (): Promise<RetratoSincronizacao> =>
+    ipcRenderer.invoke(CANAIS.sincronizacaoEstado),
 
   definirChaveLLM: (valor: string): Promise<StatusLLM> =>
     ipcRenderer.invoke(CANAIS.llmDefinir, valor),

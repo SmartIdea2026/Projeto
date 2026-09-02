@@ -95,6 +95,22 @@
   border-radius: 6px;
 }
 
+/*
+ * Marca "encontrado no conteúdo": ícone + rótulo próprios, distinta das demais
+ * etiquetas e nunca só por cor. Contraste do texto verde-escuro (#14432f) sobre
+ * o fundo #e6f0ea é ~9:1, bem acima do mínimo de 4.5:1.
+ */
+.etiqueta--conteudo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: none;
+  letter-spacing: 0;
+  background: #e6f0ea;
+  border-color: #bcd8c9;
+  color: var(--verde-escuro);
+}
+
 
 .cartao__meta {
   color: var(--texto-suave);

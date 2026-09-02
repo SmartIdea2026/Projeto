@@ -11,6 +11,7 @@ import {
   type StatusLLM
 } from '../compartilhado/tipos';
 import { ordenar } from '../compartilhado/ordenacao';
+import { BotaoSincronizar } from './componentes/BotaoSincronizar';
 import { Cartao } from './componentes/Cartao';
 import { Filtros } from './componentes/Filtros';
 import {
@@ -378,26 +379,31 @@ export function App() {
           </div>
         </div>
 
-        <div className="conexoes">
-          {(['github'] as const).map((fonte) => {
-            const item = status.find((atual) => atual.fonte === fonte);
-            const estado = item?.estado ?? 'nao-configurada';
-            return (
-              <button
-                key={fonte}
-                type="button"
-                className="conexao"
-                onClick={() => setConfigAberta(true)}
-              >
-                <span
-                  className={`conexao__ponto conexao__ponto--${estado}`}
-                  aria-hidden="true"
-                />
-                {/* O estado vai também em texto, não apenas na cor do ponto. */}
-                {NOME_FONTE[fonte]} {ROTULO_ESTADO[estado]}
-              </button>
-            );
-          })}
+        <div className="cabecalho__acoes">
+          {/* Sincronização e configurações são ambas ações sobre a aplicação. */}
+          <BotaoSincronizar />
+
+          <div className="conexoes">
+            {(['github'] as const).map((fonte) => {
+              const item = status.find((atual) => atual.fonte === fonte);
+              const estado = item?.estado ?? 'nao-configurada';
+              return (
+                <button
+                  key={fonte}
+                  type="button"
+                  className="conexao"
+                  onClick={() => setConfigAberta(true)}
+                >
+                  <span
+                    className={`conexao__ponto conexao__ponto--${estado}`}
+                    aria-hidden="true"
+                  />
+                  {/* O estado vai também em texto, não apenas na cor do ponto. */}
+                  {NOME_FONTE[fonte]} {ROTULO_ESTADO[estado]}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </header>
 

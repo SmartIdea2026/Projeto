@@ -28,7 +28,10 @@ vi.mock('../../src/main/credenciais/cofre', () => cofre);
 vi.mock('../../src/main/fontes/github', () => github);
 vi.mock('../../src/main/banco/repositorio', () => ({
   lerCache: vi.fn(async () => null),
-  gravarCache: vi.fn(async () => undefined)
+  gravarCache: vi.fn(async () => undefined),
+  conteudoParaBusca: vi.fn(async () => ({ textos: new Map(), versoes: new Map() })),
+  inventarioSincronizado: vi.fn(async () => []),
+  documentosSemAutoria: vi.fn(async () => 0)
 }));
 vi.mock('../../src/main/credenciais/validacao', () => ({
   lerValidacao: vi.fn(async () => null),

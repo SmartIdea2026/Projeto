@@ -78,6 +78,20 @@ export function Cartao({ documento, aoAbrir, aoResumir, emFoco = false }: Props)
             <span aria-hidden="true">⌥</span>
             {fonte}
           </span>
+          {/*
+            O termo casou com o texto do documento, e não com o nome. A marca
+            responde "por que este resultado está aqui?" — com ícone e rótulo
+            próprios, nunca só por cor. O trecho não é apresentado (ADR-0005).
+          */}
+          {documento.apenasConteudo && (
+            <span
+              className="etiqueta etiqueta--conteudo"
+              title="O termo buscado aparece no texto deste documento, não no nome"
+            >
+              <span aria-hidden="true">◆</span>
+              Encontrado no conteúdo
+            </span>
+          )}
         </div>
 
         <div className="cartao__meta">

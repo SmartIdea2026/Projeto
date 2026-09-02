@@ -84,6 +84,15 @@ export interface Documento {
    * sem gastar requisição alguma para descobrir o tamanho.
    */
   tamanho?: number;
+  /**
+   * Verdadeiro quando o termo da busca casou **apenas** com o texto armazenado
+   * do documento — nem o nome nem o autor.
+   *
+   * A interface assinala esse resultado, para responder à pergunta "por que
+   * este documento está aqui?". O trecho onde o termo ocorre NÃO acompanha: o
+   * conteúdo permanece confinado ao processo principal (ADR-0005).
+   */
+  apenasConteudo?: boolean;
 }
 
 export type Ordenacao = 'a-z' | 'z-a' | 'data-asc' | 'data-desc';
@@ -99,6 +108,13 @@ export interface Filtros {
   dataInicial?: string;
   dataFinal?: string;
   ordenacao: Ordenacao;
+  /**
+   * Quando verdadeiro, o termo também é procurado no texto já armazenado dos
+   * documentos, além do nome e do autor. Desligado por padrão: a busca no
+   * conteúdo alcança qualquer documento que mencione o termo no corpo, e nem
+   * sempre é isso que se procura.
+   */
+  buscarConteudo?: boolean;
 }
 
 export const FILTROS_PADRAO: Filtros = {
@@ -191,8 +207,40 @@ export interface ProgressoIngestao {
   /** Documentos em que a obtenção ou a leitura falhou. */
   falhas: number;
   suspensa: boolean;
-  /** Mensagem do sistema explicando a suspensão, quando houver. */
-  motivoSuspensao?: string;
+  /** Código do motivo da suspensão, quando houver. A redação fica no renderer. */
+  motivoSuspensao?: MotivoSuspensao;
+}
+
+/**
+ * Estado da sincronização do acervo, para a interface.
+ *
+ * `parada` é o estado antes da primeira varredura desde a abertura; depois dela
+ * o estado é sempre `concluida` ou `suspensa`, e não volta a `parada`.
+ */
+export type EstadoSincronizacao = 'parada' | 'em-andamento' | 'concluida' | 'suspensa';
+
+/**
+ * Por que a sincronização foi suspensa.
+ *
+ * Código, e não frase: a redação apresentada ao usuário fica no renderer. Os
+ * casos exigem coisas distintas de quem lê — esperar a cota se recompor, liberar
+ * espaço, configurar a credencial do GitHub, ou apenas tentar de novo.
+ */
+export type MotivoSuspensao =
+  | 'limite-requisicoes'
+  | 'limite-armazenamento'
+  | 'sem-credencial'
+  | 'falha-inventario'
+  | 'interrompida';
+
+/**
+ * Retrato do andamento da sincronização mantido no processo principal.
+ *
+ * É o que o canal `sincronizacao:estado` devolve: as contagens de
+ * `ProgressoIngestao` e o estado atual — nunca texto de documento (ADR-0005).
+ */
+export interface RetratoSincronizacao extends ProgressoIngestao {
+  estado: EstadoSincronizacao;
 }
 
 /**
