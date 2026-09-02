@@ -54,7 +54,7 @@ Processo em `Docs/ADR/TemplatesADR/ProcessoRegistroDecisoesArquitetura.md`; temp
 * Exige ADR toda decisão que altere tecnologia relevante, estrutura do sistema, integração, segurança, persistência ou deploy.
 * Ao substituir uma decisão vigente, **crie uma nova ADR** referenciando a anterior — nunca reescreva o histórico. Uma ADR ainda `Proposto` e não mergeada pode ser corrigida no lugar.
 * Cite nominalmente as seções dos documentos que a decisão supera.
-* Decisões vigentes: **ADR-0001** desktop com Electron; **ADR-0002** persistência NoSQL local; **ADR-0003** credenciais pela interface; **ADR-0004** remoção do Google Drive do MVP; **ADR-0005** armazenamento local do conteúdo dos documentos; **ADR-0006** envio do texto dos documentos a serviço externo de IA.
+* Decisões vigentes: **ADR-0001** desktop com Electron; **ADR-0002** persistência NoSQL local; **ADR-0003** credenciais pela interface; **ADR-0004** remoção do Google Drive do MVP; **ADR-0005** armazenamento local do conteúdo dos documentos; **ADR-0006** envio do texto dos documentos a serviço externo de IA; **ADR-0007** relações entre documentos por sobreposição de rótulos (similaridade vetorial permanece fora).
 
 ### ADRs vigentes
 
@@ -66,6 +66,7 @@ Processo em `Docs/ADR/TemplatesADR/ProcessoRegistroDecisoesArquitetura.md`; temp
 | 0004 | Remoção do Google Drive do MVP | — |
 | 0005 | Armazenamento local do conteúdo dos documentos | cláusula da ADR-0002 sobre não guardar conteúdo |
 | 0006 | Envio do texto dos documentos a serviço externo de IA | — |
+| 0007 | Relações entre documentos por sobreposição de rótulos | cláusula de não-objetivo de similaridade em `resumos-e-indice-por-ia`, no design arquivado de `sincronizar-acervo-e-buscar-por-conteudo` e no `GlossarioTecnico.md` |
 
 ## 5. Fluxo OpenSpec
 
@@ -115,6 +116,7 @@ Proposal → Specs → Design → Tasks → Implementação → Archive
 * **A busca pode alcançar o conteúdo.** A caixa "Buscar no conteúdo" (`filtros.buscarConteudo`, **desligada por padrão**) faz o termo casar também com o texto já ingerido dos documentos (`conteudo_documentos`), de forma aditiva a nome e autor. No conteúdo o casamento é por **palavra inteira** (não substring — "ata" não casa "tratamento"); nome e autor seguem por substring. A correspondência roda no processo **main** e devolve só a marca `apenasConteudo` — nunca o trecho (ADR-0005). Com a caixa desligada, `servico.ts` nem abre a coleção de conteúdo. Documentos sem texto vigente continuam encontráveis por nome e autor; a busca avisa quando o alcance pelo conteúdo ficou parcial. A varredura do acervo que alimenta isso tem gatilho no cabeçalho (botão "Sincronizar") e uma guarda de execução única.
 * **A busca com termo ou período é servida do snapshot local.** A sincronização grava `acervo_documentos` — o inventário com autoria e data real resolvidas por documento (reaproveitadas pelo `sha` do blob). `busca/servico.ts` monta o resultado desse snapshot (`inventarioSincronizado()`), sem `coletar` nem `enriquecerParaBusca` no GitHub; a consulta ao vivo só é usada enquanto o snapshot está vazio. Consequência: a busca reflete a última sincronização — documento novo/renomeado/removido na fonte só entra/sai depois de sincronizar. Não reintroduza a resolução de autoria por documento no caminho da busca.
 * **Data do GitHub é aproximada até a sincronização resolver.** A árvore Git não traz data por arquivo, então todo documento entra no inventário com o `pushed_at` do repositório e `dataAproximada: true`. A sincronização resolve a data real e a grava no snapshot; a lista de recentes vem dos commits e já tem data real. O filtro de período avisa quando ainda incide sobre datas aproximadas.
+* **O painel relaciona documentos por rótulo, não por vetor (ADR-0007).** A partir do documento em foco, o painel monta uma pilha de até 5 documentos relacionados, ordenada pela sobreposição dos `assuntos` que a classificação por IA gravou (Jaccard ponderado pela raridade do assunto, com bônus para o mesmo `tipo`). O cálculo roda no processo **main** (`main/relacoes/pilha.ts`), sob demanda, sem persistir nada; o canal `relacoes:documento` devolve identificação, nome e link — nunca texto nem os rótulos usados no cálculo. A pilha no painel lista só nomes. Enquanto a classificação de todo o acervo (`resumos-e-indice-por-ia`) não passou, a pilha só enxerga documentos já classificados e avisa quantos ficaram fora. **Não introduza embeddings, vetores ou similaridade por modelo** — é ADR própria.
 
 ### Persistência
 
@@ -145,6 +147,7 @@ Não implemente sem decisão da equipe:
 * **Índice local e busca por contexto** (assunto, tipo e etiquetas de todo o acervo) — mudança `resumos-e-indice-por-ia`, ainda não iniciada. Resumo do documento em foco já não está adiado: ver `painel-de-resumo-por-ia` e a seção "Postura de dados" acima.
 * **Autenticação, login e perfil** — fora de escopo.
 * **Índice de documentos e busca por assunto/etiquetas** — proposto na mudança `resumos-e-indice-por-ia`. Não confundir com a busca por conteúdo literal, que já está implementada (ver seção 6).
+* **Similaridade vetorial / embeddings** — permanece fora (ADR-0007). Relacionar documentos por sobreposição de rótulos já está implementado (a pilha do painel, seção 6); adotar vetores exige ADR própria, que terá de tratar de persistência de vetores e do envio do acervo a uma API de embeddings.
 * **Autor nos resultados** — custo de uma requisição adicional por arquivo no GitHub.
 
 ## 10. Referências

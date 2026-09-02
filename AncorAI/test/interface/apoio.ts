@@ -93,6 +93,11 @@ export function montarApi(resultado: ResultadoBusca, sobrescritas: Sobrescritas 
     resumoDoDocumento: vi.fn(async (documento: Documento) => ({
       resumo: resumoDe(documento)
     })),
+    // Sem relacionados por padrão: o teste que exercita a pilha sobrescreve.
+    relacionadosDoDocumento: vi.fn(async () => ({
+      pilha: [],
+      semClassificacao: false
+    })),
 
     ...sobrescritas
   };

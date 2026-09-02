@@ -470,6 +470,60 @@ export async function documentosSemAutoria(): Promise<number> {
   return (await idsComAutoriaPendente()).length;
 }
 
+/** Quantos documentos há no snapshot do inventário. Zero quando nunca sincronizado. */
+export async function totalNoInventario(): Promise<number> {
+  const colecao = await colecaoDeAcervo();
+  return (await colecao.findAsync({})).length;
+}
+
+/**
+ * Um documento do acervo já classificado pela IA, com seus rótulos.
+ *
+ * `nome` e `link` vêm do snapshot do inventário; `tipo` e `assuntos`, do
+ * registro de conteúdo. O texto de onde os rótulos saíram **não** acompanha
+ * (ADR-0005) — esta função alimenta a pilha de relacionados, no processo
+ * principal, e o que ela devolve pode chegar ao renderer.
+ */
+export interface DocumentoClassificado {
+  id: string;
+  nome: string;
+  fonte: Fonte;
+  link: string;
+  tipo: string;
+  assuntos: string[];
+}
+
+/**
+ * Documentos que já passaram pela classificação por IA (têm `resumoEm`) e estão
+ * no snapshot do inventário.
+ *
+ * Um documento classificado mas ausente do snapshot fica de fora: sem o registro
+ * do inventário não há nome nem link para apresentá-lo na pilha.
+ */
+export async function documentosClassificados(): Promise<DocumentoClassificado[]> {
+  const conteudoColecao = await colecaoDeConteudo();
+  const acervoColecao = await colecaoDeAcervo();
+
+  const registrosAcervo = await acervoColecao.findAsync({});
+  const noInventario = new Map(registrosAcervo.map((registro) => [registro._id, registro]));
+
+  const saida: DocumentoClassificado[] = [];
+  for (const conteudo of await conteudoColecao.findAsync({})) {
+    if (!conteudo.resumoEm) continue;
+    const inventario = noInventario.get(conteudo._id);
+    if (!inventario) continue;
+    saida.push({
+      id: conteudo._id,
+      nome: inventario.nome,
+      fonte: inventario.fonte,
+      link: inventario.link,
+      tipo: conteudo.tipo ?? '',
+      assuntos: conteudo.assuntos ?? []
+    });
+  }
+  return saida;
+}
+
 /**
  * Preferências do usuário nesta instalação.
  *

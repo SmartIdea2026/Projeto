@@ -4,7 +4,9 @@ import {
   POR_PAGINA,
   type Documento,
   type Filtros as TipoFiltros,
+  type ItemRelacionado,
   type MotivoSemResumo,
+  type RespostaRelacionados,
   type ResultadoBusca,
   type ResumoDocumento,
   type StatusFonte,
@@ -49,6 +51,8 @@ export function App() {
     motivo: MotivoSemResumo;
     mensagem?: string;
   } | null>(null);
+  const [relacionados, setRelacionados] = useState<RespostaRelacionados | null>(null);
+  const [erroRelacionados, setErroRelacionados] = useState(false);
 
   /**
    * Documento cuja geração pode substituir o painel.
@@ -266,6 +270,56 @@ export function App() {
   useEffect(() => {
     void window.ancorai.statusLLM().then(setStatusLLM);
   }, []);
+
+  /**
+   * Monta a pilha de relacionados do documento em foco.
+   *
+   * Refeita a cada troca de foco e a cada regeração do resumo (o `geradoEm`
+   * muda, e com ele os assuntos que a pilha cruza). A resposta de um foco já
+   * abandonado é descartada pela mesma disciplina de `focoVigente` que o resumo
+   * usa — a pilha do documento anterior não pode voltar por cima do atual.
+   */
+  const resumoGeradoEm = resumo?.geradoEm ?? null;
+  useEffect(() => {
+    if (!emFoco) {
+      setRelacionados(null);
+      setErroRelacionados(false);
+      return;
+    }
+    const alvo = emFoco.id;
+    setRelacionados(null);
+    setErroRelacionados(false);
+
+    void window.ancorai
+      .relacionadosDoDocumento(emFoco)
+      .then((resposta) => {
+        if (focoVigente.current === alvo) setRelacionados(resposta);
+      })
+      .catch(() => {
+        if (focoVigente.current === alvo) setErroRelacionados(true);
+      });
+  }, [emFoco, resumoGeradoEm]);
+
+  /**
+   * Leva um documento da pilha para o painel.
+   *
+   * Reaproveita `focarDocumento`: o efeito é o de acionar um resultado da lista.
+   * Se o documento também está na página, usa a instância de lá — mais completa;
+   * senão, um esboço basta, porque o texto e o resumo dele já estão no banco
+   * local (é pré-requisito para ter entrado na pilha).
+   */
+  function abrirRelacionado(item: ItemRelacionado) {
+    const naPagina = resultado?.documentos.find((documento) => documento.id === item.id);
+    const alvo: Documento = naPagina ?? {
+      id: item.id,
+      nome: item.nome,
+      extensao: item.nome.includes('.') ? (item.nome.split('.').pop() ?? '') : '',
+      fonte: item.fonte,
+      dataModificacao: '',
+      link: item.link
+    };
+    void focarDocumento(alvo);
+  }
 
   async function responderConsentimento(valor: boolean) {
     const novo = await window.ancorai.consentirEnvio(valor);
@@ -554,7 +608,10 @@ export function App() {
                     : semResumo?.motivo
                 }
                 mensagem={semResumo?.mensagem}
+                relacionados={relacionados}
+                erroRelacionados={erroRelacionados}
                 aoAbrir={abrir}
+                aoAbrirRelacionado={abrirRelacionado}
                 aoConsentir={() => void responderConsentimento(true)}
                 aoRecusar={() => void responderConsentimento(false)}
                 aoConfigurar={() => setConfigAberta(true)}

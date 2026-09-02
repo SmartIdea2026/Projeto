@@ -84,6 +84,15 @@ export const CANAIS = {
    */
   prepararConteudo: 'resumo:preparar',
 
+  /**
+   * Pilha de documentos relacionados ao documento em foco.
+   *
+   * Canal de leitura, calculado sob demanda a partir dos rótulos de
+   * classificação (`assuntos`, `tipo`) já gravados. Devolve identificação, nome
+   * e link de cada item — nunca o texto de onde os rótulos saíram (ADR-0005).
+   */
+  relacionadosDoDocumento: 'relacoes:documento',
+
   /** Abre o documento na fonte original e registra o acesso. */
   abrirDocumento: 'documento:abrir',
   /** Lista os documentos acessados anteriormente. */

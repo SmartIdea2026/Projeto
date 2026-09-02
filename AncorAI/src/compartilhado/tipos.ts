@@ -331,3 +331,32 @@ export interface DocumentoAcessado {
   link: string;
   acessadoEm: string;
 }
+
+/**
+ * Um documento da pilha de relacionados ao documento em foco.
+ *
+ * Carrega identificação, nome e o link de redirecionamento — nunca texto nem
+ * trecho (ADR-0005). `score` é a proximidade calculada pela sobreposição de
+ * assuntos, só para ordenar a pilha.
+ */
+export interface ItemRelacionado {
+  id: string;
+  nome: string;
+  fonte: Fonte;
+  link: string;
+  score: number;
+}
+
+/**
+ * Resposta do canal de documentos relacionados.
+ *
+ * `semClassificacao` distingue "não há relacionados" (pilha vazia, documento
+ * classificado) de "ainda não dá para relacionar" (o documento em foco não tem
+ * resumo). `aviso` acompanha quando parte do acervo ainda não foi classificada
+ * — mesma natureza dos avisos de resultado parcial da busca.
+ */
+export interface RespostaRelacionados {
+  pilha: ItemRelacionado[];
+  semClassificacao: boolean;
+  aviso?: AvisoFonte;
+}
