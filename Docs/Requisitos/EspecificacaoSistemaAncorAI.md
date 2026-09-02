@@ -216,7 +216,7 @@ RF26, RF27 e RF28 são novos e não constam do levantamento original.
 * **RN23** — O GitHub é configurado por token, validado antes de ser gravado.
 * **RN24** — *Adiado com a fonte (ADR-0004).* O Google Drive exigiria autorização por consentimento do usuário: uma chave isolada não alcança documentos privados, e o escopo `drive.readonly` é restrito pelo Google.
 * **RN25** — Credenciais nunca são reexibidas após gravadas.
-* **RN26** — Credencial inválida e falha de conexão são estados distintos, comunicados de forma diferente.
+* **RN26** — Credencial inválida e falha de conexão são estados distintos, comunicados de forma diferente. O resultado da verificação é apresentado na tela de configurações; o cabeçalho não replica o estado de conexão.
 
 ### Persistência
 
@@ -301,7 +301,7 @@ Tela única de busca, com tela de configurações acessível pelo cabeçalho.
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
-│ ⚓ AncorAI                      [● GitHub conectada]     │
+│ ⚓ AncorAI                            [Sincronizar] [⚙] │
 │    WORKSPACE INTERNO                                     │
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
@@ -344,7 +344,7 @@ Tela única de busca, com tela de configurações acessível pelo cabeçalho.
 * O campo de busca recebe foco na abertura.
 * Indicador de foco visível em todo elemento acionável.
 * Alterações da lista anunciadas por leitores de tela.
-* Estado de conexão e fonte do documento comunicados por texto e ícone, **nunca apenas por cor**.
+* Fonte do documento comunicada por texto e ícone, **nunca apenas por cor**. O estado de conexão da fonte é apresentado na tela de configurações — não no cabeçalho — e ali segue a mesma regra.
 * Contraste mínimo de 4.5:1.
 
 > **Pendente:** os contrastes precisam ser conferidos no Figma contra o protótipo. Os valores adotados no código foram calculados para atender à proporção, mas não foram validados contra o arquivo de design.
