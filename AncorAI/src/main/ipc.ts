@@ -7,6 +7,7 @@ import * as cofre from './credenciais/cofre';
 import * as servico from './busca/servico';
 import { estadoDaSincronizacao, ingerirAcervo } from './conteudo/ingestao';
 import * as resumos from './llm/resumos';
+import { pilhaDe } from './relacoes/pilha';
 
 /**
  * Registro dos canais IPC.
@@ -94,6 +95,12 @@ export function registrarCanais(): void {
   // Devolve situação — pronto, tem resumo, motivo — e nunca o texto em si.
   ipcMain.handle(CANAIS.prepararConteudo, (_evento, documento: Documento) =>
     resumos.prepararConteudo(documento)
+  );
+
+  // Devolve a pilha de relacionados — identificação, nome, link e rótulos em
+  // comum. O texto de onde os rótulos saíram não acompanha (ADR-0005).
+  ipcMain.handle(CANAIS.relacionadosDoDocumento, (_evento, documento: Documento) =>
+    pilhaDe(documento.id)
   );
 
   ipcMain.handle(CANAIS.abrirDocumento, async (_evento, documento: Documento) => {

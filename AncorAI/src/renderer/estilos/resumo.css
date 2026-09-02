@@ -287,3 +287,41 @@
   color: var(--texto-suave);
   cursor: default;
 }
+
+/* --- Documentos relacionados --- */
+
+.painel__relacionados {
+  padding: 4px 20px 18px;
+}
+
+.painel__pilha {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.painel__pilha-item {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.painel__pilha-item:hover,
+.painel__pilha-item:focus-visible {
+  border-color: var(--verde-medio);
+}
+
+.painel__pilha-nome {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--texto);
+}
