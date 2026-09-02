@@ -24,7 +24,14 @@ O Google Drive integrava o escopo e foi retirado do MVP pela [ADR-0004](../Docs/
 
 Formatos com texto extraído: `md`, `txt`, `pdf`, `docx` e `epub`. Planilhas (`xls`, `xlsx`) e o `.doc` antigo continuam sendo encontrados pelo nome, mas têm o conteúdo registrado como não lido — o motivo está em `src/main/conteudo/extracao.ts`.
 
-Os resumos por IA ainda não fazem parte desta versão; estão propostos na mudança `resumos-e-indice-por-ia`.
+### Sobre o envio de conteúdo a um serviço externo
+
+Até aqui, nada do conteúdo dos documentos saía da máquina — apenas metadados e o link para a fonte original (ADR-0005). Isso muda com o resumo por IA: gerar um resumo envia o **texto do documento em foco** ao Google Gemini, no plano gratuito, cuja política permite usar o conteúdo submetido para melhorar produtos do Google e revisão humana (ADR-0006). Por isso:
+
+- O sistema pede confirmação antes do **primeiro** envio, inclusive do resumo automático do primeiro resultado, e só prossegue depois que o usuário confirma.
+- A tela de configurações mantém o aviso acessível depois disso.
+- Só o texto do documento a ser resumido viaja — nunca o acervo inteiro, nenhuma credencial e nenhum dado de outro documento.
+- Recusar o consentimento mantém busca, filtros, paginação e abertura funcionando normalmente; apenas o painel de resumo fica indisponível.
 
 ## Requisitos
 
@@ -82,6 +89,10 @@ Ao abrir pela primeira vez, o aplicativo não tem acesso a nenhuma fonte. Config
 
 Gere um **Personal Access Token** em *Settings → Developer settings → Personal access tokens*, com permissão de **leitura** nos repositórios desejados. Prefira um *fine-grained token* restrito ao necessário. Cole o token na tela de configurações.
 
+### Google Gemini (opcional)
+
+Gere uma chave de API em [aistudio.google.com](https://aistudio.google.com) e cole-a na tela de configurações para habilitar o resumo por IA. Sem ela, a busca continua funcionando normalmente — apenas o painel de resumo fica indisponível.
+
 As credenciais são cifradas pelo chaveiro do sistema operacional e nunca são reexibidas.
 
 ## Estrutura
@@ -113,7 +124,7 @@ test/
 └── seguranca/            Fronteira entre renderer e processo principal
 ```
 
-Credenciais, chamadas de rede e o conteúdo dos documentos vivem **apenas no processo main**. O renderer nunca recebe o valor de um segredo (ADR-0003) nem o texto de um documento (ADR-0005) — há teste automatizado para cada uma das duas fronteiras. O de conteúdo invoca todos os canais registrados e falha se algum devolver texto, então um canal novo é examinado sem que ninguém precise lembrar de atualizar o teste.
+Credenciais, chamadas de rede e o conteúdo dos documentos vivem **apenas no processo main**. O renderer nunca recebe o valor de um segredo (ADR-0003) nem o texto de um documento (ADR-0005) — há teste automatizado para cada uma das duas fronteiras. O de conteúdo invoca todos os canais registrados e falha se algum devolver texto, então um canal novo é examinado sem que ninguém precise lembrar de atualizar o teste. Isso não significa que o texto nunca sai da máquina: para gerar um resumo, o processo main o envia ao Google Gemini (ADR-0006) — o que muda é que ele nunca passa pelo renderer, e o envio a um serviço externo exige a confirmação do usuário.
 
 ### O que fica no banco local
 

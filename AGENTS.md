@@ -54,7 +54,7 @@ Processo em `Docs/ADR/TemplatesADR/ProcessoRegistroDecisoesArquitetura.md`; temp
 * Exige ADR toda decisão que altere tecnologia relevante, estrutura do sistema, integração, segurança, persistência ou deploy.
 * Ao substituir uma decisão vigente, **crie uma nova ADR** referenciando a anterior — nunca reescreva o histórico. Uma ADR ainda `Proposto` e não mergeada pode ser corrigida no lugar.
 * Cite nominalmente as seções dos documentos que a decisão supera.
-* Decisões vigentes: **ADR-0001** desktop com Electron; **ADR-0002** persistência NoSQL local; **ADR-0003** credenciais pela interface; **ADR-0004** remoção do Google Drive do MVP.
+* Decisões vigentes: **ADR-0001** desktop com Electron; **ADR-0002** persistência NoSQL local; **ADR-0003** credenciais pela interface; **ADR-0004** remoção do Google Drive do MVP; **ADR-0005** armazenamento local do conteúdo dos documentos; **ADR-0006** envio do texto dos documentos a serviço externo de IA.
 
 ### ADRs vigentes
 
@@ -63,6 +63,9 @@ Processo em `Docs/ADR/TemplatesADR/ProcessoRegistroDecisoesArquitetura.md`; temp
 | 0001 | Aplicação desktop com Electron | Pesquisa §2.3, §21 |
 | 0002 | Banco NoSQL local no lugar do Firebase | Pesquisa §4.5, §12, §17 |
 | 0003 | Credenciais configuradas pela interface | Pesquisa §13, RNF02 |
+| 0004 | Remoção do Google Drive do MVP | — |
+| 0005 | Armazenamento local do conteúdo dos documentos | cláusula da ADR-0002 sobre não guardar conteúdo |
+| 0006 | Envio do texto dos documentos a serviço externo de IA | — |
 
 ## 5. Fluxo OpenSpec
 
@@ -139,7 +142,7 @@ Definido em `Docs/Organizacao/Processo/PadronizacaoDeRepositorio.md`.
 
 Não implemente sem decisão da equipe:
 
-* **Resumos por IA** (RF13–RF19, RN12–RN21) — adiados, mas o banco já reserva os campos.
+* **Índice local e busca por contexto** (assunto, tipo e etiquetas de todo o acervo) — mudança `resumos-e-indice-por-ia`, ainda não iniciada. Resumo do documento em foco já não está adiado: ver `painel-de-resumo-por-ia` e a seção "Postura de dados" acima.
 * **Autenticação, login e perfil** — fora de escopo.
 * **Índice de documentos e busca por assunto/etiquetas** — proposto na mudança `resumos-e-indice-por-ia`. Não confundir com a busca por conteúdo literal, que já está implementada (ver seção 6).
 * **Autor nos resultados** — custo de uma requisição adicional por arquivo no GitHub.
