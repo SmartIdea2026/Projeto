@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { App } from '../../src/renderer/App';
 import type { Documento, ResultadoBusca, StatusFonte } from '../../src/compartilhado/tipos';
-import { CONECTADO, montarApi, instalarApi } from './apoio';
+import { CONECTADO, montarApi, instalarApi, VOZ_PRONTA } from './apoio';
 
 /**
  * Ordem de tabulação e alcance por teclado (ui-spec, seção 5).
@@ -129,6 +129,33 @@ describe('ordem de tabulação da tela principal', () => {
       rotulos.indexOf('Cole a chave do Google AI Studio')
     );
     expect(rotulos.at(-1)).toBe('Fechar');
+  });
+
+  it('sem a busca por voz ativa, a região de busca tem só dois focáveis', async () => {
+    render(<App />);
+    await waitFor(() => expect(document.querySelector('.cartao__nome')).not.toBeNull());
+
+    const naBusca = focaveis().filter((e) => e.closest('.busca'));
+    expect(naBusca).toHaveLength(2);
+  });
+
+  it('com a busca por voz ativa, o microfone entra na tabulação da região de busca', async () => {
+    instalarApi(montarApi(RECENTES, { estadoVoz: vi.fn(async () => VOZ_PRONTA) }));
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /ditar o termo de busca/i })).toBeInTheDocument()
+    );
+
+    const mic = screen.getByRole('button', { name: /ditar o termo de busca/i });
+    expect(mic).not.toHaveAttribute('tabindex');
+    expect(mic.closest('.busca')).not.toBeNull();
+
+    const ordem = focaveis();
+    const campo = screen.getByLabelText('Buscar pelo nome do documento');
+    const buscar = screen.getByRole('button', { name: 'Buscar' });
+    // Campo → microfone → Buscar, na leitura visual da barra.
+    expect(ordem.indexOf(campo)).toBeLessThan(ordem.indexOf(mic));
+    expect(ordem.indexOf(mic)).toBeLessThan(ordem.indexOf(buscar));
   });
 
   it('o campo de busca recebe o foco na abertura', async () => {
