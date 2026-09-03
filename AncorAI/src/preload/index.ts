@@ -87,6 +87,9 @@ const api = {
   relacionadosDoDocumento: (documento: Documento): Promise<RespostaRelacionados> =>
     ipcRenderer.invoke(CANAIS.relacionadosDoDocumento, documento),
 
+  categoriasDisponiveis: (): Promise<string[]> =>
+    ipcRenderer.invoke(CANAIS.categoriasDisponiveis),
+
   abrirDocumento: (documento: Documento): Promise<void> =>
     ipcRenderer.invoke(CANAIS.abrirDocumento, documento),
 

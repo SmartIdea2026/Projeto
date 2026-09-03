@@ -83,6 +83,11 @@ export const CANAIS = {
    * etapa de leitura da etapa de geração sem inventar a transição.
    */
   prepararConteudo: 'resumo:preparar',
+  /**
+   * Categorias já atribuídas a algum documento do acervo (categorizar-
+   * documentos-pelo-resumo), para popular o dropdown do filtro por categoria.
+   */
+  categoriasDisponiveis: 'busca:categorias',
 
   /**
    * Pilha de documentos relacionados ao documento em foco.

@@ -87,9 +87,10 @@ describe('ordem de tabulação da tela principal', () => {
     // A ordenação fica entre os filtros e a lista, à direita do contador,
     // conforme o protótipo — e a tabulação acompanha essa leitura.
     //
-    // Os filtros são dois: a extensão e o botão de período. Os campos de data
-    // vivem dentro do painel do período e só entram na tabulação quando ele
-    // está aberto, que é o comportamento correto para conteúdo recolhido.
+    // Os filtros são três: extensão, categoria e o botão de período. Os
+    // campos de data vivem dentro do painel do período e só entram na
+    // tabulação quando ele está aberto, que é o comportamento correto para
+    // conteúdo recolhido.
     //
     // Cada resultado tem duas ações — gerar resumo e abrir na fonte — e o
     // painel de resumo vem depois da lista, que é onde ele aparece na tela.
@@ -99,7 +100,8 @@ describe('ordem de tabulação da tela principal', () => {
       'cabecalho',
       'busca',
       'busca',
-      // Buscar no conteúdo, extensão e período.
+      // Buscar no conteúdo, extensão, categoria e período.
+      'filtros',
       'filtros',
       'filtros',
       'filtros',

@@ -35,7 +35,7 @@ function doc(nome: string): Documento {
 /** Acrescenta um documento ao inventário e, se `rotulos` vier, o classifica. */
 async function registrar(
   documento: Documento,
-  rotulos?: { tipo: string; assuntos: string[] }
+  rotulos?: { categoria: string; assuntos: string[] }
 ) {
   inventario.push(documento);
   await banco.sincronizarInventario(inventario);
@@ -49,7 +49,7 @@ async function registrar(
   });
   await banco.gravarResumo(documento.id, {
     resumo: 'Resumo.',
-    tipo: rotulos.tipo,
+    categoria: rotulos.categoria,
     assuntos: rotulos.assuntos,
     destaques: ['ponto']
   });
@@ -79,12 +79,12 @@ describe('peso inverso à frequência', () => {
 describe('montagem da pilha', () => {
   it('relaciona documentos pela sobreposição de assuntos, do mais próximo ao menos', async () => {
     // "comum" está em todo mundo; "nicho" e "raro" em poucos.
-    await registrar(doc('foco.md'), { tipo: 'Ata', assuntos: ['comum', 'nicho', 'raro'] });
-    await registrar(doc('proximo.md'), { tipo: 'Nota', assuntos: ['comum', 'nicho', 'raro'] });
-    await registrar(doc('meio.md'), { tipo: 'Nota', assuntos: ['comum', 'nicho'] });
-    await registrar(doc('distante.md'), { tipo: 'Nota', assuntos: ['comum', 'solto'] });
-    await registrar(doc('enche1.md'), { tipo: 'Nota', assuntos: ['comum'] });
-    await registrar(doc('enche2.md'), { tipo: 'Nota', assuntos: ['comum'] });
+    await registrar(doc('foco.md'), { categoria: 'Ata', assuntos: ['comum', 'nicho', 'raro'] });
+    await registrar(doc('proximo.md'), { categoria: 'Nota', assuntos: ['comum', 'nicho', 'raro'] });
+    await registrar(doc('meio.md'), { categoria: 'Nota', assuntos: ['comum', 'nicho'] });
+    await registrar(doc('distante.md'), { categoria: 'Nota', assuntos: ['comum', 'solto'] });
+    await registrar(doc('enche1.md'), { categoria: 'Nota', assuntos: ['comum'] });
+    await registrar(doc('enche2.md'), { categoria: 'Nota', assuntos: ['comum'] });
 
     const { pilha, semClassificacao } = await pilhaDe('github:org/repo:foco.md');
 
@@ -95,12 +95,12 @@ describe('montagem da pilha', () => {
   });
 
   it('um único assunto raro em comum já basta para entrar', async () => {
-    await registrar(doc('foco.md'), { tipo: 'Ata', assuntos: ['raro', 'a', 'b'] });
-    await registrar(doc('so-raro.md'), { tipo: 'Nota', assuntos: ['raro', 'x', 'y'] });
+    await registrar(doc('foco.md'), { categoria: 'Ata', assuntos: ['raro', 'a', 'b'] });
+    await registrar(doc('so-raro.md'), { categoria: 'Nota', assuntos: ['raro', 'x', 'y'] });
     // Enchimento com assuntos próprios: "raro" fica em 2 de 16 documentos, e
     // seu peso passa do limiar — um assunto em comum só, mas raro, basta.
     for (let i = 0; i < 14; i += 1) {
-      await registrar(doc(`enche${i}.md`), { tipo: 'Nota', assuntos: [`t${i}`, `u${i}`] });
+      await registrar(doc(`enche${i}.md`), { categoria: 'Nota', assuntos: [`t${i}`, `u${i}`] });
     }
 
     const { pilha } = await pilhaDe('github:org/repo:foco.md');
@@ -109,10 +109,10 @@ describe('montagem da pilha', () => {
   });
 
   it('deixa fora quem compartilha só um assunto comum', async () => {
-    await registrar(doc('foco.md'), { tipo: 'Ata', assuntos: ['comum', 'x'] });
-    await registrar(doc('so-comum.md'), { tipo: 'Nota', assuntos: ['comum', 'z'] });
-    await registrar(doc('enche1.md'), { tipo: 'Nota', assuntos: ['comum'] });
-    await registrar(doc('enche2.md'), { tipo: 'Nota', assuntos: ['comum'] });
+    await registrar(doc('foco.md'), { categoria: 'Ata', assuntos: ['comum', 'x'] });
+    await registrar(doc('so-comum.md'), { categoria: 'Nota', assuntos: ['comum', 'z'] });
+    await registrar(doc('enche1.md'), { categoria: 'Nota', assuntos: ['comum'] });
+    await registrar(doc('enche2.md'), { categoria: 'Nota', assuntos: ['comum'] });
 
     const { pilha } = await pilhaDe('github:org/repo:foco.md');
 
@@ -120,8 +120,8 @@ describe('montagem da pilha', () => {
   });
 
   it('nunca inclui o próprio documento em foco', async () => {
-    await registrar(doc('foco.md'), { tipo: 'Ata', assuntos: ['a', 'b'] });
-    await registrar(doc('outro.md'), { tipo: 'Ata', assuntos: ['a', 'b'] });
+    await registrar(doc('foco.md'), { categoria: 'Ata', assuntos: ['a', 'b'] });
+    await registrar(doc('outro.md'), { categoria: 'Ata', assuntos: ['a', 'b'] });
 
     const { pilha } = await pilhaDe('github:org/repo:foco.md');
 
@@ -129,9 +129,9 @@ describe('montagem da pilha', () => {
   });
 
   it('corta a pilha no teto', async () => {
-    await registrar(doc('foco.md'), { tipo: 'Ata', assuntos: ['a', 'b', 'c'] });
+    await registrar(doc('foco.md'), { categoria: 'Ata', assuntos: ['a', 'b', 'c'] });
     for (let i = 0; i < TETO_PILHA + 3; i += 1) {
-      await registrar(doc(`rel${i}.md`), { tipo: 'Nota', assuntos: ['a', 'b', 'c'] });
+      await registrar(doc(`rel${i}.md`), { categoria: 'Nota', assuntos: ['a', 'b', 'c'] });
     }
 
     const { pilha } = await pilhaDe('github:org/repo:foco.md');
@@ -139,24 +139,28 @@ describe('montagem da pilha', () => {
     expect(pilha).toHaveLength(TETO_PILHA);
   });
 
-  it('desempata pelo mesmo tipo do documento em foco', async () => {
-    await registrar(doc('foco.md'), { tipo: 'Ata', assuntos: ['a', 'b'] });
-    await registrar(doc('mesma-especie.md'), { tipo: 'Ata', assuntos: ['a', 'b'] });
-    await registrar(doc('outra-especie.md'), { tipo: 'Relatório', assuntos: ['a', 'b'] });
+  it('desempata pela mesma categoria do documento em foco', async () => {
+    // Nomes de propósito na ordem alfabética contrária ao resultado esperado:
+    // se o bônus de categoria não estiver em vigor, o desempate por nome
+    // aprovaria o teste do jeito errado — a ordem alfabética sozinha já
+    // colocaria "a-outra-categoria" primeiro.
+    await registrar(doc('foco.md'), { categoria: 'Ata', assuntos: ['a', 'b'] });
+    await registrar(doc('z-mesma-categoria.md'), { categoria: 'Ata', assuntos: ['a', 'b'] });
+    await registrar(doc('a-outra-categoria.md'), { categoria: 'Relatório', assuntos: ['a', 'b'] });
 
     const { pilha } = await pilhaDe('github:org/repo:foco.md');
 
     expect(pilha.map((item) => item.nome)).toEqual([
-      'mesma-especie.md',
-      'outra-especie.md'
+      'z-mesma-categoria.md',
+      'a-outra-categoria.md'
     ]);
   });
 });
 
 describe('cobertura parcial', () => {
   it('avisa quantos documentos ainda não foram classificados', async () => {
-    await registrar(doc('foco.md'), { tipo: 'Ata', assuntos: ['a', 'b'] });
-    await registrar(doc('rel.md'), { tipo: 'Nota', assuntos: ['a', 'b'] });
+    await registrar(doc('foco.md'), { categoria: 'Ata', assuntos: ['a', 'b'] });
+    await registrar(doc('rel.md'), { categoria: 'Nota', assuntos: ['a', 'b'] });
     await registrar(doc('sem1.md'));
     await registrar(doc('sem2.md'));
     await registrar(doc('sem3.md'));
@@ -167,8 +171,8 @@ describe('cobertura parcial', () => {
   });
 
   it('não avisa quando todo o inventário está classificado', async () => {
-    await registrar(doc('foco.md'), { tipo: 'Ata', assuntos: ['a', 'b'] });
-    await registrar(doc('rel.md'), { tipo: 'Nota', assuntos: ['a', 'b'] });
+    await registrar(doc('foco.md'), { categoria: 'Ata', assuntos: ['a', 'b'] });
+    await registrar(doc('rel.md'), { categoria: 'Nota', assuntos: ['a', 'b'] });
 
     const { aviso } = await pilhaDe('github:org/repo:foco.md');
 
@@ -179,7 +183,7 @@ describe('cobertura parcial', () => {
 describe('documento em foco sem classificação', () => {
   it('devolve pilha vazia e a marca de sem classificação, sem erro', async () => {
     await registrar(doc('foco.md'));
-    await registrar(doc('rel.md'), { tipo: 'Nota', assuntos: ['a', 'b'] });
+    await registrar(doc('rel.md'), { categoria: 'Nota', assuntos: ['a', 'b'] });
 
     const resposta = await pilhaDe('github:org/repo:foco.md');
 

@@ -61,7 +61,7 @@ export function resumoDe(documento: Documento): ResumoDocumento {
   return {
     documentoId: documento.id,
     resumo: `Resumo de ${documento.nome}.`,
-    tipo: 'Documento',
+    categoria: 'Ata',
     assuntos: ['exemplo'],
     destaques: ['Primeiro ponto', 'Segundo ponto'],
     geradoEm: '2026-08-28T12:00:00Z',
@@ -126,6 +126,7 @@ export function montarApi(resultado: ResultadoBusca, sobrescritas: Sobrescritas 
       pilha: [],
       semClassificacao: false
     })),
+    categoriasDisponiveis: vi.fn(async () => [] as string[]),
 
     // Busca por voz desligada por padrão — o microfone não entra na tela nem
     // na tabulação. O teste que exercita o ditado sobrescreve com VOZ_PRONTA.
