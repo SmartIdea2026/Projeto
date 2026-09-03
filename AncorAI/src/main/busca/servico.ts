@@ -15,7 +15,6 @@ import { ErroFonte } from '../fontes/comum';
 import { aplicarFiltros, fonteSelecionada, ordenar, unificar } from './regras';
 import { gravarValidacao, lerValidacao } from '../credenciais/validacao';
 import {
-  categoriasDeDocumentos,
   conteudoParaBusca,
   documentosSemAutoria,
   gravarCache,
@@ -295,13 +294,15 @@ async function buscarNoSnapshot(
   const conteudo = querBuscaNoConteudo(filtros) ? await conteudoParaBusca() : null;
   const filtrados = aplicarFiltros(documentos, filtros, conteudo?.textos);
 
-  const avisos = [
-    ...avisarSobreAlcanceDoPeriodo(documentos, filtros),
-    ...(await avisarSobreAutoriaPendente(filtros)),
-    ...avisarSobreAlcanceDoConteudo(documentos, conteudo?.versoes)
-  ];
-
-  return apresentar(filtrados, filtros, { falhas: [], doCache: true, avisos });
+  return apresentar(filtrados, filtros, {
+    falhas: [],
+    doCache: true,
+    avisos: [
+      ...avisarSobreAlcanceDoPeriodo(documentos, filtros),
+      ...(await avisarSobreAutoriaPendente(filtros)),
+      ...avisarSobreAlcanceDoConteudo(documentos, conteudo?.versoes)
+    ]
+  });
 }
 
 /** Busca consultando a fonte ao vivo, resolvendo autoria e data no momento. */
@@ -408,34 +409,14 @@ const TETO_RECENTES = 30;
  * alfabética" — troca o conteúdo da lista, e não apenas a ordem dela, sem que
  * nada na tela indique que isso aconteceu.
  */
-async function prepararRecentes(bruto: ResultadoBusca, filtros: Filtros): Promise<ResultadoBusca> {
-  const comCategoria = await comCategoriaConhecida(bruto.documentos);
-  const filtrados = aplicarFiltros(comCategoria, { ...filtros, termo: '' });
+function prepararRecentes(bruto: ResultadoBusca, filtros: Filtros): ResultadoBusca {
+  const filtrados = aplicarFiltros(bruto.documentos, { ...filtros, termo: '' });
   const maisRecentes = ordenar(filtrados, 'data-desc').slice(0, TETO_RECENTES);
 
   return apresentar(maisRecentes, filtros, {
     falhas: bruto.falhas,
     avisos: bruto.avisos,
     doCache: bruto.doCache
-  });
-}
-
-/**
- * Completa os documentos da janela de recentes com a categoria já conhecida
- * no acervo local (`categorizar-documentos-pelo-resumo`).
- *
- * A janela vem direto do GitHub — nenhum documento dela carrega categoria por
- * conta própria, mesmo que o acervo já tenha um resumo gerado para ele. Sem
- * isto, o selo de categoria só aparecia depois de o usuário aplicar o filtro,
- * que é a única outra rota que passa pelo acervo.
- */
-async function comCategoriaConhecida(documentos: Documento[]): Promise<Documento[]> {
-  const categorias = await categoriasDeDocumentos(documentos.map((documento) => documento.id));
-  if (categorias.size === 0) return documentos;
-
-  return documentos.map((documento) => {
-    const categoria = categorias.get(documento.id);
-    return categoria ? { ...documento, categoria } : documento;
   });
 }
 
@@ -471,21 +452,17 @@ export async function recentes(filtros: Filtros): Promise<ResultadoBusca> {
  * Verdadeiro quando os filtros vigentes exigem percorrer o acervo.
  *
  * A janela de recentes cobre, por desenho, apenas os commits mais recentes de
- * alguns repositórios, com os documentos vindos direto do GitHub — sem
- * nenhum dado que more só no acervo local. É o recorte certo para abrir a
- * aplicação — barato e com data real — e o recorte errado para responder a um
- * filtro de período ou de categoria: um intervalo anterior à janela devolve
- * lista vazia, indistinguível, para quem olha a tela, de um acervo que
- * realmente não tem documentos ali; e a categoria, por só existir no acervo,
- * descartaria todo documento da janela, vazia ou não.
+ * alguns repositórios. É o recorte certo para abrir a aplicação — barato e com
+ * data real — e o recorte errado para responder a um filtro de período: um
+ * intervalo anterior à janela devolve lista vazia, e uma lista vazia é
+ * indistinguível, para quem olha a tela, de um acervo que realmente não tem
+ * documentos naquele intervalo.
  *
  * A condição vive aqui, e só aqui, porque a escolha da rota é uma decisão sobre
  * o que a consulta precisa alcançar — não sobre o que a tela está exibindo.
  */
 export function exigeAcervo(filtros: Filtros): boolean {
-  return Boolean(
-    filtros.termo.trim() || filtros.dataInicial || filtros.dataFinal || filtros.categoria
-  );
+  return Boolean(filtros.termo.trim() || filtros.dataInicial || filtros.dataFinal);
 }
 
 async function executarRecentes(filtros: Filtros): Promise<ResultadoBusca> {

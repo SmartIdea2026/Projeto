@@ -35,37 +35,12 @@ pendente ou depende de outra pessoa.
 Não abra com fórmulas como "este documento" ou "o presente texto". Vá ao ponto.
 Não repita o nome do arquivo: ele já está na tela, logo acima do resumo.
 
-**`categoria`** — um único rótulo, escolhido exclusivamente da lista fechada
-abaixo, que responde **o que o documento é**, não do que ele trata.
-
-Lista fechada de categorias permitidas:
-
-- Ata
-- ADR
-- Especificação
-- Levantamento
-- Pesquisa
-- Processo
-- Padrão
-- Manual
-- Relatório
-- Contrato
-- Edital
-- Formulário
-- Glossário
-- Template
-
-Nunca devolva um rótulo fora desta lista, mesmo que pareça descrever melhor o
-documento do que qualquer item dela — a lista existe justamente para que dois
-documentos do mesmo gênero recebam sempre o mesmo rótulo. Se nenhum item se
-aplica com confiança, não inclua o campo `categoria` na resposta (ver "Quando
-o texto não dá base") — nunca um rótulo genérico como "Documento".
-
-Esta lista pode crescer por Pull Request se um gênero recorrente do acervo não
-estiver representado nela.
+**`tipo`** — uma ou duas palavras classificando o documento. Por exemplo: Ata,
+Especificação, Registro de decisão, Levantamento, Pesquisa, Manual, Relatório.
+Se o texto não permitir classificar com segurança, use "Documento".
 
 **`assuntos`** — de dois a cinco termos curtos sobre o que o documento trata.
-Substantivos, em minúsculas, sem repetir a `categoria`.
+Substantivos, em minúsculas, sem repetir o `tipo`.
 
 **`destaques`** — de três a cinco pontos, uma linha cada, com o que alguém
 precisaria saber sem ler o documento inteiro: decisões tomadas, prazos,
@@ -77,7 +52,3 @@ específico. Evite pontos genéricos como "o documento aborda vários temas".
 Se o texto recebido for curto ou vago demais para sustentar o resumo, diga isso
 no `resumo`, em uma frase, em vez de alongar a partir de suposições. Prefira um
 resumo curto e verdadeiro a um resumo completo e inventado.
-
-O mesmo vale para a `categoria`: se o texto não permitir dizer com confiança
-qual item da lista fechada descreve o documento, omita o campo. Uma categoria
-ausente e correta vale mais que um palpite que parece uma classificação.

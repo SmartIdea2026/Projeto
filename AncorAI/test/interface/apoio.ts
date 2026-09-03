@@ -33,7 +33,7 @@ export function resumoDe(documento: Documento): ResumoDocumento {
   return {
     documentoId: documento.id,
     resumo: `Resumo de ${documento.nome}.`,
-    categoria: 'Ata',
+    tipo: 'Documento',
     assuntos: ['exemplo'],
     destaques: ['Primeiro ponto', 'Segundo ponto'],
     geradoEm: '2026-08-28T12:00:00Z',
@@ -93,12 +93,6 @@ export function montarApi(resultado: ResultadoBusca, sobrescritas: Sobrescritas 
     resumoDoDocumento: vi.fn(async (documento: Documento) => ({
       resumo: resumoDe(documento)
     })),
-    // Sem relacionados por padrão: o teste que exercita a pilha sobrescreve.
-    relacionadosDoDocumento: vi.fn(async () => ({
-      pilha: [],
-      semClassificacao: false
-    })),
-    categoriasDisponiveis: vi.fn(async () => [] as string[]),
 
     ...sobrescritas
   };

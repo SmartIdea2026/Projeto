@@ -16,11 +16,7 @@ import { ErroFonte, extensaoDe, extensaoEhAceita } from './comum';
  *   recentes, que é onde os arquivos alterados aparecem.
  */
 
-// Sobrepõe a URL da API sob a suíte E2E (ver `e2e/apoio/servidorMockGithub.ts`),
-// que sobe um servidor local no lugar da API real — nenhum teste deve tocar
-// rede de verdade. Fora desse cenário, a env var não existe e o valor é o de
-// sempre.
-const BASE = process.env['ANCORAI_E2E_GITHUB_BASE_URL'] || 'https://api.github.com';
+const BASE = 'https://api.github.com';
 
 interface RespostaCache<T> {
   dados: T;
@@ -282,10 +278,7 @@ interface CommitDetalheApi {
  *
  * A lista de commits não traz os arquivos alterados, por isso o detalhe dos
  * commits mais recentes é buscado individualmente — comportamento confirmado
- * contra a API real. As requisições de detalhe são disparadas em paralelo:
- * cada uma depende só do `sha` do commit, nunca do resultado de outra, e
- * esperar uma de cada vez custava, medido em uso real, a soma de todas —
- * ida e volta de rede vezes `limiteCommits`, por repositório.
+ * contra a API real.
  */
 export async function recentesDoRepositorio(
   token: string,
@@ -298,22 +291,14 @@ export async function recentesDoRepositorio(
     `github:commits:${repo.full_name}`
   );
 
-  const detalhes = await Promise.all(
-    commits.map((commit) =>
-      requisitar<CommitDetalheApi>(
-        `/repos/${repo.full_name}/commits/${commit.sha}`,
-        token,
-        `github:commit:${repo.full_name}:${commit.sha}`
-      )
-    )
-  );
-
   const encontrados = new Map<string, Documento>();
 
-  // A ordem de processamento continua a dos commits — do mais recente para o
-  // mais antigo —, mesmo com as requisições resolvendo em qualquer ordem.
-  for (const [indice, commit] of commits.entries()) {
-    const { dados: detalhe } = detalhes[indice]!;
+  for (const commit of commits) {
+    const { dados: detalhe } = await requisitar<CommitDetalheApi>(
+      `/repos/${repo.full_name}/commits/${commit.sha}`,
+      token,
+      `github:commit:${repo.full_name}:${commit.sha}`
+    );
 
     for (const arquivo of detalhe.files ?? []) {
       if (arquivo.status === 'removed') continue;

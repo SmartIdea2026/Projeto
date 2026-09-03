@@ -85,12 +85,6 @@ export interface Documento {
    */
   tamanho?: number;
   /**
-   * Categoria do documento, atribuída pelo resumo por IA a partir de uma lista
-   * fechada (`resumos-por-ia`) — ausente enquanto o documento não foi
-   * resumido, ou quando o resumo não encontrou categoria com confiança.
-   */
-  categoria?: string;
-  /**
    * Verdadeiro quando o termo da busca casou **apenas** com o texto armazenado
    * do documento — nem o nome nem o autor.
    *
@@ -111,12 +105,6 @@ export interface Filtros {
   fontes: Fonte[];
   /** Lista vazia significa todas as extensões aceitas. */
   extensoes: string[];
-  /**
-   * Categoria inferida pelo resumo por IA. Ausente significa todas as
-   * categorias — distinto de `extensoes`, que filtra pelo formato do
-   * arquivo, não pela classificação por IA.
-   */
-  categoria?: string;
   dataInicial?: string;
   dataFinal?: string;
   ordenacao: Ordenacao;
@@ -258,18 +246,14 @@ export interface RetratoSincronizacao extends ProgressoIngestao {
 /**
  * Resumo de um documento produzido por modelo de linguagem.
  *
- * `categoria`, `assuntos` e `destaques` vêm da **mesma** submissão que produz
- * o resumo em prosa: pedir separadamente custaria mais cota e abriria espaço
+ * `tipo`, `assuntos` e `destaques` vêm da **mesma** submissão que produz o
+ * resumo em prosa: pedir separadamente custaria mais cota e abriria espaço
  * para os quatro discordarem entre si.
- *
- * `categoria` vem de uma lista fechada (`CATEGORIAS_PERMITIDAS` em
- * `main/llm/gemini.ts`) — string vazia quando nenhum item da lista descreve o
- * documento com confiança, nunca um rótulo genérico.
  */
 export interface ResumoDocumento {
   documentoId: string;
   resumo: string;
-  categoria: string;
+  tipo: string;
   assuntos: string[];
   destaques: string[];
   /** ISO 8601. */
@@ -346,33 +330,4 @@ export interface DocumentoAcessado {
   fonte: Fonte;
   link: string;
   acessadoEm: string;
-}
-
-/**
- * Um documento da pilha de relacionados ao documento em foco.
- *
- * Carrega identificação, nome e o link de redirecionamento — nunca texto nem
- * trecho (ADR-0005). `score` é a proximidade calculada pela sobreposição de
- * assuntos, só para ordenar a pilha.
- */
-export interface ItemRelacionado {
-  id: string;
-  nome: string;
-  fonte: Fonte;
-  link: string;
-  score: number;
-}
-
-/**
- * Resposta do canal de documentos relacionados.
- *
- * `semClassificacao` distingue "não há relacionados" (pilha vazia, documento
- * classificado) de "ainda não dá para relacionar" (o documento em foco não tem
- * resumo). `aviso` acompanha quando parte do acervo ainda não foi classificada
- * — mesma natureza dos avisos de resultado parcial da busca.
- */
-export interface RespostaRelacionados {
-  pilha: ItemRelacionado[];
-  semClassificacao: boolean;
-  aviso?: AvisoFonte;
 }

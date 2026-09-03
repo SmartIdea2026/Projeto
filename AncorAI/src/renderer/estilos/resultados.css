@@ -96,20 +96,6 @@
 }
 
 /*
- * Categoria do documento, inferida pelo resumo por IA
- * (categorizar-documentos-pelo-resumo) — distinta da extensão do arquivo, que
- * usa a etiqueta base. Cor própria para não ser confundida com ela; o texto
- * da categoria ("Ata", "ADR") já é a diferença principal, a cor só reforça.
- */
-.etiqueta--categoria {
-  text-transform: none;
-  letter-spacing: 0;
-  background: #eef1fb;
-  border-color: #c7d0f0;
-  color: #2c3968;
-}
-
-/*
  * Marca "encontrado no conteúdo": ícone + rótulo próprios, distinta das demais
  * etiquetas e nunca só por cor. Contraste do texto verde-escuro (#14432f) sobre
  * o fundo #e6f0ea é ~9:1, bem acima do mínimo de 4.5:1.

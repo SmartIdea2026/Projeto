@@ -2,12 +2,11 @@ import { ipcMain, shell } from 'electron';
 import { CANAIS } from '../compartilhado/canais';
 import type { Documento, Filtros, Fonte } from '../compartilhado/tipos';
 import { FILTROS_PADRAO } from '../compartilhado/tipos';
-import { categoriasDisponiveis, listarAcessados, registrarAcesso } from './banco/repositorio';
+import { listarAcessados, registrarAcesso } from './banco/repositorio';
 import * as cofre from './credenciais/cofre';
 import * as servico from './busca/servico';
 import { estadoDaSincronizacao, ingerirAcervo } from './conteudo/ingestao';
 import * as resumos from './llm/resumos';
-import { pilhaDe } from './relacoes/pilha';
 
 /**
  * Registro dos canais IPC.
@@ -97,22 +96,9 @@ export function registrarCanais(): void {
     resumos.prepararConteudo(documento)
   );
 
-  // Devolve a pilha de relacionados — identificação, nome, link e rótulos em
-  // comum. O texto de onde os rótulos saíram não acompanha (ADR-0005).
-  ipcMain.handle(CANAIS.relacionadosDoDocumento, (_evento, documento: Documento) =>
-    pilhaDe(documento.id)
-  );
-
-  ipcMain.handle(CANAIS.categoriasDisponiveis, () => categoriasDisponiveis());
-
   ipcMain.handle(CANAIS.abrirDocumento, async (_evento, documento: Documento) => {
     await registrarAcesso(documento);
-    // Sob a suíte E2E (mesma env var que isola `userData`, ver `main/index.ts`),
-    // não abre de fato um navegador externo — o registro de acesso acima já é
-    // o efeito observável que o teste verifica.
-    if (!process.env['ANCORAI_E2E_USER_DATA_DIR']) {
-      await shell.openExternal(documento.link);
-    }
+    await shell.openExternal(documento.link);
   });
 
   ipcMain.handle(CANAIS.documentosAcessados, () => listarAcessados());
