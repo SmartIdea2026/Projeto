@@ -4,6 +4,9 @@ import { inicializarCofre } from './credenciais/cofre';
 import { ingerirAcervo } from './conteudo/ingestao';
 import { registrarCanais } from './ipc';
 import { inicializarInstrucao } from './llm/instrucao';
+import { configurarPermissoes } from './permissoes';
+import { inicializarConfigVoz } from './voz/config';
+import { encerrarVoz, inicializarVoz } from './voz/transcricao';
 import { criarJanela } from './janela';
 
 /**
@@ -28,6 +31,14 @@ void app.whenReady().then(async () => {
   // Empacotada, ela vem em `resources/`; em desenvolvimento, da raiz do projeto.
   inicializarInstrucao(process.resourcesPath, app.getAppPath());
 
+  // A configuração da transcrição de voz segue o mesmo padrão. O modelo é
+  // baixado sob demanda para `userData/modelos` (ADR-0008).
+  inicializarConfigVoz(process.resourcesPath, app.getAppPath());
+  inicializarVoz(app.getPath('userData'));
+
+  // Só microfone (áudio), só para a janela da aplicação. O resto é negado.
+  configurarPermissoes();
+
   registrarCanais();
   criarJanela();
 
@@ -47,4 +58,7 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('will-quit', fecharBanco);
+app.on('will-quit', () => {
+  encerrarVoz();
+  fecharBanco();
+});

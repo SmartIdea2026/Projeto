@@ -67,6 +67,7 @@ A aplicação executa inteiramente no cliente. Não há servidor próprio.
 | Interface | React + TypeScript |
 | Build | electron-vite |
 | Persistência | Banco NoSQL de documentos, local (ADR-0002) |
+| Transcrição de voz | Whisper local (`onnx-community/whisper-small` q8, ~250 MB, baixado sob demanda) via `@huggingface/transformers` + `onnxruntime-node`, em `utilityProcess` (ADR-0008) |
 | Testes | Vitest |
 | Distribuição | electron-builder |
 
@@ -99,8 +100,18 @@ A lista guardada aparece **antes** de qualquer requisição: abrir a aplicação
 
 ### 3.2 Busca
 
+O termo pode ser digitado ou **ditado** (ADR-0008): com a busca por voz ativada, o
+usuário toca no microfone, fala, e a transcrição local preenche o campo. A busca
+não dispara sozinha — o usuário confere o texto e confirma, como numa busca
+digitada. A transcrição é literal e em pt-BR — a fala não é traduzida. No
+primeiro acionamento, uma confirmação dentro do app pede o uso do microfone antes
+de qualquer acesso a ele; a decisão é lembrada. O microfone de captura pode ser
+escolhido em Configurações → Busca por voz (o padrão acompanha o dispositivo do
+sistema); se o escolhido estiver indisponível, a captura recai no padrão do
+sistema.
+
 ```text
-Usuário informa o termo e confirma
+Usuário informa o termo (digitado ou ditado) e confirma
         ↓
 Sistema identifica as fontes selecionadas
         ↓
@@ -163,8 +174,11 @@ A distinção é importante: **alterar filtro consulta as fontes novamente**, en
 | **RF26** | Apresentar documentos modificados recentemente na abertura | Implementado |
 | **RF27** | Configurar as credenciais pela interface | Implementado |
 | **RF28** | Registrar localmente os documentos acessados | Implementado |
+| **RF29** | Ditar o termo de busca por voz, transcrito por modelo local, preenchendo o campo sem disparar a busca (ADR-0008) | Implementado |
+| **RF30** | Ativar a busca por voz nas configurações, baixando o modelo sob demanda | Implementado |
+| **RF31** | Confirmar o uso do microfone no primeiro acionamento do ditado e escolher o dispositivo de captura nas configurações (ADR-0008) | Implementado |
 
-RF26, RF27 e RF28 são novos e não constam do levantamento original.
+RF26–RF31 são novos e não constam do levantamento original.
 
 ### Requisitos adiados
 
@@ -185,6 +199,7 @@ RF26, RF27 e RF28 são novos e não constam do levantamento original.
 | **RNF04** | As credenciais permanecem fora da camada de interface |
 | **RNF05** | O sistema opera sem servidor centralizado |
 | **RNF06** | A interface é operável por teclado e não comunica informação apenas por cor |
+| **RNF07** | A transcrição da busca por voz roda na máquina do usuário; o áudio não é enviado a serviço externo nem gravado (ADR-0008) |
 
 ## 6. Regras de negócio
 
@@ -309,8 +324,9 @@ Tela única de busca, com tela de configurações acessível pelo cabeçalho.
 │      Todos os documentos do seu GitHub em um só lugar    │
 │                                                          │
 │   ┌────────────────────────────────────────────────┐     │
-│   │ 🔍 Buscar pelo nome do documento…    [Buscar]  │     │
+│   │ 🔍 Buscar pelo nome do documento…  🎙 [Buscar] │     │
 │   └────────────────────────────────────────────────┘     │
+│      (🎙 só aparece com a busca por voz ativada)         │
 │                                                          │
 │           [Tipo: todos] [Período] [Ordenação]            │
 │                                                          │
@@ -337,6 +353,8 @@ Tela única de busca, com tela de configurações acessível pelo cabeçalho.
 ### Estados obrigatórios
 
 *Default*, *hover*, *focus*, *loading*, *empty* de busca, *empty* de credenciais, *error* por fonte e *filtro ativo*.
+
+Para o controle de voz (ADR-0008): *default*, *hover*, *focus*, *escutando*, *transcrevendo*, *vazio* ("Não ouvi nada, tente de novo"), *error* e *desabilitado* (permissão de microfone negada). Escuta e transcrição são dois *loadings* distintos, cada um anunciado a leitores de tela e distinguível sem depender só de cor. No primeiro acionamento há ainda o diálogo de confirmação de uso do microfone (*default* e recusado); nas configurações, a escolha do microfone tem o estado sem-rótulos (oferece "permitir para listar") e o estado com a lista disponível.
 
 ### Acessibilidade
 

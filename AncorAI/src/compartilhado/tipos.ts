@@ -376,3 +376,103 @@ export interface RespostaRelacionados {
   semClassificacao: boolean;
   aviso?: AvisoFonte;
 }
+
+/**
+ * Busca por voz (ADR-0008).
+ *
+ * O ditado converte a fala em texto no campo de busca, com um modelo Whisper
+ * que roda na máquina do usuário. O áudio não sai do computador nem é gravado.
+ */
+
+/** Situação do arquivo do modelo de transcrição no disco. */
+export type EstadoModeloVoz = 'ausente' | 'baixando' | 'pronto' | 'erro';
+
+/** Resultado da última tentativa de acesso ao microfone. */
+export type PermissaoMicrofone = 'concedida' | 'negada' | 'desconhecida';
+
+/**
+ * Parâmetros de captura, vindos de `instrucoes/transcricao.md`.
+ *
+ * Valem no renderer: são o limiar e a duração que encerram a gravação, e a
+ * taxa para a qual o áudio é reamostrado antes de ir para a transcrição.
+ */
+export interface CapturaVoz {
+  silencioLimiarRms: number;
+  silencioDuracaoMs: number;
+  duracaoMaximaS: number;
+  taxaAmostragemHz: number;
+}
+
+/**
+ * Um microfone que o navegador conhece, do ponto de vista do renderer.
+ *
+ * `rotulo` só vem preenchido depois que a permissão de microfone foi concedida
+ * ao menos uma vez; antes disso o navegador entrega a lista sem nomes.
+ */
+export interface MicrofoneDisponivel {
+  /** `deviceId` do dispositivo. */
+  id: string;
+  /** Nome legível; vazio enquanto a permissão nunca foi concedida. */
+  rotulo: string;
+}
+
+/**
+ * Ajuste da configuração de microfone da busca por voz.
+ *
+ * Campos ausentes ficam como estão. `dispositivoId: null` volta ao microfone
+ * padrão do sistema.
+ */
+export interface AjusteMicrofoneVoz {
+  /** Registra o consentimento explícito do usuário para usar o microfone. */
+  consentido?: boolean;
+  /** `deviceId` do microfone escolhido; `null` volta ao padrão do sistema. */
+  dispositivoId?: string | null;
+}
+
+/**
+ * Estado consolidado da busca por voz, para a barra de busca e as configurações.
+ *
+ * `vozAtiva` é a preferência do usuário; `modelo` é derivado do disco. O ícone
+ * de microfone só aparece com `vozAtiva && modelo === 'pronto'`.
+ */
+export interface EstadoVoz {
+  vozAtiva: boolean;
+  modelo: EstadoModeloVoz;
+  /** 0 a 1 enquanto `modelo === 'baixando'`. */
+  progresso?: number;
+  permissao: PermissaoMicrofone;
+  /**
+   * O usuário já autorizou explicitamente o AncorAI a usar o microfone.
+   *
+   * Diferente de `permissao`: esta é a decisão registrada pela aplicação (o
+   * "permitir" do primeiro uso), enquanto `permissao` é o resultado do navegador
+   * na última tentativa. O modal de consentimento só aparece com isto `false`.
+   */
+  microfoneConsentido: boolean;
+  /** `deviceId` do microfone escolhido, ou `null` para o padrão do sistema. */
+  microfoneId: string | null;
+  /** Presente quando `modelo === 'erro'`: por que o download não completou. */
+  mensagemErro?: string;
+  captura: CapturaVoz;
+}
+
+/** Andamento do download do modelo, emitido em `EVENTOS_VOZ.modeloProgresso`. */
+export interface ProgressoModeloVoz {
+  recebidos: number;
+  total: number;
+  arquivo: string;
+}
+
+/**
+ * Por que uma transcrição não produziu texto.
+ *
+ * `modelo-ausente` não deveria acontecer com a interface correta (o ícone só
+ * aparece com o modelo pronto), mas o canal é defensivo. `vazio` é silêncio ou
+ * ruído sem fala — a interface avisa e não mexe no campo.
+ */
+export type MotivoErroVoz = 'modelo-ausente' | 'falha-transcricao' | 'vazio';
+
+export interface RespostaTranscricao {
+  texto: string | null;
+  motivo?: MotivoErroVoz;
+}

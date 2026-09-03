@@ -78,6 +78,18 @@ Organizado por assunto, e não em ordem alfabética: os termos se explicam melho
 
 **Autoria pendente no snapshot** — caso análogo, emitido quando a busca é servida do *snapshot do inventário* e ainda há documentos sem autoria resolvida: eles foram procurados apenas pelo nome. Substitui, nesse caminho, o aviso de "considerou os N primeiros" da consulta ao vivo — ali há um teto por consulta; no snapshot a autoria é resolvida pela sincronização para todo o acervo. Some quando a sincronização termina.
 
+## Busca por voz
+
+**Ditado na busca** — preencher o campo de busca falando, em vez de digitando. O que o usuário fala é transcrito e vira o texto do campo; a busca **não** dispara sozinha — a confirmação continua sendo um ato do usuário, como numa busca digitada. Não há interpretação de comando: tudo o que se fala é tratado como termo de busca (ADR-0008).
+
+**Transcrição local** — a conversão da fala em texto feita **na máquina do usuário**, sem enviar o áudio a nenhum serviço externo. É o oposto do resumo por IA (ADR-0006), que manda o texto dos documentos para fora: aqui o áudio é processado e descartado, nunca gravado. Por isso a ADR-0006 e seu consentimento não se aplicam.
+
+**Modelo de voz (Whisper)** — o `onnx-community/whisper-small` quantizado (~250 MB), executado por `@huggingface/transformers` sobre `onnxruntime-node` (CPU). É **baixado sob demanda** quando o usuário ativa a busca por voz nas configurações — nunca embutido no instalador —, guardado em `userData/modelos/` e verificado por um manifesto de SHA-256 versionado em `AncorAI/instrucoes/transcricao.md`.
+
+**`utilityProcess` de voz** — processo separado, filho do *processo main*, onde a inferência do Whisper roda. A transcrição é CPU-bound e travaria o event loop do main se rodasse lá; isolada, um crash do runtime de ML derruba só esse processo. O main nunca carrega o runtime — só troca mensagens com o worker (`src/main/voz/`).
+
+**Transcrito da voz** — o texto que o canal `voz:transcrever` devolve ao *renderer*. É a fala do próprio usuário, da mesma natureza de um termo digitado — o *confinamento ao processo principal* (que vale para o texto dos documentos) não se aplica a ele.
+
 ## Análise de relações
 
 **Documentos relacionados** (pilha) — lista de até cinco documentos próximos do que está em foco no painel, montada a partir da sobreposição dos `assuntos` que a classificação por IA gravou. A proximidade é uma **similaridade de Jaccard ponderada**: cada assunto pesa pelo inverso da sua frequência no acervo (um assunto raro distingue mais que um assunto guarda-chuva), e dois documentos da mesma `categoria` ganham um acréscimo fixo. Um documento só entra com ao menos dois assuntos em comum, ou um assunto raro. O cálculo roda no processo principal, sob demanda, sem persistir nada e **sem embeddings nem busca vetorial** (ADR-0007). O canal devolve identificação, nome e link — nunca texto nem os rótulos usados no cálculo; a pilha no painel lista só nomes. Enquanto a classificação de todo o acervo (`resumos-e-indice-por-ia`) não passou, a pilha só considera os documentos já classificados e emite um *aviso de resultado parcial* com a contagem do que ficou fora.

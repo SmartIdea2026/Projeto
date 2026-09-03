@@ -5,7 +5,16 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
-    build: { rollupOptions: { input: { index: resolve('src/main/index.ts') } } }
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve('src/main/index.ts'),
+          // Corpo do utilityProcess de transcrição de voz (ADR-0008). Entrada
+          // separada: roda como processo próprio, não é importado pelo main.
+          'voz-worker': resolve('src/main/voz/worker.ts')
+        }
+      }
+    }
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
