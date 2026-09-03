@@ -1,12 +1,13 @@
 import { ipcMain, shell } from 'electron';
-import { CANAIS } from '../compartilhado/canais';
-import type { Documento, Filtros, Fonte } from '../compartilhado/tipos';
+import { CANAIS, EVENTOS_VOZ } from '../compartilhado/canais';
+import type { AjusteMicrofoneVoz, Documento, Filtros, Fonte } from '../compartilhado/tipos';
 import { FILTROS_PADRAO } from '../compartilhado/tipos';
 import { categoriasDisponiveis, listarAcessados, registrarAcesso } from './banco/repositorio';
 import * as cofre from './credenciais/cofre';
 import * as servico from './busca/servico';
 import { estadoDaSincronizacao, ingerirAcervo } from './conteudo/ingestao';
 import * as resumos from './llm/resumos';
+import * as voz from './voz/servico';
 import { pilhaDe } from './relacoes/pilha';
 
 /**
@@ -111,4 +112,27 @@ export function registrarCanais(): void {
   });
 
   ipcMain.handle(CANAIS.documentosAcessados, () => listarAcessados());
+
+  // Devolve o texto da fala do próprio usuário — não conteúdo de documento
+  // (ver a nota do canal em `compartilhado/canais.ts`). O áudio é processado no
+  // worker de voz e descartado; não sai da máquina.
+  ipcMain.handle(CANAIS.vozTranscrever, (_evento, pcm: ArrayBuffer) =>
+    voz.transcrever(pcm)
+  );
+
+  ipcMain.handle(CANAIS.vozModeloEstado, () => voz.estado());
+
+  ipcMain.handle(CANAIS.vozAtivar, (evento, valor: boolean) =>
+    voz.ativar(valor, (progresso) => {
+      if (!evento.sender.isDestroyed()) {
+        evento.sender.send(EVENTOS_VOZ.modeloProgresso, progresso);
+      }
+    })
+  );
+
+  // Consentimento do primeiro uso e escolha do microfone. Devolve o estado
+  // atualizado — nunca áudio nem transcrição.
+  ipcMain.handle(CANAIS.vozMicrofone, (_evento, ajuste: AjusteMicrofoneVoz) =>
+    voz.ajustarMicrofone(ajuste ?? {})
+  );
 }

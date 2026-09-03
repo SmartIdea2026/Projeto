@@ -73,6 +73,94 @@
   cursor: not-allowed;
 }
 
+/* ---------- Ditado por voz (ADR-0008) ---------- */
+
+/*
+ * O botão de microfone fica entre o campo e "Buscar" — círculo com a mesma
+ * altura dos demais controles da barra. Os estados de escuta e de transcrição
+ * são distintos por forma e por glifo (quadrado de "parar" / "…" / microfone),
+ * nunca só por cor — a borda pulsante da escuta é reforço, não o único sinal.
+ */
+.busca__voz {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--verde-medio);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* Ícones desenhados (microfone, parar): herdam a cor da fonte via `currentColor`. */
+.busca__voz-glifo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.busca__voz-icone {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.busca__voz:hover:not(:disabled) {
+  border-color: var(--borda-forte);
+  box-shadow: var(--sombra);
+}
+
+.busca__voz:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.busca__voz--escutando {
+  border-color: var(--verde-medio);
+  background: #eef5f1;
+  animation: busca__voz-pulso 1.4s ease-in-out infinite;
+}
+
+.busca__voz--transcrevendo,
+.busca__voz--solicitando {
+  border-style: dashed;
+}
+
+@keyframes busca__voz-pulso {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(47, 133, 90, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(47, 133, 90, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .busca__voz--escutando {
+    animation: none;
+  }
+}
+
+/* Anúncio de estado / aviso ("Não ouvi nada…"). Discreto, abaixo da barra. */
+.busca__voz-status {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  text-align: center;
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+.busca {
+  position: relative;
+}
+
 /* ---------- Filtros ---------- */
 
 /*

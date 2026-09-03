@@ -8,6 +8,7 @@ O Google Drive integrava o escopo e foi retirado do MVP pela [ADR-0004](../Docs/
 
 - **Busca por nome ou autor.** O termo casa com o nome do arquivo e com quem realizou a última alteração, então procurar pelo nome de um integrante encontra o que ele produziu. A busca com termo ou período é respondida a partir do **snapshot local** gravado pela última sincronização (ver *Sincronização do acervo*), sem consultar o GitHub documento a documento — o que a mantinha lenta. Um documento criado, renomeado ou removido no GitHub só entra ou sai da busca depois de sincronizar; enquanto não houver snapshot, a busca consulta o GitHub ao vivo.
 - **Busca no conteúdo, opcional.** O botão de alternância **"Buscar no conteúdo"** (desligado por padrão) faz o termo casar também com o **texto já armazenado** do documento (ver *Sincronização do acervo*), de forma aditiva a nome e autor. É opcional porque a correspondência pelo texto alcança qualquer documento que mencione o termo no corpo. No conteúdo o termo casa como palavra inteira. Um resultado que casou apenas pelo conteúdo é assinalado no cartão, sem mostrar o trecho; e a busca avisa quando parte do acervo ainda não foi sincronizada.
+- **Busca por voz, opcional.** Um ícone de microfone ao lado do botão "Buscar" — visível só depois de ativar a busca por voz nas configurações. Toque para falar; a captura para sozinha no silêncio (ou no botão de parar). No primeiro uso, uma confirmação dentro do app pede para usar o microfone, e você pode escolher qual microfone usar nas configurações. O que você fala é transcrito **na sua máquina**, por um modelo Whisper local, e vira texto no campo de busca para você conferir e confirmar — a busca não dispara sozinha. O áudio não é enviado a nenhum serviço externo nem gravado (ADR-0008). Ativar baixa o modelo uma vez (~250 MB) para a pasta de dados da aplicação.
 - **Filtros de extensão e período.** O período fica recolhido em um painel, aberto pelo botão abaixo da barra de busca. Ele recorta pela **data real de alteração do documento**: definir um intervalo faz a aplicação percorrer o acervo — e não a janela estreita dos recentes — e resolver a data de cada candidato antes de filtrar. Documento cuja data não puder ser obtida fica de fora, e a aplicação diz quantos ficaram.
 - **Filtro por categoria**, inferida pela IA junto do resumo do documento — um valor só, de uma lista fechada (Ata, ADR, Especificação, Levantamento, Pesquisa, Processo, Padrão, Manual, Relatório, Contrato, Edital, Formulário, Glossário, Template). Só existe depois que o resumo do documento é gerado; com o filtro ativo, documento sem categoria fica fora do resultado. A categoria aparece como um selo no cartão do documento, ao lado da extensão — não é a mesma coisa que a extensão, que vem do nome do arquivo, não da IA.
 - **Ordenação** por data ou nome, com desempate por nome A–Z e, permanecendo o empate, pelo identificador do documento. O critério vale para o **resultado inteiro**, não para a página visível: trocá-lo reorganiza tudo o que foi encontrado, recalcula as páginas e devolve a primeira — sem nova consulta às fontes. O controle fica acima da lista, alinhado à direita dela.
@@ -34,6 +35,16 @@ Até aqui, nada do conteúdo dos documentos saía da máquina — apenas metadad
 - A tela de configurações mantém o aviso acessível depois disso.
 - Só o texto do documento a ser resumido viaja — nunca o acervo inteiro, nenhuma credencial e nenhum dado de outro documento.
 - Recusar o consentimento mantém busca, filtros, paginação e abertura funcionando normalmente; apenas o painel de resumo fica indisponível.
+
+### Sobre a busca por voz
+
+A transcrição da busca por voz é o oposto do resumo por IA: roda **inteiramente na sua máquina**, com um modelo Whisper local (`onnx-community/whisper-small`, ADR-0008). O áudio capturado é processado e descartado; não é enviado a serviço externo nem gravado em disco.
+
+- Ativar a busca por voz nas configurações **baixa o modelo uma vez** (~250 MB) do Hugging Face. É a única vez que o recurso usa a rede.
+- O modelo fica em `<userData>/modelos/onnx-community/whisper-small/` — em Linux, `~/.config/AncorAI/modelos/`. Apagar essa pasta desfaz o download; reativar baixa de novo.
+- No primeiro uso, uma confirmação dentro do app pede para usar o microfone; depois disso o clique grava direto. A permissão vale só para áudio.
+- Em **Configurações → Busca por voz** dá para escolher qual microfone o ditado usa (ou deixar no padrão do sistema). Os nomes dos microfones só aparecem depois de conceder a permissão uma vez.
+- O que você dita **preenche o campo de busca e não dispara a busca** — você confere e confirma.
 
 ## Requisitos
 
@@ -109,9 +120,12 @@ src/
 │   ├── fontes/              Integração com o GitHub
 │   ├── credenciais/         Cofre cifrado e cache de validação
 │   ├── conteudo/            Ingestão, extração de texto e limites
+│   ├── voz/                 Transcrição local (utilityProcess Whisper, ADR-0008)
+│   ├── permissoes.ts        Política de permissões da sessão (só microfone)
 │   └── banco/               Persistência NoSQL local
 ├── preload/              Fronteira tipada entre os processos
 ├── renderer/             Interface em React
+│   ├── audio/               Captura de microfone e reamostragem para o ditado
 │   ├── componentes/         Componentes reutilizáveis
 │   ├── telas/               Telas completas
 │   └── estilos/             Folhas divididas por área da interface
@@ -121,12 +135,13 @@ test/
 ├── busca/                Filtro, ordenação, paginação, reordenação, falhas, busca pelo conteúdo e pelo snapshot
 ├── fontes/               Normalização das respostas das APIs e autoria
 ├── conteudo/             Obtenção, extração, persistência, ingestão e estado da sincronização
-├── interface/            Componentes: tabulação, paginação, filtros, ordenação e autoria
+├── voz/                  Configuração, modelo, transcrição, permissão e canais da busca por voz
+├── interface/            Componentes: tabulação, paginação, filtros, ordenação, autoria e ditado
 ├── persistencia/         Banco local
 └── seguranca/            Fronteira entre renderer e processo principal
 ```
 
-Credenciais, chamadas de rede e o conteúdo dos documentos vivem **apenas no processo main**. O renderer nunca recebe o valor de um segredo (ADR-0003) nem o texto de um documento (ADR-0005) — há teste automatizado para cada uma das duas fronteiras. O de conteúdo invoca todos os canais registrados e falha se algum devolver texto, então um canal novo é examinado sem que ninguém precise lembrar de atualizar o teste. Isso não significa que o texto nunca sai da máquina: para gerar um resumo, o processo main o envia ao Google Gemini (ADR-0006) — o que muda é que ele nunca passa pelo renderer, e o envio a um serviço externo exige a confirmação do usuário.
+Credenciais, chamadas de rede e o conteúdo dos documentos vivem **apenas no processo main**. O renderer nunca recebe o valor de um segredo (ADR-0003) nem o texto de um documento (ADR-0005) — há teste automatizado para cada uma das duas fronteiras. O de conteúdo invoca todos os canais registrados e falha se algum devolver texto, então um canal novo é examinado sem que ninguém precise lembrar de atualizar o teste. Isso não significa que o texto nunca sai da máquina: para gerar um resumo, o processo main o envia ao Google Gemini (ADR-0006) — o que muda é que ele nunca passa pelo renderer, e o envio a um serviço externo exige a confirmação do usuário. O canal `voz:transcrever` devolve texto ao renderer, mas é a **fala do próprio usuário** transcrita localmente, da mesma natureza de um termo digitado — não conteúdo de documento (ADR-0008).
 
 ### O que fica no banco local
 

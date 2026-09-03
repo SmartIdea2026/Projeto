@@ -78,6 +78,41 @@
   flex-wrap: wrap;
 }
 
+/* Diálogo curto — o consentimento do microfone no primeiro uso do ditado. */
+.modal--estreito {
+  width: min(420px, 100%);
+}
+
+/* Escolha do microfone dentro da seção "Busca por voz". */
+.campo__microfone {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--borda);
+}
+
+.campo__microfone label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.campo__microfone select {
+  width: 100%;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  padding: 11px 13px;
+  font: inherit;
+  background: var(--creme);
+  color: var(--texto);
+}
+
+.campo__microfone select:focus {
+  outline: none;
+  border-color: var(--verde-medio);
+}
+
 .botao {
   border: 1px solid transparent;
   border-radius: 999px;

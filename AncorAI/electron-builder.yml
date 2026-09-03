@@ -13,6 +13,18 @@ files:
   # nunca chama - alem de reintroduzir dependencia nativa no empacotamento,
   # exatamente o que a escolha por bibliotecas em JavaScript puro evita.
   - '!node_modules/@napi-rs/**'
+  # O onnxruntime-node (transcricao de voz, ADR-0008) traz os execution
+  # providers de GPU e binarios de todas as plataformas. A aplicacao so usa
+  # CPU, e o AppImage e Linux x64: o provider CUDA (>340 MB) e os binarios de
+  # macOS/Windows/arm sao peso morto.
+  - '!node_modules/onnxruntime-node/bin/**/libonnxruntime_providers_cuda.*'
+  - '!node_modules/onnxruntime-node/bin/**/libonnxruntime_providers_tensorrt.*'
+  - '!node_modules/onnxruntime-node/bin/napi-v3/{darwin,win32}/**'
+  - '!node_modules/onnxruntime-node/bin/napi-v3/linux/arm64/**'
+# O binario nativo do onnxruntime-node (.node e .so) precisa ficar fora do asar
+# para o processo de voz conseguir carregar em disco.
+asarUnpack:
+  - node_modules/onnxruntime-node/bin/**
 extraResources:
   # A instrucao de redacao do resumo e lida em tempo de execucao, para que a
   # equipe possa ajusta-la sem recompilar. Empacotada em `files` ela ficaria

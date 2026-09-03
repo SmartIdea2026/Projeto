@@ -41,6 +41,17 @@ vi.mock('../../src/main/credenciais/cofre', () => ({
   existe: vi.fn(() => true)
 }));
 
+// O worker de transcrição roda num utilityProcess do Electron — dublado aqui
+// para o canal `voz:transcrever` chegar ao fim sem processo nenhum. O texto
+// devolvido é a fala do usuário, de propósito diferente da MARCA do documento.
+vi.mock('../../src/main/voz/transcricao', () => ({
+  transcrever: vi.fn(async () => ({ texto: 'roadmap de setembro' })),
+  baixarModelo: vi.fn(async () => undefined),
+  encerrarVoz: vi.fn(),
+  inicializarVoz: vi.fn(),
+  modeloEstaPronto: vi.fn(async () => false)
+}));
+
 const banco = await import('../../src/main/banco/repositorio');
 const github = await import('../../src/main/fontes/github');
 const gemini = await import('../../src/main/llm/gemini');
@@ -131,7 +142,12 @@ const ARGUMENTOS: Record<string, unknown[]> = {
   [CANAIS.resumoDoDocumento]: [documento],
   [CANAIS.resumoGravado]: [documento],
   [CANAIS.prepararConteudo]: [documento],
-  [CANAIS.relacionadosDoDocumento]: [documento]
+  [CANAIS.relacionadosDoDocumento]: [documento],
+  // Um trecho de PCM qualquer: o transcritor é dublado e devolve texto fixo.
+  [CANAIS.vozTranscrever]: [new ArrayBuffer(32000)],
+  [CANAIS.vozAtivar]: [false],
+  // Consentimento do microfone: devolve o estado da voz, nunca áudio.
+  [CANAIS.vozMicrofone]: [{ consentido: true }]
 };
 
 describe('nenhum canal devolve conteúdo de documento', () => {

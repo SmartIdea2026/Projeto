@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 import type {
   Documento,
+  EstadoVoz,
   ResultadoBusca,
   ResumoDocumento,
   StatusFonte,
@@ -28,6 +29,33 @@ export const LLM_PRONTA: StatusLLM = { estado: 'conectada', consentido: true };
 
 /** Nenhuma chave configurada: o painel informa e a busca segue funcionando. */
 export const LLM_AUSENTE: StatusLLM = { estado: 'nao-configurada', consentido: false };
+
+const CAPTURA_VOZ = {
+  silencioLimiarRms: 0.01,
+  silencioDuracaoMs: 1500,
+  duracaoMaximaS: 30,
+  taxaAmostragemHz: 16000
+};
+
+/** Busca por voz desligada — o padrão: o microfone não aparece na barra. */
+export const VOZ_INATIVA: EstadoVoz = {
+  vozAtiva: false,
+  modelo: 'ausente',
+  permissao: 'desconhecida',
+  microfoneConsentido: false,
+  microfoneId: null,
+  captura: CAPTURA_VOZ
+};
+
+/** Busca por voz ativa e modelo pronto — o microfone aparece. */
+export const VOZ_PRONTA: EstadoVoz = {
+  vozAtiva: true,
+  modelo: 'pronto',
+  permissao: 'concedida',
+  microfoneConsentido: true,
+  microfoneId: null,
+  captura: CAPTURA_VOZ
+};
 
 export function resumoDe(documento: Documento): ResumoDocumento {
   return {
@@ -99,6 +127,14 @@ export function montarApi(resultado: ResultadoBusca, sobrescritas: Sobrescritas 
       semClassificacao: false
     })),
     categoriasDisponiveis: vi.fn(async () => [] as string[]),
+
+    // Busca por voz desligada por padrão — o microfone não entra na tela nem
+    // na tabulação. O teste que exercita o ditado sobrescreve com VOZ_PRONTA.
+    estadoVoz: vi.fn(async () => VOZ_INATIVA),
+    ativarVoz: vi.fn(async () => VOZ_PRONTA),
+    ajustarMicrofoneVoz: vi.fn(async () => VOZ_PRONTA),
+    transcreverVoz: vi.fn(async () => ({ texto: 'roadmap de setembro' })),
+    aoProgressoModeloVoz: vi.fn(() => () => undefined),
 
     ...sobrescritas
   };
