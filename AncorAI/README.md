@@ -7,7 +7,7 @@ O Google Drive integrava o escopo e foi retirado do MVP pela [ADR-0004](../Docs/
 ## O que a aplicação faz
 
 - **Busca por nome ou autor.** O termo casa com o nome do arquivo e com quem realizou a última alteração, então procurar pelo nome de um integrante encontra o que ele produziu. A busca com termo ou período é respondida a partir do **snapshot local** gravado pela última sincronização (ver *Sincronização do acervo*), sem consultar o GitHub documento a documento — o que a mantinha lenta. Um documento criado, renomeado ou removido no GitHub só entra ou sai da busca depois de sincronizar; enquanto não houver snapshot, a busca consulta o GitHub ao vivo.
-- **Busca no conteúdo, opcional.** A caixa **"Buscar no conteúdo"** (desligada por padrão) faz o termo casar também com o **texto já armazenado** do documento (ver *Sincronização do acervo*), de forma aditiva a nome e autor. É opcional porque a correspondência pelo texto alcança qualquer documento que mencione o termo no corpo. No conteúdo o termo casa como palavra inteira. Um resultado que casou apenas pelo conteúdo é assinalado no cartão, sem mostrar o trecho; e a busca avisa quando parte do acervo ainda não foi sincronizada.
+- **Busca no conteúdo, opcional.** O botão de alternância **"Buscar no conteúdo"** (desligado por padrão) faz o termo casar também com o **texto já armazenado** do documento (ver *Sincronização do acervo*), de forma aditiva a nome e autor. É opcional porque a correspondência pelo texto alcança qualquer documento que mencione o termo no corpo. No conteúdo o termo casa como palavra inteira. Um resultado que casou apenas pelo conteúdo é assinalado no cartão, sem mostrar o trecho; e a busca avisa quando parte do acervo ainda não foi sincronizada.
 - **Filtros de extensão e período.** O período fica recolhido em um painel, aberto pelo botão abaixo da barra de busca. Ele recorta pela **data real de alteração do documento**: definir um intervalo faz a aplicação percorrer o acervo — e não a janela estreita dos recentes — e resolver a data de cada candidato antes de filtrar. Documento cuja data não puder ser obtida fica de fora, e a aplicação diz quantos ficaram.
 - **Filtro por categoria**, inferida pela IA junto do resumo do documento — um valor só, de uma lista fechada (Ata, ADR, Especificação, Levantamento, Pesquisa, Processo, Padrão, Manual, Relatório, Contrato, Edital, Formulário, Glossário, Template). Só existe depois que o resumo do documento é gerado; com o filtro ativo, documento sem categoria fica fora do resultado. A categoria aparece como um selo no cartão do documento, ao lado da extensão — não é a mesma coisa que a extensão, que vem do nome do arquivo, não da IA.
 - **Ordenação** por data ou nome, com desempate por nome A–Z e, permanecendo o empate, pelo identificador do documento. O critério vale para o **resultado inteiro**, não para a página visível: trocá-lo reorganiza tudo o que foi encontrado, recalcula as páginas e devolve a primeira — sem nova consulta às fontes. O controle fica acima da lista, alinhado à direita dela.
@@ -85,7 +85,7 @@ ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ npm install
 
 ## Configuração de acesso
 
-Ao abrir pela primeira vez, o aplicativo não tem acesso a nenhuma fonte. Configure pelo botão de conexão no cabeçalho.
+Ao abrir pela primeira vez, o aplicativo não tem acesso a nenhuma fonte. Configure pelo botão de configurações (ícone de engrenagem) no cabeçalho. O estado de conexão de cada fonte é mostrado nessa tela de configurações.
 
 ### GitHub
 

@@ -83,21 +83,22 @@ export function Filtros({ filtros, aoAlterar, erroPeriodo }: Props) {
 
         {/*
           Amplia onde o termo é procurado: além de nome e autor, o texto já
-          armazenado do documento. Desligado por padrão — a busca no conteúdo
-          alcança qualquer documento que mencione o termo no corpo.
+          armazenado do documento. Botão de alternância, como o de período,
+          desligado por padrão — a busca no conteúdo alcança qualquer documento
+          que mencione o termo no corpo. `aria-pressed` carrega o estado; o ✓
+          antes do rótulo o comunica sem depender só de cor.
         */}
-        <label
-          className={`filtro filtro--check ${filtros.buscarConteudo ? 'filtro--ativo' : ''}`}
+        <button
+          type="button"
+          className={`filtro filtro--botao ${filtros.buscarConteudo ? 'filtro--ativo' : ''}`}
+          aria-pressed={Boolean(filtros.buscarConteudo)}
+          onClick={() =>
+            aoAlterar({ ...filtros, buscarConteudo: !filtros.buscarConteudo })
+          }
         >
-          <input
-            type="checkbox"
-            checked={Boolean(filtros.buscarConteudo)}
-            onChange={(evento) =>
-              aoAlterar({ ...filtros, buscarConteudo: evento.target.checked })
-            }
-          />
-          <span>Buscar no conteúdo</span>
-        </label>
+          {filtros.buscarConteudo && <span aria-hidden="true">✓</span>}
+          Buscar no conteúdo
+        </button>
 
         <label className={`filtro ${tipoAtivo ? 'filtro--ativo' : ''}`}>
           <span>Extensão:</span>
