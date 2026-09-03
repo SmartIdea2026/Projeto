@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import type { StatusFonte, StatusLLM } from '../../compartilhado/tipos';
+import type {
+  EstadoVoz,
+  MicrofoneDisponivel,
+  StatusFonte,
+  StatusLLM
+} from '../../compartilhado/tipos';
+import { enumerarMicrofones, solicitarPermissaoMicrofone } from '../audio/captura';
 
 interface Props {
   status: StatusFonte[];
@@ -7,6 +13,8 @@ interface Props {
   aoAtualizarStatus: (status: StatusFonte[]) => void;
   statusLLM: StatusLLM | null;
   aoAtualizarStatusLLM: (status: StatusLLM) => void;
+  estadoVoz: EstadoVoz | null;
+  aoAtualizarEstadoVoz: (estado: EstadoVoz) => void;
 }
 
 /**
@@ -31,7 +39,9 @@ export function Configuracoes({
   aoFechar,
   aoAtualizarStatus,
   statusLLM,
-  aoAtualizarStatusLLM
+  aoAtualizarStatusLLM,
+  estadoVoz,
+  aoAtualizarEstadoVoz
 }: Props) {
   const dialogo = useRef<HTMLDivElement>(null);
   const focoAnterior = useRef<HTMLElement | null>(null);
@@ -39,6 +49,60 @@ export function Configuracoes({
   const [chaveLLM, setChaveLLM] = useState('');
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [erro, setErro] = useState<Record<string, string>>({});
+  const [progressoVoz, setProgressoVoz] = useState<number | null>(null);
+  const [microfones, setMicrofones] = useState<MicrofoneDisponivel[]>([]);
+  const [listandoMic, setListandoMic] = useState(false);
+
+  // O progresso do download chega por evento enquanto o worker baixa o modelo.
+  useEffect(() => {
+    return window.ancorai.aoProgressoModeloVoz(({ recebidos, total }) => {
+      setProgressoVoz(total > 0 ? recebidos / total : null);
+    });
+  }, []);
+
+  // Com a voz pronta, lista os microfones para a escolha do dispositivo. Os
+  // nomes só vêm depois de a permissão ter sido concedida ao menos uma vez.
+  const vozPronta = Boolean(estadoVoz?.vozAtiva) && estadoVoz?.modelo === 'pronto';
+  useEffect(() => {
+    if (vozPronta) void enumerarMicrofones().then(setMicrofones);
+  }, [vozPronta]);
+
+  const rotulosDisponiveis = microfones.some((m) => m.rotulo);
+
+  async function permitirEListarMicrofones(): Promise<void> {
+    setListandoMic(true);
+    try {
+      await solicitarPermissaoMicrofone();
+      setMicrofones(await enumerarMicrofones());
+      aoAtualizarEstadoVoz(await window.ancorai.ajustarMicrofoneVoz({ consentido: true }));
+    } finally {
+      setListandoMic(false);
+    }
+  }
+
+  async function escolherMicrofone(id: string): Promise<void> {
+    aoAtualizarEstadoVoz(
+      await window.ancorai.ajustarMicrofoneVoz({ dispositivoId: id || null })
+    );
+  }
+
+  async function alternarVoz(ativar: boolean): Promise<void> {
+    setOcupado('voz');
+    setErro((atual) => ({ ...atual, voz: '' }));
+    setProgressoVoz(ativar ? 0 : null);
+    try {
+      const novo = await window.ancorai.ativarVoz(ativar);
+      aoAtualizarEstadoVoz(novo);
+      if (novo.modelo === 'erro' && novo.mensagemErro) {
+        setErro((atual) => ({ ...atual, voz: novo.mensagemErro! }));
+      }
+    } catch {
+      setErro((atual) => ({ ...atual, voz: 'Não foi possível alterar a busca por voz.' }));
+    } finally {
+      setOcupado(null);
+      setProgressoVoz(null);
+    }
+  }
 
   const github = status.find((item) => item.fonte === 'github');
 
@@ -273,6 +337,91 @@ export function Configuracoes({
               </button>
             )}
           </div>
+        </section>
+
+        <section className="campo">
+          <div className="campo__rotulo">
+            <span>Busca por voz</span>
+            <span>
+              {estadoVoz?.vozAtiva && estadoVoz.modelo === 'pronto'
+                ? 'Ativa'
+                : estadoVoz?.modelo === 'baixando' || ocupado === 'voz'
+                  ? 'Baixando modelo…'
+                  : 'Desligada'}
+            </span>
+          </div>
+          <p className="campo__ajuda">
+            Dite o termo de busca falando ao microfone. A transcrição é feita por
+            um modelo que roda <strong>na sua máquina</strong>; o áudio não é
+            enviado a nenhum serviço externo nem gravado.
+          </p>
+          <p className="campo__ajuda">
+            Ativar baixa o modelo uma vez (cerca de 80 MB). A busca funciona
+            normalmente sem esta opção.
+          </p>
+          {ocupado === 'voz' && progressoVoz !== null && (
+            <p className="campo__ajuda" role="status">
+              Baixando o modelo: {Math.round(progressoVoz * 100)}%
+            </p>
+          )}
+          {erro['voz'] && (
+            <p className="erro-campo" role="alert">
+              {erro['voz']}
+            </p>
+          )}
+          <div className="campo__acoes">
+            <button
+              type="button"
+              className="botao botao--primario"
+              aria-pressed={Boolean(estadoVoz?.vozAtiva)}
+              disabled={ocupado === 'voz'}
+              onClick={() => void alternarVoz(!estadoVoz?.vozAtiva)}
+            >
+              {ocupado === 'voz'
+                ? 'Aguarde…'
+                : estadoVoz?.vozAtiva
+                  ? 'Desativar busca por voz'
+                  : 'Ativar busca por voz'}
+            </button>
+          </div>
+
+          {vozPronta && (
+            <div className="campo__microfone">
+              <p className="campo__ajuda">
+                Escolha qual microfone o ditado vai usar. "Padrão do sistema"
+                acompanha o que estiver definido no seu sistema operacional.
+              </p>
+              {rotulosDisponiveis ? (
+                <label>
+                  <span>Microfone</span>
+                  <select
+                    value={estadoVoz?.microfoneId ?? ''}
+                    onChange={(evento) => void escolherMicrofone(evento.target.value)}
+                  >
+                    <option value="">Padrão do sistema</option>
+                    {microfones
+                      .filter((m) => m.id)
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.rotulo || 'Microfone sem nome'}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              ) : (
+                <button
+                  type="button"
+                  className="botao botao--secundario"
+                  disabled={listandoMic}
+                  onClick={() => void permitirEListarMicrofones()}
+                >
+                  {listandoMic
+                    ? 'Aguarde…'
+                    : 'Permitir o microfone para escolher o dispositivo'}
+                </button>
+              )}
+            </div>
+          )}
         </section>
 
         <div className="campo__acoes">

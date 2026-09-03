@@ -534,7 +534,11 @@ export async function documentosClassificados(): Promise<DocumentoClassificado[]
  */
 interface RegistroPreferencia {
   _id: string;
-  valor: boolean;
+  /**
+   * `boolean` para os liga/desliga (consentimento da LLM, busca por voz ativa);
+   * `string` para escolhas com valor textual, como o `deviceId` do microfone.
+   */
+  valor: boolean | string;
   definidoEm: string;
 }
 
@@ -556,10 +560,31 @@ async function colecaoDePreferencias(): Promise<Datastore<RegistroPreferencia>> 
 export async function lerPreferencia(chave: string): Promise<boolean | null> {
   const colecao = await colecaoDePreferencias();
   const registro = await colecao.findOneAsync({ _id: chave });
-  return registro ? registro.valor : null;
+  return registro && typeof registro.valor === 'boolean' ? registro.valor : null;
 }
 
 export async function gravarPreferencia(chave: string, valor: boolean): Promise<void> {
+  const colecao = await colecaoDePreferencias();
+  await colecao.updateAsync(
+    { _id: chave },
+    { $set: { valor, definidoEm: new Date().toISOString() } },
+    { upsert: true }
+  );
+}
+
+/**
+ * Preferência com valor textual, na mesma coleção das de liga/desliga.
+ *
+ * Usada pela escolha de microfone da busca por voz: o `deviceId` precisa ser
+ * lembrado entre execuções, não é segredo, e não caberia como `boolean`.
+ */
+export async function lerPreferenciaTexto(chave: string): Promise<string | null> {
+  const colecao = await colecaoDePreferencias();
+  const registro = await colecao.findOneAsync({ _id: chave });
+  return registro && typeof registro.valor === 'string' ? registro.valor : null;
+}
+
+export async function gravarPreferenciaTexto(chave: string, valor: string): Promise<void> {
   const colecao = await colecaoDePreferencias();
   await colecao.updateAsync(
     { _id: chave },

@@ -3,6 +3,7 @@ import {
   FILTROS_PADRAO,
   POR_PAGINA,
   type Documento,
+  type EstadoVoz,
   type Filtros as TipoFiltros,
   type ItemRelacionado,
   type MotivoSemResumo,
@@ -21,6 +22,7 @@ import {
   useEtapaProlongada,
   type EtapaResumo
 } from './componentes/PainelResumo';
+import { BotaoMicrofone } from './componentes/BotaoMicrofone';
 import { Configuracoes } from './telas/Configuracoes';
 
 const NOME_FONTE = { github: 'GitHub' } as const;
@@ -263,6 +265,13 @@ export function App() {
     void window.ancorai.statusLLM().then(setStatusLLM);
   }, []);
 
+  // Estado da busca por voz. Recarregado ao fechar as configurações — é lá que
+  // o recurso é ativado e o modelo baixado (ADR-0008).
+  const [estadoVoz, setEstadoVoz] = useState<EstadoVoz | null>(null);
+  useEffect(() => {
+    if (!configAberta) void window.ancorai.estadoVoz().then(setEstadoVoz);
+  }, [configAberta]);
+
   /**
    * Monta a pilha de relacionados do documento em foco.
    *
@@ -462,6 +471,17 @@ export function App() {
             aria-label="Buscar pelo nome do documento"
             onChange={(evento) => setTermoCampo(evento.target.value)}
           />
+          <BotaoMicrofone
+            estadoVoz={estadoVoz}
+            aoTranscrever={(texto) => {
+              // Preenche o campo e devolve o foco — não busca. A confirmação
+              // continua sendo do usuário (openspec/specs/busca-por-voz).
+              setTermoCampo(texto);
+              campoBusca.current?.focus();
+            }}
+            aoNegarPermissao={() => void window.ancorai.estadoVoz().then(setEstadoVoz)}
+            aoAtualizarEstadoVoz={setEstadoVoz}
+          />
           <button type="submit" className="busca__acao" disabled={periodoInvalido}>
             Buscar
           </button>
@@ -638,6 +658,8 @@ export function App() {
           status={status}
           statusLLM={statusLLM}
           aoAtualizarStatusLLM={setStatusLLM}
+          estadoVoz={estadoVoz}
+          aoAtualizarEstadoVoz={setEstadoVoz}
           aoFechar={() => setConfigAberta(false)}
           aoAtualizarStatus={(novo) => {
             setStatus(novo);

@@ -96,7 +96,39 @@ export const CANAIS = {
   /** Abre o documento na fonte original e registra o acesso. */
   abrirDocumento: 'documento:abrir',
   /** Lista os documentos acessados anteriormente. */
-  documentosAcessados: 'documento:acessados'
+  documentosAcessados: 'documento:acessados',
+
+  /**
+   * Transcreve um trecho de áudio capturado na busca por voz (ADR-0008).
+   *
+   * Recebe PCM (16 kHz mono) e devolve **o texto da fala do próprio usuário** —
+   * não o conteúdo de um documento. A restrição da ADR-0005 é sobre o texto dos
+   * documentos do acervo; um termo ditado é da mesma natureza de um termo
+   * digitado. O áudio é processado localmente e descartado; não sai da máquina.
+   */
+  vozTranscrever: 'voz:transcrever',
+  /** Estado do modelo de voz, da permissão de microfone e da ativação do recurso. */
+  vozModeloEstado: 'voz:modelo-estado',
+  /** Liga/desliga a busca por voz; ligar dispara o download do modelo. */
+  vozAtivar: 'voz:ativar',
+  /**
+   * Ajusta o microfone da busca por voz: consentimento do primeiro uso e qual
+   * dispositivo captar. Recebe `AjusteMicrofoneVoz`, devolve o `EstadoVoz`
+   * atualizado — nunca áudio nem transcrição.
+   */
+  vozMicrofone: 'voz:microfone'
 } as const;
 
 export type Canal = (typeof CANAIS)[keyof typeof CANAIS];
+
+/**
+ * Eventos emitidos pelo processo principal para o renderer (`webContents.send`).
+ *
+ * Ficam fora de `CANAIS` de propósito: aquela lista é só de canais `handle`
+ * (pedido → resposta), e é isso que o teste de fronteira `fronteira-conteudo`
+ * percorre. Um evento não tem handler para percorrer.
+ */
+export const EVENTOS_VOZ = {
+  /** Andamento do download do modelo de voz: `{ recebidos, total, arquivo }`. */
+  modeloProgresso: 'voz:modelo-progresso'
+} as const;

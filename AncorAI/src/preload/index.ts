@@ -1,15 +1,19 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { CANAIS } from '../compartilhado/canais';
+import { CANAIS, EVENTOS_VOZ } from '../compartilhado/canais';
 import type {
+  AjusteMicrofoneVoz,
   Documento,
   DocumentoAcessado,
+  EstadoVoz,
   Filtros,
   Fonte,
   PreparoConteudo,
   ProgressoIngestao,
+  ProgressoModeloVoz,
   RetratoSincronizacao,
   RespostaRelacionados,
   RespostaResumo,
+  RespostaTranscricao,
   ResultadoBusca,
   ResumoDocumento,
   StatusLLM,
@@ -87,7 +91,31 @@ const api = {
     ipcRenderer.invoke(CANAIS.abrirDocumento, documento),
 
   documentosAcessados: (): Promise<DocumentoAcessado[]> =>
-    ipcRenderer.invoke(CANAIS.documentosAcessados)
+    ipcRenderer.invoke(CANAIS.documentosAcessados),
+
+  /*
+   * Busca por voz (ADR-0008). `transcreverVoz` recebe PCM (16 kHz mono) e
+   * devolve o texto da fala do próprio usuário — não conteúdo de documento. O
+   * áudio é processado no processo principal e descartado.
+   */
+  transcreverVoz: (pcm: ArrayBuffer): Promise<RespostaTranscricao> =>
+    ipcRenderer.invoke(CANAIS.vozTranscrever, pcm),
+
+  estadoVoz: (): Promise<EstadoVoz> => ipcRenderer.invoke(CANAIS.vozModeloEstado),
+
+  ativarVoz: (valor: boolean): Promise<EstadoVoz> =>
+    ipcRenderer.invoke(CANAIS.vozAtivar, valor),
+
+  /** Registra o consentimento do microfone e/ou o dispositivo escolhido. */
+  ajustarMicrofoneVoz: (ajuste: AjusteMicrofoneVoz): Promise<EstadoVoz> =>
+    ipcRenderer.invoke(CANAIS.vozMicrofone, ajuste),
+
+  /** Assina o progresso do download do modelo. Devolve a função para cancelar. */
+  aoProgressoModeloVoz: (ouvinte: (p: ProgressoModeloVoz) => void): (() => void) => {
+    const wrap = (_evento: unknown, p: ProgressoModeloVoz): void => ouvinte(p);
+    ipcRenderer.on(EVENTOS_VOZ.modeloProgresso, wrap);
+    return () => ipcRenderer.off(EVENTOS_VOZ.modeloProgresso, wrap);
+  }
 };
 
 export type ApiAncorAI = typeof api;
