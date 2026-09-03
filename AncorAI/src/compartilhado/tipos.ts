@@ -85,6 +85,12 @@ export interface Documento {
    */
   tamanho?: number;
   /**
+   * Categoria do documento, atribuída pelo resumo por IA a partir de uma lista
+   * fechada (`resumos-por-ia`) — ausente enquanto o documento não foi
+   * resumido, ou quando o resumo não encontrou categoria com confiança.
+   */
+  categoria?: string;
+  /**
    * Verdadeiro quando o termo da busca casou **apenas** com o texto armazenado
    * do documento — nem o nome nem o autor.
    *
@@ -105,6 +111,12 @@ export interface Filtros {
   fontes: Fonte[];
   /** Lista vazia significa todas as extensões aceitas. */
   extensoes: string[];
+  /**
+   * Categoria inferida pelo resumo por IA. Ausente significa todas as
+   * categorias — distinto de `extensoes`, que filtra pelo formato do
+   * arquivo, não pela classificação por IA.
+   */
+  categoria?: string;
   dataInicial?: string;
   dataFinal?: string;
   ordenacao: Ordenacao;
@@ -246,14 +258,18 @@ export interface RetratoSincronizacao extends ProgressoIngestao {
 /**
  * Resumo de um documento produzido por modelo de linguagem.
  *
- * `tipo`, `assuntos` e `destaques` vêm da **mesma** submissão que produz o
- * resumo em prosa: pedir separadamente custaria mais cota e abriria espaço
+ * `categoria`, `assuntos` e `destaques` vêm da **mesma** submissão que produz
+ * o resumo em prosa: pedir separadamente custaria mais cota e abriria espaço
  * para os quatro discordarem entre si.
+ *
+ * `categoria` vem de uma lista fechada (`CATEGORIAS_PERMITIDAS` em
+ * `main/llm/gemini.ts`) — string vazia quando nenhum item da lista descreve o
+ * documento com confiança, nunca um rótulo genérico.
  */
 export interface ResumoDocumento {
   documentoId: string;
   resumo: string;
-  tipo: string;
+  categoria: string;
   assuntos: string[];
   destaques: string[];
   /** ISO 8601. */

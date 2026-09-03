@@ -87,6 +87,14 @@ export function aplicarFiltros(
       continue;
     }
 
+    // Igualdade simples: a categoria é um valor só (categorizar-documentos-
+    // pelo-resumo). Documento sem categoria (`undefined`) nunca corresponde a
+    // uma categoria selecionada — mesmo tratamento de "fora do filtro" que um
+    // documento sem texto extraível já recebe em outros filtros.
+    if (filtros.categoria && documento.categoria !== filtros.categoria) {
+      continue;
+    }
+
     if (inicial !== null || final !== null) {
       // Data aproximada não serve a um recorte por data: ela é a do
       // repositório, igual para todos os arquivos dele. Presumir o documento

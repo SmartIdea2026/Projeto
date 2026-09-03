@@ -2,7 +2,7 @@ import { ipcMain, shell } from 'electron';
 import { CANAIS } from '../compartilhado/canais';
 import type { Documento, Filtros, Fonte } from '../compartilhado/tipos';
 import { FILTROS_PADRAO } from '../compartilhado/tipos';
-import { listarAcessados, registrarAcesso } from './banco/repositorio';
+import { categoriasDisponiveis, listarAcessados, registrarAcesso } from './banco/repositorio';
 import * as cofre from './credenciais/cofre';
 import * as servico from './busca/servico';
 import { estadoDaSincronizacao, ingerirAcervo } from './conteudo/ingestao';
@@ -102,6 +102,8 @@ export function registrarCanais(): void {
   ipcMain.handle(CANAIS.relacionadosDoDocumento, (_evento, documento: Documento) =>
     pilhaDe(documento.id)
   );
+
+  ipcMain.handle(CANAIS.categoriasDisponiveis, () => categoriasDisponiveis());
 
   ipcMain.handle(CANAIS.abrirDocumento, async (_evento, documento: Documento) => {
     await registrarAcesso(documento);

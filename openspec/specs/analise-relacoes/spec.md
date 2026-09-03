@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Relacionar documentos do acervo entre si pela sobreposição dos rótulos de classificação que a IA já produz — assuntos e tipo —, apresentando, a partir do documento em foco, uma pilha dos documentos mais próximos para que o usuário percorra o acervo pelo tema e não só pelo nome do arquivo.
+Relacionar documentos do acervo entre si pela sobreposição dos rótulos de classificação que a IA já produz — assuntos e categoria —, apresentando, a partir do documento em foco, uma pilha dos documentos mais próximos para que o usuário percorra o acervo pelo tema e não só pelo nome do arquivo.
 
 ## Requirements
 
 ### Requirement: Pilha de documentos relacionados ao documento em foco
 
-Quando o painel apresenta um documento que possui classificação por IA (assuntos e tipo), o sistema SHALL montar uma pilha dos demais documentos do acervo ordenada por proximidade de assunto e apresentá-la no painel.
+Quando o painel apresenta um documento que possui classificação por IA (assuntos e categoria), o sistema SHALL montar uma pilha dos demais documentos do acervo ordenada por proximidade de assunto e apresentá-la no painel.
 
 A pilha SHALL conter no máximo **5 documentos**. Cada item SHALL identificar o documento pelo nome.
 
@@ -18,7 +18,7 @@ O documento em foco NÃO SHALL aparecer na própria pilha.
 
 #### Scenario: Documento em foco com classificação
 
-- **GIVEN** que o painel apresenta um documento com assuntos e tipo classificados
+- **GIVEN** que o painel apresenta um documento com assuntos e categoria classificados
 - **AND** que há outros documentos classificados no acervo
 - **WHEN** o painel é apresentado
 - **THEN** o painel apresenta uma pilha de até 5 documentos relacionados
@@ -45,7 +45,7 @@ O documento em foco NÃO SHALL aparecer na própria pilha.
 
 ### Requirement: Critério de proximidade entre documentos
 
-A proximidade entre dois documentos SHALL derivar da sobreposição dos seus conjuntos de assuntos. Assuntos **raros no acervo** SHALL pesar mais do que assuntos comuns, e dois documentos do **mesmo tipo** SHALL receber um acréscimo fixo de proximidade.
+A proximidade entre dois documentos SHALL derivar da sobreposição dos seus conjuntos de assuntos. Assuntos **raros no acervo** SHALL pesar mais do que assuntos comuns, e dois documentos da **mesma categoria** SHALL receber um acréscimo fixo de proximidade.
 
 Os destaques do resumo NÃO SHALL entrar no cálculo.
 
@@ -67,12 +67,12 @@ A pilha SHALL ser ordenada por proximidade decrescente. O sistema NÃO SHALL usa
 - **WHEN** a pilha é montada
 - **THEN** esse documento não aparece na pilha
 
-#### Scenario: Mesmo tipo aproxima
+#### Scenario: Mesma categoria aproxima
 
 - **GIVEN** dois documentos que compartilham os mesmos assuntos com o documento em foco
-- **AND** apenas um deles é do mesmo tipo do documento em foco
+- **AND** apenas um deles é da mesma categoria do documento em foco
 - **WHEN** a pilha é montada
-- **THEN** o do mesmo tipo aparece antes
+- **THEN** o da mesma categoria aparece antes
 
 ### Requirement: A pilha não carrega conteúdo de documento
 
