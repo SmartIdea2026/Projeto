@@ -35,4 +35,4 @@
 - [x] 6.1 Executar a suíte completa, `tsc` nos dois projetos e o build — verificar que tudo passa
 - [x] 6.2 Percorrer cada requisito dos deltas de `resumos-por-ia` e `busca-documentos` conferindo a correspondência com o código, cenário a cenário — verificar que nenhum cenário ficou sem contrapartida implementada
 - [x] 6.3 Avaliar com o usuário se registra a ADR sugerida (vocabulário fechado + apagar-e-regerar em vez de migrar) — ver seção "ADR sugerida" do processo que originou esta proposta (decisão: sem ADR própria)
-- [ ] 6.4 Executar `/opsx:archive` para incorporar os deltas às especificações principais
+- [x] 6.4 Executar `/opsx:archive` para incorporar os deltas às especificações principais
