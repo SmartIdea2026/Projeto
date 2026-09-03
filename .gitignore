@@ -41,5 +41,9 @@ AncorAI/node_modules/
 AncorAI/out/
 AncorAI/release/
 
+# Artefatos de execução do Playwright (AncorAI/e2e/)
+AncorAI/test-results/
+AncorAI/playwright-report/
+
 # Sobra de compilação acidental (gcc/clang sem -o) na pasta do AncorAI.
 AncorAI/a.out

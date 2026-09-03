@@ -4,10 +4,13 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   abrirBanco,
+  categoriasDeDocumentos,
+  categoriasDisponiveis,
   conteudoParaBusca,
   documentosSemAutoria,
   fecharBanco,
   gravarAutoria,
+  gravarCategoriaAcervo,
   gravarConteudo,
   gravarCache,
   idsComAutoriaPendente,
@@ -242,6 +245,112 @@ describe('snapshot do inventário', () => {
     const [documento] = await inventarioSincronizado();
     expect(documento?.autor).toBeUndefined();
     expect(await idsComAutoriaPendente()).toEqual(['anonimo']);
+  });
+
+  it('aplica a categoria espelhada do resumo por IA', async () => {
+    await sincronizarInventario([doInventario('com-categoria')]);
+    await gravarCategoriaAcervo('com-categoria', {
+      categoria: 'Ata',
+      categoriaVersaoConteudo: 'sha-com-categoria'
+    });
+
+    const [documento] = await inventarioSincronizado();
+    expect(documento?.categoria).toBe('Ata');
+  });
+
+  it('esconde a categoria quando o conteúdo mudou na fonte depois dela', async () => {
+    await sincronizarInventario([doInventario('categoria-desatualizada')]);
+    await gravarCategoriaAcervo('categoria-desatualizada', {
+      categoria: 'Ata',
+      categoriaVersaoConteudo: 'sha-categoria-desatualizada'
+    });
+
+    await sincronizarInventario([
+      doInventario('categoria-desatualizada', { versaoConteudo: 'sha-novo' })
+    ]);
+
+    const [documento] = await inventarioSincronizado();
+    expect(documento?.categoria).toBeUndefined();
+  });
+
+  it('documento sem resumo não tem categoria', async () => {
+    await sincronizarInventario([doInventario('sem-resumo')]);
+
+    const [documento] = await inventarioSincronizado();
+    expect(documento?.categoria).toBeUndefined();
+  });
+
+  it('lista as categorias distintas já atribuídas, em ordem alfabética', async () => {
+    await sincronizarInventario([
+      doInventario('doc-ata'),
+      doInventario('doc-adr'),
+      doInventario('doc-ata-2'),
+      doInventario('doc-sem-categoria')
+    ]);
+    await gravarCategoriaAcervo('doc-ata', {
+      categoria: 'Ata',
+      categoriaVersaoConteudo: 'sha-doc-ata'
+    });
+    await gravarCategoriaAcervo('doc-adr', {
+      categoria: 'ADR',
+      categoriaVersaoConteudo: 'sha-doc-adr'
+    });
+    await gravarCategoriaAcervo('doc-ata-2', {
+      categoria: 'Ata',
+      categoriaVersaoConteudo: 'sha-doc-ata-2'
+    });
+
+    expect(await categoriasDisponiveis()).toEqual(['ADR', 'Ata']);
+  });
+
+  it('não lista categoria desatualizada nem categoria vazia', async () => {
+    await sincronizarInventario([
+      doInventario('desatualizado'),
+      doInventario('vazio')
+    ]);
+    await gravarCategoriaAcervo('desatualizado', {
+      categoria: 'Ata',
+      categoriaVersaoConteudo: 'sha-desatualizado'
+    });
+    await gravarCategoriaAcervo('vazio', { categoria: '', categoriaVersaoConteudo: 'sha-vazio' });
+
+    // Novo conteúdo para "desatualizado": a categoria gravada fica para trás.
+    await sincronizarInventario([
+      doInventario('desatualizado', { versaoConteudo: 'sha-novo' }),
+      doInventario('vazio')
+    ]);
+
+    expect(await categoriasDisponiveis()).toEqual([]);
+  });
+
+  it('devolve a categoria vigente de cada id informado, indexada por id', async () => {
+    await sincronizarInventario([
+      doInventario('com-categoria'),
+      doInventario('sem-categoria')
+    ]);
+    await gravarCategoriaAcervo('com-categoria', {
+      categoria: 'Ata',
+      categoriaVersaoConteudo: 'sha-com-categoria'
+    });
+
+    const mapa = await categoriasDeDocumentos(['com-categoria', 'sem-categoria', 'inexistente']);
+
+    expect(mapa.get('com-categoria')).toBe('Ata');
+    expect(mapa.has('sem-categoria')).toBe(false);
+    expect(mapa.has('inexistente')).toBe(false);
+  });
+
+  it('não devolve categoria desatualizada em categoriasDeDocumentos', async () => {
+    await sincronizarInventario([doInventario('desatualizado')]);
+    await gravarCategoriaAcervo('desatualizado', {
+      categoria: 'Ata',
+      categoriaVersaoConteudo: 'sha-desatualizado'
+    });
+    await sincronizarInventario([doInventario('desatualizado', { versaoConteudo: 'sha-novo' })]);
+
+    const mapa = await categoriasDeDocumentos(['desatualizado']);
+
+    expect(mapa.has('desatualizado')).toBe(false);
   });
 });
 

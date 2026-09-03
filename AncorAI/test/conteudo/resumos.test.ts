@@ -45,7 +45,7 @@ const documento: Documento = {
 
 const PRODUZIDO = {
   resumo: 'Ata da reunião de planejamento.',
-  tipo: 'Ata',
+  categoria: 'Ata',
   assuntos: ['planejamento', 'sprint'],
   destaques: ['Decidiu-se adotar NoSQL']
 };
@@ -416,5 +416,40 @@ describe('instrução versionada', () => {
       unknown
     ];
     expect(instrucaoEnviada).toContain('Atenha-se ao texto recebido');
+  });
+});
+
+describe('categoria espelhada no acervo (categorizar-documentos-pelo-resumo)', () => {
+  it('aparece no acervo depois de gerar o resumo, para o filtro por categoria', async () => {
+    await banco.sincronizarInventario([documento]);
+    await comTexto();
+
+    await resumos.resumoDoDocumento(documento);
+
+    const [reconstruido] = await banco.inventarioSincronizado();
+    expect(reconstruido?.categoria).toBe('Ata');
+  });
+
+  it('não aparece quando o resumo não encontrou categoria com confiança', async () => {
+    await banco.sincronizarInventario([documento]);
+    await comTexto();
+    vi.mocked(gemini.resumir).mockResolvedValue({ ...PRODUZIDO, categoria: '' });
+
+    await resumos.resumoDoDocumento(documento);
+
+    const [reconstruido] = await banco.inventarioSincronizado();
+    expect(reconstruido?.categoria).toBeUndefined();
+  });
+
+  it('é atualizada no acervo quando o resumo é regerado com uma categoria diferente', async () => {
+    await banco.sincronizarInventario([documento]);
+    await comTexto();
+    await resumos.resumoDoDocumento(documento);
+
+    vi.mocked(gemini.resumir).mockResolvedValue({ ...PRODUZIDO, categoria: 'ADR' });
+    await resumos.resumoDoDocumento(documento, true);
+
+    const [reconstruido] = await banco.inventarioSincronizado();
+    expect(reconstruido?.categoria).toBe('ADR');
   });
 });

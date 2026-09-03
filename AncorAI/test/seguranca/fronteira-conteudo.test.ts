@@ -95,7 +95,7 @@ beforeEach(async () => {
   vi.spyOn(gemini, 'verificarChave').mockResolvedValue(undefined);
   vi.spyOn(gemini, 'resumir').mockResolvedValue({
     resumo: 'Resumo sem nada do texto original.',
-    tipo: 'Ata',
+    categoria: 'Ata',
     assuntos: ['exemplo'],
     destaques: ['Um ponto']
   });
@@ -130,7 +130,8 @@ const ARGUMENTOS: Record<string, unknown[]> = {
   [CANAIS.llmConsentir]: [true],
   [CANAIS.resumoDoDocumento]: [documento],
   [CANAIS.resumoGravado]: [documento],
-  [CANAIS.prepararConteudo]: [documento]
+  [CANAIS.prepararConteudo]: [documento],
+  [CANAIS.relacionadosDoDocumento]: [documento]
 };
 
 describe('nenhum canal devolve conteúdo de documento', () => {
@@ -187,6 +188,27 @@ describe('nenhum canal devolve conteúdo de documento', () => {
     // A correspondência aconteceu de fato — o documento veio assinalado…
     expect(serial).toContain('apenasConteudo');
     // …mas nada do texto de onde ela saiu.
+    expect(serial).not.toContain(MARCA);
+    expect(serial).not.toContain('Ata de reunião sobre');
+  });
+
+  it('a pilha de relacionados nunca devolve o texto de onde os rótulos saíram', async () => {
+    // Classifica o documento: a pilha só cruza os rótulos de quem já tem
+    // resumo. O texto por trás dos rótulos continua com a marca.
+    await banco.sincronizarInventario([documento]);
+    await banco.gravarResumo(documento.id, {
+      resumo: 'Resumo sem nada do texto.',
+      categoria: 'Ata',
+      assuntos: ['planejamento'],
+      destaques: ['Um ponto']
+    });
+
+    const handler = handlers.get(CANAIS.relacionadosDoDocumento) as (
+      ...args: unknown[]
+    ) => Promise<unknown>;
+    const resposta = await handler({}, documento);
+
+    const serial = JSON.stringify(resposta);
     expect(serial).not.toContain(MARCA);
     expect(serial).not.toContain('Ata de reunião sobre');
   });

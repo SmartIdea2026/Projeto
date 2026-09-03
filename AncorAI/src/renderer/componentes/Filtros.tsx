@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { EXTENSOES_ACEITAS, type Filtros } from '../../compartilhado/tipos';
 
 interface Props {
@@ -15,11 +15,35 @@ interface Props {
 
 export function Filtros({ filtros, aoAlterar, erroPeriodo }: Props) {
   const tipoAtivo = filtros.extensoes.length > 0;
+  const categoriaAtiva = Boolean(filtros.categoria);
   const periodoAtivo = Boolean(filtros.dataInicial || filtros.dataFinal);
 
   const [periodoAberto, setPeriodoAberto] = useState(false);
   const areaPeriodo = useRef<HTMLDivElement>(null);
   const botaoPeriodo = useRef<HTMLButtonElement>(null);
+
+  /*
+    As categorias vêm do resumo por IA (categorizar-documentos-pelo-resumo) —
+    não são uma lista fixa como as extensões, e crescem conforme documentos
+    são resumidos. Busca sozinho, como o resto do componente já faz com o
+    período: uma consulta ao montar, e outra sempre que o dropdown recebe
+    foco, para refletir categorias atribuídas desde a última vez que a lista
+    foi carregada.
+  */
+  const [categorias, setCategorias] = useState<string[]>([]);
+
+  const buscarCategorias = useCallback(async () => {
+    try {
+      setCategorias(await window.ancorai.categoriasDisponiveis());
+    } catch {
+      // Falhar aqui não impede o resto da busca: o dropdown só fica sem
+      // opções novas até a próxima tentativa.
+    }
+  }, []);
+
+  useEffect(() => {
+    void buscarCategorias();
+  }, [buscarCategorias]);
 
   /*
     O período ficava como dois campos de data soltos na barra de filtros. Cada
@@ -50,29 +74,31 @@ export function Filtros({ filtros, aoAlterar, erroPeriodo }: Props) {
     <>
       <div className="filtros">
         {/*
-          O protótipo separa "Extensão" de "Tipo": o primeiro é a extensão do
-          arquivo, este filtro; o segundo é a classificação por IA, que chega na
-          mudança seguinte. Rotular este como "Tipo" colidiria com aquele.
+          O protótipo separa "Extensão" de "Categoria": o primeiro é a extensão
+          do arquivo, este filtro; o segundo é a classificação por IA
+          (categorizar-documentos-pelo-resumo), o filtro logo abaixo. Rotular
+          este como "Tipo" colidiria com o nome antigo do outro campo.
         */}
         <span className="filtros__rotulo">FILTROS</span>
 
         {/*
           Amplia onde o termo é procurado: além de nome e autor, o texto já
-          armazenado do documento. Desligado por padrão — a busca no conteúdo
-          alcança qualquer documento que mencione o termo no corpo.
+          armazenado do documento. Botão de alternância, como o de período,
+          desligado por padrão — a busca no conteúdo alcança qualquer documento
+          que mencione o termo no corpo. `aria-pressed` carrega o estado; o ✓
+          antes do rótulo o comunica sem depender só de cor.
         */}
-        <label
-          className={`filtro filtro--check ${filtros.buscarConteudo ? 'filtro--ativo' : ''}`}
+        <button
+          type="button"
+          className={`filtro filtro--botao ${filtros.buscarConteudo ? 'filtro--ativo' : ''}`}
+          aria-pressed={Boolean(filtros.buscarConteudo)}
+          onClick={() =>
+            aoAlterar({ ...filtros, buscarConteudo: !filtros.buscarConteudo })
+          }
         >
-          <input
-            type="checkbox"
-            checked={Boolean(filtros.buscarConteudo)}
-            onChange={(evento) =>
-              aoAlterar({ ...filtros, buscarConteudo: evento.target.checked })
-            }
-          />
-          <span>Buscar no conteúdo</span>
-        </label>
+          {filtros.buscarConteudo && <span aria-hidden="true">✓</span>}
+          Buscar no conteúdo
+        </button>
 
         <label className={`filtro ${tipoAtivo ? 'filtro--ativo' : ''}`}>
           <span>Extensão:</span>
@@ -89,6 +115,24 @@ export function Filtros({ filtros, aoAlterar, erroPeriodo }: Props) {
             {EXTENSOES_ACEITAS.map((extensao) => (
               <option key={extensao} value={extensao}>
                 .{extensao}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className={`filtro ${categoriaAtiva ? 'filtro--ativo' : ''}`}>
+          <span>Categoria:</span>
+          <select
+            value={filtros.categoria ?? ''}
+            onFocus={() => void buscarCategorias()}
+            onChange={(evento) =>
+              aoAlterar({ ...filtros, categoria: evento.target.value || undefined })
+            }
+          >
+            <option value="">todas</option>
+            {categorias.map((categoria) => (
+              <option key={categoria} value={categoria}>
+                {categoria}
               </option>
             ))}
           </select>

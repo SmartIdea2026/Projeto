@@ -59,7 +59,7 @@ O sistema SHALL ler a instrução vigente em tempo de execução.
 
 O sistema SHALL produzir o resumo a partir do texto do documento já mantido localmente, obtendo-o sob demanda apenas quando ainda não houver.
 
-Uma única submissão SHALL produzir o resumo em prosa, o tipo do documento, os assuntos identificados e os destaques principais. O sistema NÃO SHALL realizar submissões separadas para cada um desses elementos.
+Uma única submissão SHALL produzir o resumo em prosa, a categoria do documento, os assuntos identificados e os destaques principais. O sistema NÃO SHALL realizar submissões separadas para cada um desses elementos.
 
 As submissões à LLM SHALL ocorrer **uma por vez**, nunca em lote paralelo.
 
@@ -82,7 +82,7 @@ Documentos sem texto disponível — formato não lido, sem texto extraível ou 
 
 - **GIVEN** que um documento foi submetido à LLM
 - **WHEN** a resposta é recebida
-- **THEN** ela contém o resumo em prosa, o tipo, os assuntos e os destaques
+- **THEN** ela contém o resumo em prosa, a categoria, os assuntos e os destaques
 - **AND** apenas uma submissão foi realizada
 
 #### Scenario: Submissões em série
@@ -97,6 +97,51 @@ Documentos sem texto disponível — formato não lido, sem texto extraível ou 
 - **WHEN** ele entra em foco no painel
 - **THEN** nenhuma submissão à LLM é realizada
 - **AND** o painel informa que aquele documento não tem texto a resumir
+
+### Requirement: Categoria de vocabulário fechado
+
+A categoria SHALL ser escolhida pela LLM a partir de uma lista fechada de rótulos definida na instrução de redação do resumo (`instrucoes/resumo.md`) — nunca um rótulo fora dela.
+
+Quando nenhum rótulo da lista descrever o documento com confiança, a categoria SHALL ficar ausente. O sistema NÃO SHALL atribuir um rótulo genérico em seu lugar.
+
+A categoria NÃO SHALL ser apresentada no painel de resumo — aparece como selo no cartão do documento e alimenta o filtro por categoria da busca (capacidade `busca-documentos`).
+
+#### Scenario: Categoria escolhida da lista fechada
+
+- **GIVEN** que o conteúdo de um documento corresponde claramente a um dos rótulos da lista fechada
+- **WHEN** o resumo é gerado
+- **THEN** o documento recebe esse rótulo como categoria
+
+#### Scenario: Nenhum rótulo da lista se aplica com confiança
+
+- **GIVEN** que o conteúdo de um documento não corresponde com confiança a nenhum rótulo da lista fechada
+- **WHEN** o resumo é gerado
+- **THEN** o documento fica sem categoria
+- **AND** nenhum rótulo genérico é atribuído em seu lugar
+
+#### Scenario: Categoria não aparece no painel
+
+- **GIVEN** que um documento tem categoria atribuída
+- **WHEN** seu resumo é apresentado no painel
+- **THEN** a categoria não é exibida ali
+
+### Requirement: Persistência da categoria para filtragem
+
+A categoria produzida SHALL ser refletida, junto da versão de conteúdo em que foi atribuída, no registro do acervo consultado pela busca — não apenas no registro do resumo.
+
+A categoria refletida SHALL ser atualizada sempre que o resumo do documento for gerado ou regerado.
+
+#### Scenario: Categoria refletida ao gerar o resumo
+
+- **GIVEN** que um documento recebeu categoria ao ser resumido
+- **WHEN** a busca consulta o acervo
+- **THEN** a categoria está disponível para o filtro por categoria, sem nova submissão à LLM
+
+#### Scenario: Categoria atualizada ao regerar o resumo
+
+- **GIVEN** que um documento já tem categoria refletida no acervo
+- **WHEN** seu resumo é regerado com um resultado diferente
+- **THEN** a categoria refletida no acervo é atualizada para o novo resultado
 
 ### Requirement: Armazenamento e reuso do resumo
 
@@ -129,11 +174,13 @@ O resumo SHALL ser assinalado como desatualizado quando o conteúdo do documento
 
 ### Requirement: Painel de resumo
 
-O sistema SHALL apresentar um painel à direita da lista de resultados, contendo o nome do documento, a fonte de onde ele vem, o resumo em prosa, os destaques principais e uma ação que abre o documento na fonte original.
+O sistema SHALL apresentar um painel à direita da lista de resultados, contendo o nome do documento, a fonte de onde ele vem, o resumo em prosa, os destaques principais, a pilha de documentos relacionados e uma ação que abre o documento na fonte original.
 
 Ao concluir uma busca com resultados, o painel SHALL passar a apresentar o **primeiro** documento da página.
 
 Cada resultado SHALL oferecer uma ação de gerar o resumo. Acioná-la SHALL substituir o conteúdo do painel pelo daquele documento, **sem alterar a lista de resultados** nem a posição de rolagem dela.
+
+Acionar um item da pilha de documentos relacionados SHALL ter o mesmo efeito: substituir o conteúdo do painel pelo daquele documento, sem alterar a lista de resultados nem a posição de rolagem dela.
 
 O painel NÃO SHALL ser apresentado quando não houver documento em foco.
 
@@ -150,6 +197,13 @@ A ação de abrir o documento SHALL ter o mesmo efeito do link no resultado: red
 - **GIVEN** que o painel apresenta um documento
 - **WHEN** o usuário aciona a geração de resumo em outro resultado
 - **THEN** o painel passa a apresentar o documento escolhido
+- **AND** a lista de resultados permanece inalterada
+
+#### Scenario: Navegação por um documento relacionado
+
+- **GIVEN** que o painel apresenta um documento e sua pilha de relacionados
+- **WHEN** o usuário aciona um item da pilha
+- **THEN** o painel passa a apresentar o documento daquele item
 - **AND** a lista de resultados permanece inalterada
 
 #### Scenario: Painel identifica a origem do documento
@@ -243,7 +297,7 @@ O sistema SHALL distinguir credencial ausente, credencial inválida, limite de r
 
 ### Requirement: Alcance do painel por teclado e por leitores de tela
 
-O painel e a ação de gerar resumo em cada resultado SHALL ser alcançáveis por teclado, na ordem de leitura visual.
+O painel, a ação de gerar resumo em cada resultado e cada item da pilha de documentos relacionados SHALL ser alcançáveis por teclado, na ordem de leitura visual.
 
 A troca do conteúdo do painel SHALL ser anunciada por leitores de tela, assim como a conclusão de uma geração.
 
@@ -253,7 +307,7 @@ A informação apresentada no painel NÃO SHALL depender apenas de cor para ser 
 
 - **GIVEN** que a lista de resultados e o painel estão apresentados
 - **WHEN** o usuário percorre a tela pelo teclado
-- **THEN** a ação de gerar resumo de cada resultado e as ações do painel são alcançadas
+- **THEN** a ação de gerar resumo de cada resultado, as ações do painel e os itens da pilha de relacionados são alcançados
 - **AND** a ordem segue a leitura visual da tela
 
 #### Scenario: Troca de conteúdo anunciada

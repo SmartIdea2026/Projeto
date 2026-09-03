@@ -387,12 +387,12 @@ describe('avisos sobre a base do resumo', () => {
 });
 
 describe('classificação apresentada junto do resumo', () => {
-  it('mostra tipo, assuntos e destaques', async () => {
+  it('mostra assuntos e destaques, mas não a categoria (vira selo no cartão)', async () => {
     instalarApi(montarApi(RESULTADO));
     render(<App />);
     await painelCom('doc1.md');
 
-    expect(screen.getByText('Tipo identificado:')).toBeInTheDocument();
+    expect(screen.queryByText('Tipo identificado:')).not.toBeInTheDocument();
     expect(screen.getByText('Assuntos detectados:')).toBeInTheDocument();
     expect(screen.getByText('Destaques principais')).toBeInTheDocument();
     expect(screen.getByText('Primeiro ponto')).toBeInTheDocument();
@@ -406,5 +406,193 @@ describe('classificação apresentada junto do resumo', () => {
     const vivo = document.querySelector('.painel [aria-live="polite"]');
     expect(vivo).not.toBeNull();
     expect(vivo).toHaveAttribute('aria-atomic', 'true');
+  });
+});
+
+describe('pilha de documentos relacionados', () => {
+  function itemRelacionado(nome: string) {
+    return {
+      id: `github:org/repo:${nome}`,
+      nome,
+      fonte: 'github' as const,
+      link: `https://github.com/org/repo/blob/main/${nome}`,
+      score: 0.5
+    };
+  }
+
+  it('lista os relacionados pelo nome', async () => {
+    instalarApi(
+      montarApi(RESULTADO, {
+        relacionadosDoDocumento: vi.fn(async () => ({
+          pilha: [itemRelacionado('guia.md')],
+          semClassificacao: false
+        }))
+      })
+    );
+    render(<App />);
+    await painelCom('doc1.md');
+
+    await waitFor(() =>
+      expect(screen.getByText('Documentos relacionados')).toBeInTheDocument()
+    );
+    expect(screen.getByRole('button', { name: 'guia.md' })).toBeInTheDocument();
+  });
+
+  it('indica progresso enquanto a pilha é montada', async () => {
+    instalarApi(
+      montarApi(RESULTADO, {
+        relacionadosDoDocumento: vi.fn(() => new Promise(() => {}))
+      })
+    );
+    render(<App />);
+    await painelCom('doc1.md');
+
+    await waitFor(() => expect(screen.getByText('Montando a pilha…')).toBeInTheDocument());
+  });
+
+  it('informa quando não há nenhum relacionado', async () => {
+    instalarApi(
+      montarApi(RESULTADO, {
+        relacionadosDoDocumento: vi.fn(async () => ({ pilha: [], semClassificacao: false }))
+      })
+    );
+    render(<App />);
+    await painelCom('doc1.md');
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('Nenhum documento relacionado encontrado.')
+      ).toBeInTheDocument()
+    );
+  });
+
+  it('informa a falha sem derrubar o resumo', async () => {
+    instalarApi(
+      montarApi(RESULTADO, {
+        relacionadosDoDocumento: vi.fn(async () => {
+          throw new Error('falhou');
+        })
+      })
+    );
+    render(<App />);
+    await painelCom('doc1.md');
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('Não foi possível montar os documentos relacionados.')
+      ).toBeInTheDocument()
+    );
+    // O resumo continua na tela, e a ação de abrir também.
+    expect(screen.getByText('Resumo de doc1.md.')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Abrir documento no GitHub/ })
+    ).toBeInTheDocument();
+  });
+
+  it('diz que a pilha aparece depois do resumo quando o foco não tem classificação', async () => {
+    instalarApi(
+      montarApi(RESULTADO, {
+        relacionadosDoDocumento: vi.fn(async () => ({ pilha: [], semClassificacao: true }))
+      })
+    );
+    render(<App />);
+    await painelCom('doc1.md');
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/aparecem depois que este documento tem um resumo/)
+      ).toBeInTheDocument()
+    );
+  });
+
+  it('apresenta o aviso de cobertura parcial como resultado parcial', async () => {
+    instalarApi(
+      montarApi(RESULTADO, {
+        relacionadosDoDocumento: vi.fn(async () => ({
+          pilha: [itemRelacionado('guia.md')],
+          semClassificacao: false,
+          aviso: { fonte: 'github', mensagem: '4 documento(s) ficaram fora da análise.' }
+        }))
+      })
+    );
+    render(<App />);
+    await painelCom('doc1.md');
+
+    await waitFor(() =>
+      expect(screen.getByText('4 documento(s) ficaram fora da análise.')).toBeInTheDocument()
+    );
+    expect(screen.getByText('Resultado parcial:')).toBeInTheDocument();
+  });
+
+  it('acionar um relacionado troca o foco do painel sem mexer na lista', async () => {
+    instalarApi(
+      montarApi(RESULTADO, {
+        relacionadosDoDocumento: vi.fn(async (documento: Documento) => ({
+          pilha:
+            documento.id === 'github:org/repo:doc1.md'
+              ? [itemRelacionado('doc2.md')]
+              : [],
+          semClassificacao: false
+        }))
+      })
+    );
+    render(<App />);
+    await painelCom('doc1.md');
+
+    const nomesAntes = [...document.querySelectorAll('.cartao__nome')].map((n) => n.textContent);
+
+    const item = await screen.findByRole('button', { name: 'doc2.md' });
+    fireEvent.click(item);
+
+    await painelCom('doc2.md');
+    const nomesDepois = [...document.querySelectorAll('.cartao__nome')].map((n) => n.textContent);
+    expect(nomesDepois).toEqual(nomesAntes);
+  });
+
+  it('refaz a pilha ao trocar de documento em foco', async () => {
+    const relacionados = vi.fn(async () => ({ pilha: [], semClassificacao: false }));
+    instalarApi(montarApi(RESULTADO, { relacionadosDoDocumento: relacionados }));
+    render(<App />);
+    await painelCom('doc1.md');
+
+    const acoes = screen.getAllByRole('button', { name: /Gerar resumo/ });
+    fireEvent.click(acoes[acoes.length - 1] as HTMLElement);
+    await painelCom('doc2.md');
+
+    await waitFor(() =>
+      expect(relacionados).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'github:org/repo:doc2.md' })
+      )
+    );
+  });
+
+  it('não deixa a pilha do documento anterior aparecer depois da troca de foco', async () => {
+    const pendentes = new Map<string, (v: unknown) => void>();
+    instalarApi(
+      montarApi(RESULTADO, {
+        relacionadosDoDocumento: vi.fn(
+          (documento: Documento) =>
+            new Promise((resolver) => {
+              pendentes.set(documento.id, resolver);
+            })
+        )
+      })
+    );
+    render(<App />);
+    await waitFor(() => expect(pendentes.has('github:org/repo:doc1.md')).toBe(true));
+
+    const acoes = screen.getAllByRole('button', { name: /Gerar resumo/ });
+    fireEvent.click(acoes[acoes.length - 1] as HTMLElement);
+    await painelCom('doc2.md');
+
+    // doc1 responde atrasado, com uma pilha que não é mais a do foco.
+    await act(async () => {
+      pendentes.get('github:org/repo:doc1.md')?.({
+        pilha: [itemRelacionado('fantasma.md')],
+        semClassificacao: false
+      });
+    });
+
+    expect(screen.queryByText('fantasma.md')).toBeNull();
   });
 });

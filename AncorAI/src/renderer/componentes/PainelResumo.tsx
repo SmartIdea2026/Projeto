@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
-import type { Documento, MotivoSemResumo, ResumoDocumento } from '../../compartilhado/tipos';
+import type {
+  Documento,
+  ItemRelacionado,
+  MotivoSemResumo,
+  RespostaRelacionados,
+  ResumoDocumento
+} from '../../compartilhado/tipos';
 
 /**
  * Painel de resumo por IA, à direita da lista.
@@ -41,7 +47,11 @@ interface Props {
   etapa: EtapaResumo | null;
   motivo?: MotivoSemResumo;
   mensagem?: string;
+  /** `null` enquanto a pilha ainda está sendo montada. */
+  relacionados: RespostaRelacionados | null;
+  erroRelacionados: boolean;
   aoAbrir: (documento: Documento) => void;
+  aoAbrirRelacionado: (item: ItemRelacionado) => void;
   aoConsentir: () => void;
   aoRecusar: () => void;
   aoConfigurar: () => void;
@@ -165,19 +175,18 @@ function Conteudo({
 }) {
   return (
     <div className="painel__corpo">
-      {(resumo.tipo || resumo.assuntos.length > 0) && (
+      {/*
+        A categoria não aparece aqui (categorizar-documentos-pelo-resumo): vira
+        selo no cartão do documento, ao lado da extensão — é onde quem navega
+        a lista já espera encontrar essa classificação, e é o que alimenta o
+        filtro por categoria da busca.
+      */}
+      {resumo.assuntos.length > 0 && (
         <ul className="painel__classificacao">
-          {resumo.tipo && (
-            <li>
-              <span className="painel__rotulo">Tipo identificado:</span> {resumo.tipo}
-            </li>
-          )}
-          {resumo.assuntos.length > 0 && (
-            <li>
-              <span className="painel__rotulo">Assuntos detectados:</span>{' '}
-              {resumo.assuntos.join(', ')}
-            </li>
-          )}
+          <li>
+            <span className="painel__rotulo">Assuntos detectados:</span>{' '}
+            {resumo.assuntos.join(', ')}
+          </li>
         </ul>
       )}
 
@@ -212,13 +221,89 @@ function Conteudo({
   );
 }
 
+/**
+ * Documentos relacionados ao que está em foco, pela sobreposição de assuntos.
+ *
+ * Vem depois do resumo, dos assuntos e dos destaques: é continuação da leitura
+ * do documento, não uma tela à parte. Acionar um item passa o foco do painel
+ * para aquele documento — o mesmo efeito de acionar um resultado da lista —, e
+ * a ação de abrir na fonte continua sendo a do rodapé, separada.
+ *
+ * Uma falha aqui não derruba o resto do painel: o bloco diz o que houve e o
+ * resumo segue na tela.
+ */
+function Relacionados({
+  estado,
+  aoAbrir
+}: {
+  estado:
+    | { situacao: 'carregando' }
+    | { situacao: 'erro' }
+    | { situacao: 'sem-classificacao' }
+    | { situacao: 'pronta'; pilha: ItemRelacionado[]; aviso?: string };
+  aoAbrir: (item: ItemRelacionado) => void;
+}) {
+  return (
+    <div className="painel__relacionados">
+      <h3 className="painel__subtitulo">Documentos relacionados</h3>
+
+      {estado.situacao === 'carregando' && (
+        <p className="painel__nota" role="status">
+          Montando a pilha…
+        </p>
+      )}
+
+      {estado.situacao === 'erro' && (
+        <p className="painel__nota painel__nota--atencao" role="status">
+          Não foi possível montar os documentos relacionados.
+        </p>
+      )}
+
+      {estado.situacao === 'sem-classificacao' && (
+        <p className="painel__nota">
+          Os documentos relacionados aparecem depois que este documento tem um resumo.
+        </p>
+      )}
+
+      {estado.situacao === 'pronta' && estado.pilha.length === 0 && (
+        <p className="painel__nota">Nenhum documento relacionado encontrado.</p>
+      )}
+
+      {estado.situacao === 'pronta' && estado.pilha.length > 0 && (
+        <ul className="painel__pilha">
+          {estado.pilha.map((item) => (
+            <li key={item.id}>
+              <button
+                type="button"
+                className="painel__pilha-item"
+                onClick={() => aoAbrir(item)}
+              >
+                <span className="painel__pilha-nome">{item.nome}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {estado.situacao === 'pronta' && estado.aviso && (
+        <p className="painel__nota painel__nota--atencao" role="status">
+          <strong>Resultado parcial:</strong> {estado.aviso}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function PainelResumo({
   documento,
   resumo,
   etapa,
   motivo,
   mensagem,
+  relacionados,
+  erroRelacionados,
   aoAbrir,
+  aoAbrirRelacionado,
   aoConsentir,
   aoRecusar,
   aoConfigurar,
@@ -249,6 +334,30 @@ export function PainelResumo({
           />
         )}
       </div>
+
+      {/*
+        A pilha só aparece quando há o que relacionar: fora do pedido de
+        consentimento e da geração em curso, onde ainda não há assuntos e o
+        bloco seria só ruído.
+      */}
+      {motivo !== 'sem-consentimento' && !etapa && (
+        <Relacionados
+          estado={
+            erroRelacionados
+              ? { situacao: 'erro' }
+              : relacionados === null
+                ? { situacao: 'carregando' }
+                : relacionados.semClassificacao
+                  ? { situacao: 'sem-classificacao' }
+                  : {
+                      situacao: 'pronta',
+                      pilha: relacionados.pilha,
+                      aviso: relacionados.aviso?.mensagem
+                    }
+          }
+          aoAbrir={aoAbrirRelacionado}
+        />
+      )}
 
       <div className="painel__rodape">
         <button

@@ -31,7 +31,8 @@ vi.mock('../../src/main/banco/repositorio', () => ({
   gravarCache: vi.fn(async () => undefined),
   conteudoParaBusca: vi.fn(async () => ({ textos: new Map(), versoes: new Map() })),
   inventarioSincronizado: vi.fn(async () => []),
-  documentosSemAutoria: vi.fn(async () => 0)
+  documentosSemAutoria: vi.fn(async () => 0),
+  categoriasDeDocumentos: vi.fn(async () => new Map())
 }));
 vi.mock('../../src/main/credenciais/validacao', () => ({
   lerValidacao: vi.fn(async () => null),
