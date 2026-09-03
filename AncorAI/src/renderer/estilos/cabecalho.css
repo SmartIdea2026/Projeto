@@ -1,4 +1,4 @@
-/* Cabeçalho: marca e indicadores de conexão das fontes. */
+/* Cabeçalho: marca, sincronização do acervo e acesso às configurações. */
 
 /* ---------- Cabeçalho ---------- */
 
@@ -112,16 +112,20 @@
   color: var(--texto-suave);
 }
 
+/* Botão só de ícone: abre a tela de configurações. O estado de conexão da
+   fonte não aparece aqui — vive na própria tela de configurações. */
 .conexao {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
+  justify-content: center;
+  padding: 7px;
   border-radius: 999px;
   border: 1px solid var(--borda);
   background: var(--superficie);
-  font-size: 13px;
+  font-size: 15px;
+  line-height: 1;
   color: var(--texto);
+  cursor: pointer;
   transition: box-shadow 0.15s, border-color 0.15s;
 }
 
@@ -130,16 +134,4 @@
   box-shadow: var(--sombra);
 }
 
-.conexao__ponto {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex: none;
-}
-
-/* O estado nunca é comunicado apenas por cor: o rótulo textual acompanha. */
-.conexao__ponto--conectada { background: var(--verde-medio); }
-.conexao__ponto--invalida { background: var(--erro); }
-.conexao__ponto--nao-configurada { background: var(--borda-forte); }
-.conexao__ponto--sem-conexao { background: var(--aviso-borda); }
-.conexao__ponto--verificando { background: var(--texto-suave); }
+/* O foco visível vem da regra global `:focus-visible` de base.css. */
