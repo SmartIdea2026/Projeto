@@ -107,7 +107,12 @@ export function registrarCanais(): void {
 
   ipcMain.handle(CANAIS.abrirDocumento, async (_evento, documento: Documento) => {
     await registrarAcesso(documento);
-    await shell.openExternal(documento.link);
+    // Sob a suíte E2E (mesma env var que isola `userData`, ver `main/index.ts`),
+    // não abre de fato um navegador externo — o registro de acesso acima já é
+    // o efeito observável que o teste verifica.
+    if (!process.env['ANCORAI_E2E_USER_DATA_DIR']) {
+      await shell.openExternal(documento.link);
+    }
   });
 
   ipcMain.handle(CANAIS.documentosAcessados, () => listarAcessados());

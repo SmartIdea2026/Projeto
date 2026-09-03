@@ -12,7 +12,12 @@ import type { MotivoSemResumo } from '../../compartilhado/tipos';
  * erro que registre a URL requisitada.
  */
 
-const BASE = 'https://generativelanguage.googleapis.com/v1beta';
+// Sobrepõe a URL da API sob a suíte E2E (ver `e2e/apoio/servidorMockGemini.ts`),
+// que sobe um servidor local no lugar da API real — nenhum teste deve tocar
+// rede de verdade. Fora desse cenário, a env var não existe e o valor é o de
+// sempre.
+const BASE =
+  process.env['ANCORAI_E2E_GEMINI_BASE_URL'] || 'https://generativelanguage.googleapis.com/v1beta';
 
 /**
  * O modelo NÃO é fixado no código.

@@ -44,7 +44,9 @@ test('busca por um termo encontra o documento correspondente no snapshot local',
 
   const campoBusca = janela.getByRole('searchbox', { name: 'Buscar pelo nome do documento' });
   await campoBusca.fill(TERMO_DISTINTIVO);
-  await janela.getByRole('button', { name: 'Buscar' }).click();
+  // `exact: true`: o filtro "Buscar no conteúdo" (adicionado depois desta PoC)
+  // também casa com "Buscar" por substring.
+  await janela.getByRole('button', { name: 'Buscar', exact: true }).click();
 
   // O nome do documento também aparece no painel de resumo (que passa a
   // acompanhar o primeiro resultado automaticamente) — por isso o locator é
@@ -57,7 +59,9 @@ test('busca por um termo sem correspondência não retorna resultados', async ()
 
   const campoBusca = janela.getByRole('searchbox', { name: 'Buscar pelo nome do documento' });
   await campoBusca.fill('termo-sem-nenhuma-correspondencia-9x8z');
-  await janela.getByRole('button', { name: 'Buscar' }).click();
+  // `exact: true`: o filtro "Buscar no conteúdo" (adicionado depois desta PoC)
+  // também casa com "Buscar" por substring.
+  await janela.getByRole('button', { name: 'Buscar', exact: true }).click();
 
   // Sem credencial do GitHub configurada — fora do escopo desta PoC —, a
   // mensagem "Nenhum documento encontrado" não aparece: ela é condicionada a

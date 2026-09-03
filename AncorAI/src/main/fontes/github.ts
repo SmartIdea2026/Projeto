@@ -16,7 +16,11 @@ import { ErroFonte, extensaoDe, extensaoEhAceita } from './comum';
  *   recentes, que é onde os arquivos alterados aparecem.
  */
 
-const BASE = 'https://api.github.com';
+// Sobrepõe a URL da API sob a suíte E2E (ver `e2e/apoio/servidorMockGithub.ts`),
+// que sobe um servidor local no lugar da API real — nenhum teste deve tocar
+// rede de verdade. Fora desse cenário, a env var não existe e o valor é o de
+// sempre.
+const BASE = process.env['ANCORAI_E2E_GITHUB_BASE_URL'] || 'https://api.github.com';
 
 interface RespostaCache<T> {
   dados: T;
