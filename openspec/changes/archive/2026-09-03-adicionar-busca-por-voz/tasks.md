@@ -1,0 +1,75 @@
+## 1. Spike e preparação
+
+- [x] 1.1 Spike do transformers.js: carregar `onnx-community/whisper-base` q8 e transcrever um WAV 16 kHz mono. **Feito** (`scratchpad/spike-whisper/`): backend WASM não roda no build Node do v3 → `onnxruntime-node` CPU; inferência 0,82 s para 13 s de áudio (RTF 0,06); modelo q8 = 76 MB; ORT-node CPU Linux = ~22 MB após excluir os `.so` de CUDA/TensorRT. Design decisão #3 atualizada. Pendente de calibração (não bloqueia): precisão pt-BR de `base` vs `tiny` com frase real gravada.
+- [x] 1.2 Fixar nome + revisão do modelo e montar o manifesto `arquivo → sha256`. **Feito**: `onnx-community/whisper-base` @ `1846881b6b3a3024392c1eea3ad983695bc23925`; os 7 arquivos hasheados (os 2 `.onnx` batem com o SHA-256 LFS do Hub). Manifesto em `instrucoes/transcricao.md`.
+- [x] 1.3 Criar `instrucoes/transcricao.md` com idioma, `task`, limiares de captura, `no_speech`, nome+revisão do modelo e o manifesto de hashes. **Feito**: `AncorAI/instrucoes/transcricao.md` (prosa + dois blocos ```json: parâmetros e manifesto).
+
+## 2. Dependência e gestão do modelo (main)
+
+- [x] 2.1 Adicionar `@huggingface/transformers` v3 ao `AncorAI/package.json`. `electron-builder.yml`: `asarUnpack: node_modules/onnxruntime-node/bin/**` e exclusão de `libonnxruntime_providers_{cuda,tensorrt}.*` + binários de `{darwin,win32}` e `linux/arm64`. **Feito e verificado** com `electron-builder --dir`: `resources/` 349 MB → 250 MB, sem os `.so` de GPU. O recurso ainda adiciona ~180–200 MB (`onnxruntime-web` + `dist` do transformers.js, dentro do asar) — aparar isso precisa de teste do app empacotado; registrado no ADR-0008 como acompanhamento.
+- [x] 2.2 `src/main/voz/config.ts` — `inicializarConfigVoz(process.resourcesPath, app.getAppPath())` lendo `instrucoes/transcricao.md` em runtime, no padrão de `src/main/llm/instrucao.ts`. Verificar: teste unitário lê a config de um diretório de fixture e falha com mensagem clara quando o arquivo não existe.
+- [x] 2.3 `src/main/voz/modelo.ts` — estado do modelo derivado do disco (`env.cacheDir` = `userData/modelos`): `ausente` | `pronto`, conferindo presença dos arquivos e os hashes do manifesto. Verificar: `test/voz/modelo.test.ts` cobre ausente, pronto e arquivo com hash divergente (→ tratado como ausente).
+- [x] 2.4 `src/main/voz/modelo.ts` — download sob demanda: liga `env.allowRemoteModels`, resolve o `pipeline` com `progress_callback`, desliga de novo; ao terminar, valida os hashes; em falha ou hash divergente, apaga o diretório do modelo. Verificar: `test/voz/modelo.test.ts` com fetch dublado cobre download OK, download interrompido (parcial apagado) e hash divergente (diretório apagado).
+
+## 3. Transcrição (main + utilityProcess)
+
+- [x] 3.1 `src/main/voz/worker.ts` — corpo do `utilityProcess`: recebe PCM (Float32 16 kHz mono) por mensagem, roda o pipeline Whisper com os parâmetros da config, responde `{ texto }` ou `{ erro }`. Verificar: `test/voz/worker.test.ts` transcreve um buffer de fixture com o modelo dublado e devolve o texto.
+- [x] 3.2 `src/main/voz/transcricao.ts` — orquestra o `utilityProcess` (fork sob demanda, encerramento, timeout, um pedido por vez), expõe `transcrever(pcm): Promise<{ texto } | { erro }>`. Verificar: `test/voz/transcricao.test.ts` cobre sucesso, timeout e crash do worker (→ `{ erro }`, sem derrubar o processo de teste).
+- [x] 3.3 Distinguir os motivos de erro (`modelo-ausente`, `falha-transcricao`, `vazio`) num tipo em `src/compartilhado/tipos.ts`. Verificar: `tsc --noEmit` passa; os testes de 3.2 aferem cada motivo.
+
+## 4. Permissão de microfone (main)
+
+- [x] 4.1 `src/main/permissoes.ts` — `setPermissionRequestHandler` / `setPermissionCheckHandler` na sessão padrão: concede só `media`/áudio para a origem própria da aplicação, nega o resto; registra o último resultado (`concedida` | `negada` | `desconhecida`). Chamado de `src/main/index.ts` após `app.whenReady`. Verificar: `test/voz/permissoes.test.ts` com sessão dublada afere concessão de áudio, negação de câmera e o rastreio do último resultado.
+
+## 5. Canais IPC, preload e tipos
+
+- [x] 5.1 Adicionar `voz:transcrever`, `voz:modeloEstado`, `voz:ativar` a `src/compartilhado/canais.ts` com comentário explicitando que o transcrito é a fala do usuário, não conteúdo de documento (ADR-0005). Criar `EVENTOS_VOZ` com `voz:modelo-progresso` (evento main→renderer, fora de `CANAIS`). Verificar: `tsc --noEmit` passa.
+- [x] 5.2 Handlers em `src/main/ipc.ts`: `voz:transcrever` → `transcricao.transcrever`; `voz:modeloEstado` → estado do modelo + permissão + `vozAtiva`; `voz:ativar` → grava a preferência e inicia/cancela o download, emitindo `voz:modelo-progresso`. Verificar: `test/voz/ipc.test.ts` exercita os três handlers com os módulos de voz dublados.
+- [x] 5.3 Persistir `{ vozAtiva }` na coleção de preferências (`src/main/banco/repositorio.ts`), no padrão do consentimento da LLM. Verificar: teste do repositório cobre gravar/ler `vozAtiva`, com ausência = `false`.
+- [x] 5.4 Expor os canais no `src/preload/index.ts` e tipar em `src/preload/index.d.ts` (`window.ancorai.voz.*`). Verificar: `tsc --noEmit` passa; `test/seguranca/fronteira-conteudo.test.ts` (bloco do preload) continua verde — nenhum termo de conteúdo de documento introduzido.
+
+## 6. Captura de áudio (renderer)
+
+- [x] 6.1 `src/renderer/audio/captura.ts` — `getUserMedia({ audio: true })`, captura, detecção de silêncio por `AnalyserNode` (RMS < limiar por N ms), teto de duração, reamostragem para 16 kHz mono Float32 via `OfflineAudioContext`, retorno do `ArrayBuffer`. API: `iniciar()`, `parar()`, `cancelar()`, callbacks de estado. Verificar: `test/interface/captura.test.tsx` com Web Audio dublado cobre parada por silêncio, parada manual, teto e cancelamento.
+- [x] 6.2 Hook `useDitado` no renderer — máquina de estados `ocioso → solicitando-permissão → escutando → transcrevendo → (preenchido | vazio | erro)`, chamando `captura` + `window.ancorai.voz.transcrever`. Verificar: `test/interface/ditado.test.tsx` percorre todos os estados com a API e a captura dubladas.
+
+## 7. Controle de microfone na barra de busca (renderer)
+
+- [x] 7.1 Botão de microfone em `<form className="busca">` de `src/renderer/App.tsx`, ao lado de "Buscar": glifo emoji em `<span aria-hidden="true">` + `aria-label`; só renderiza quando `voz:modeloEstado` indica `vozAtiva` e modelo `pronto`; estado desabilitado + orientação quando `permissao === 'negada'`. Ao receber o transcrito, `setTermoCampo(texto)` e foco em `campoBusca`, **sem** chamar `aoSubmeter`. Verificar: `test/interface/ditado.test.tsx` afere que o texto entra no campo, o foco volta ao campo e `window.ancorai.buscar` não é chamado.
+- [x] 7.2 Estados visuais do botão (default/hover/foco/escutando/transcrevendo/erro) e o controle de parar visível durante a escuta, em `src/renderer/estilos/busca.css`; estados distinguíveis sem depender só de cor; anúncios a leitor de tela (`aria-live`) para início da escuta, início da transcrição, chegada do texto e erros. Verificar: `test/interface/ditado.test.tsx` afere os `aria-live`/rótulos por estado; revisão visual manual.
+- [x] 7.3 Caso "nenhuma fala reconhecida": não altera o campo, mostra aviso breve "Não ouvi nada, tente de novo". Verificar: `test/interface/ditado.test.tsx` cobre transcrição vazia → campo inalterado + aviso.
+
+## 8. Ativação e download nas configurações (renderer)
+
+- [x] 8.1 Seção "Busca por voz" em `src/renderer/telas/Configuracoes.tsx`: controle de ativação (desligado por padrão), barra de progresso do download escutando `voz:modelo-progresso`, mensagens de erro distinguindo falha de download de recusa do usuário. Estilos em `src/renderer/estilos/configuracoes.css`. Verificar: `test/interface/configuracoes-voz.test.tsx` cobre ativar → progresso → pronto, e ativar → falha → volta a desligado com erro.
+- [x] 8.2 Tipos `EstadoModeloVoz` / progresso em `src/compartilhado/tipos.ts` e fio até a tela. Verificar: `tsc --noEmit` passa.
+
+## 9. Testes existentes
+
+- [x] 9.1 `test/seguranca/fronteira-conteudo.test.ts` — `ARGUMENTOS[CANAIS.vozTranscrever] = [new ArrayBuffer(32000)]`, `vi.mock` do módulo de transcrição devolvendo `{ texto: 'roadmap de setembro' }`. Verificar: a suíte passa, inclusive a asserção de que `[...handlers.keys()]` é exatamente `Object.values(CANAIS)`.
+- [x] 9.2 `test/interface/tabulacao.test.tsx` — o botão de microfone entra na ordem de foco da região `.busca` quando a voz está ativa; ajustar a contagem de focáveis e a asserção de ordem (cabeçalho → busca → filtros → …). Verificar: a suíte passa com a voz ativa e com a voz desativada (botão ausente).
+
+## 10. ADR e documentação
+
+- [x] 10.1 `Docs/ADR/ADR-0008-transcricao-de-voz-local.md` (status Proposto, template `Docs/ADR/TemplatesADR/TemplateExemploADR.md`): Whisper local (`onnx-community/whisper-base` q8), modelo (~76 MB) baixado sob demanda, inferência em `utilityProcess` via `@huggingface/transformers` + `onnxruntime-node` CPU (~22 MB, providers de GPU excluídos), áudio não sai da máquina; supera o argumento "gigabytes no instalador" da ADR-0006 registrando os números reais; cita ADR-0003 (permissão de microfone via `setPermissionRequestHandler`) e ADR-0005 (transcrito = fala do usuário). Alternativas descartadas: `@xenova/transformers` v2 WASM (sem manutenção), inferência no renderer (CSP + superfície). Verificar: seções obrigatórias do template presentes; referências à ADR-0003/0005/0006.
+- [x] 10.2 Atualizar `AGENTS.md` (§2 capacidades/integrações, §6 arquitetura com o `utilityProcess` de voz, §9), `AncorAI/README.md` (seção sobre a busca por voz e o modelo baixado sob demanda; caminho em `userData` para apagar), `Docs/Requisitos/EspecificacaoSistemaAncorAI.md` (mock da §10 com o ícone de microfone, tabela RF/RNF, stack §2), `Docs/Requisitos/GlossarioTecnico.md` (termos "ditado na busca", "transcrição local", "modelo de voz"). Verificar: `grep` pelos novos termos encontra as entradas; o mock da §10 mostra o microfone.
+
+## 12. Consentimento explícito e escolha do microfone
+
+- [x] 12.1 Canal `voz:microfone` (`AjusteMicrofoneVoz`) em `canais.ts`/preload/`ipc.ts`; `EstadoVoz` ganha `microfoneConsentido` e `microfoneId`. `voz/servico.ts`: `ajustarMicrofone({ consentido?, dispositivoId? })` persistindo em preferências (`voz.microfoneConsentido` booleana; `voz.microfone` textual — nova `lerPreferenciaTexto`/`gravarPreferenciaTexto` no `repositorio.ts`, `RegistroPreferencia.valor: boolean | string`). Verificar: `test/voz/servico.test.ts` e `test/voz/ipc.test.ts` cobrem consentimento, escolha, `null` = padrão e "não mexe no que não veio"; `fronteira-conteudo` inclui o canal novo.
+- [x] 12.2 `captura.ts`: `iniciarCaptura(captura, dispositivoId?)` com `getUserMedia({ audio: { deviceId: { exact } } })` e retorno ao padrão em `OverconstrainedError`/`NotFoundError`; `solicitarPermissaoMicrofone()` e `enumerarMicrofones()`. Verificar: `test/interface/captura.test.tsx` cobre encaminhar o deviceId, o fallback e a listagem só de `audioinput`.
+- [x] 12.3 `BotaoMicrofone.tsx`: no primeiro uso (`!microfoneConsentido`) abre um modal de consentimento antes de qualquer `getUserMedia`; "Permitir" grava o consentimento (`ajustarMicrofoneVoz`) e segue para a captura; passa `microfoneId` para `iniciarCaptura`. Verificar: `test/interface/ditado.test.tsx` cobre "abre o modal em vez de gravar" e "permitir → consentimento gravado → captura".
+- [x] 12.4 `Configuracoes.tsx`: na seção "Busca por voz", com o modelo pronto, `<select>` de microfone (com "Padrão do sistema") ou botão "Permitir o microfone para escolher o dispositivo" quando os rótulos ainda não estão disponíveis. Estilos em `configuracoes.css` (`.campo__microfone`, `.modal--estreito`). Verificar: `test/interface/configuracoes-voz.test.tsx` cobre o botão de permissão e a gravação da escolha.
+- [x] 12.5 Spec delta: requisitos "Consentimento explícito no primeiro uso do microfone" e "Escolha do microfone de captura" em `specs/busca-por-voz/spec.md`. `design.md` atualizado. Verificar: `openspec validate --strict` passa.
+- [x] 12.6 Docs: `AncorAI/README.md` (escolha de microfone + consentimento do primeiro uso), `Docs/Requisitos/EspecificacaoSistemaAncorAI.md` (RF/estados). `npx tsc --noEmit`, `npx vitest run`, `npx electron-vite build` verdes.
+- [x] 12.7 `worker.ts` — `limparPontuacao()` tira a pontuação de frase da transcrição (`.`, `,`, `!`, `?`, aspas, parênteses) antes de devolver, mantendo hífen/apóstrofo internos. Requisito "Ditado do termo de busca por voz" no spec e nota em `instrucoes/transcricao.md`. Verificar: `test/voz/worker.test.ts` cobre a remoção e a preservação do hífen.
+- [x] 12.8 Idioma. Tentativa 1 (`idioma: "auto"`, omitir `language`) **revertida**: o `@huggingface/transformers` 3.8 não implementa detecção — sem `language` ele assume inglês (`console.warn('No language specified - defaulting to English')`) e o Whisper *traduz* o português falado. `worker.ts` volta a fixar `language` (pt-BR da config; `auto`/vazio → `portuguese`), `task: transcribe` sempre. Spec "A transcrição SHALL assumir o português do Brasil e devolver a fala literal, sem tradução" + cenário "Fala não é traduzida"; ADR-0008 item 8; proposal/design. Verificar: `test/voz/worker.test.ts` cobre `language: 'portuguese'` e o fallback de `auto`.
+
+- [x] 12.9 Qualidade da transcrição. `base` (~76 MB) errava demais em pt-BR com fala real → padrão passou a **`onnx-community/whisper-small` q8** (~250 MB) @ `36050c46d777d46dc4b5f43f6d90574fc38f8732`. `instrucoes/transcricao.md` (modelo + revisão + manifesto refeito baixando o modelo uma vez), ADR-0008 (item 1, tamanhos), proposal/design/GlossarioTecnico/AGENTS/README. `worker.ts` `limparPontuacao()` agora também remove anotações de som entre colchetes/parênteses (`[Música]`). `test/voz/{config,modelo}.test.ts` e `worker.test.ts` ajustados. O modelo já foi pré-colocado em `~/.config/AncorAI/modelos/` para o teste manual não precisar baixar 250 MB.
+- [x] 12.10 Captura (`captura.ts`): `getUserMedia` com `echoCancellation`/`noiseSuppression`/`autoGainControl` explícitos e `MediaRecorder` a 128 kbps (com fallback) — fala mais limpa e nivelada ajuda qualquer modelo. `test/interface/captura.test.tsx` ajustado.
+
+## 11. Verificação final
+
+- [x] 11.1 Rodar o gate do repositório: `npx tsc --noEmit`, `npx vitest run`, `npx electron-vite build`. Verificar: os três passam.
+- [ ] 11.2 **Pendente de execução por uma pessoa** (exige GUI + microfone real). Roteiro: ativar nas configurações (download com progresso), ditar um termo (parada por silêncio e parada manual), conferir que o texto preenche o campo sem buscar, editar e buscar; recusar a permissão e confirmar que a digitação segue funcionando; desativar e confirmar que o ícone some. Também confirmar a open question do design: `onnxruntime-node` roda dentro do `utilityProcess` empacotado. Cobertura automatizada já feita: `test/voz/` (7 arquivos) + `test/interface/{captura,ditado,configuracoes-voz}.test.tsx` + `tabulacao`/`fronteira-conteudo` ajustados; `npm run build` e `electron-builder --dir` passam.
+- [x] 11.3 `openspec validate --changes adicionar-busca-por-voz --strict`. Verificar: passa.
