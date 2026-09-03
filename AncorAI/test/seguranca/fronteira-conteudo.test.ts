@@ -95,7 +95,7 @@ beforeEach(async () => {
   vi.spyOn(gemini, 'verificarChave').mockResolvedValue(undefined);
   vi.spyOn(gemini, 'resumir').mockResolvedValue({
     resumo: 'Resumo sem nada do texto original.',
-    tipo: 'Ata',
+    categoria: 'Ata',
     assuntos: ['exemplo'],
     destaques: ['Um ponto']
   });
@@ -198,7 +198,7 @@ describe('nenhum canal devolve conteúdo de documento', () => {
     await banco.sincronizarInventario([documento]);
     await banco.gravarResumo(documento.id, {
       resumo: 'Resumo sem nada do texto.',
-      tipo: 'Ata',
+      categoria: 'Ata',
       assuntos: ['planejamento'],
       destaques: ['Um ponto']
     });

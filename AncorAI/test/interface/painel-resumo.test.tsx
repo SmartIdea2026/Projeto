@@ -387,12 +387,12 @@ describe('avisos sobre a base do resumo', () => {
 });
 
 describe('classificação apresentada junto do resumo', () => {
-  it('mostra tipo, assuntos e destaques', async () => {
+  it('mostra assuntos e destaques, mas não a categoria (vira selo no cartão)', async () => {
     instalarApi(montarApi(RESULTADO));
     render(<App />);
     await painelCom('doc1.md');
 
-    expect(screen.getByText('Tipo identificado:')).toBeInTheDocument();
+    expect(screen.queryByText('Tipo identificado:')).not.toBeInTheDocument();
     expect(screen.getByText('Assuntos detectados:')).toBeInTheDocument();
     expect(screen.getByText('Destaques principais')).toBeInTheDocument();
     expect(screen.getByText('Primeiro ponto')).toBeInTheDocument();

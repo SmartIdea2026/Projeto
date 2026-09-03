@@ -19,14 +19,15 @@ import {
  */
 
 /**
- * Acréscimo fixo de proximidade quando os dois documentos são do mesmo `tipo`.
+ * Acréscimo fixo de proximidade quando os dois documentos são da mesma
+ * `categoria`.
  *
  * Some por fora do Jaccard (não normalizado): a intenção é desempatar dois
  * candidatos com sobreposição parecida — duas atas, dois ADRs têm afinidade que
- * os assuntos nem sempre capturam —, não deixar o tipo decidir a pilha. Faixa
- * esperada: 0,1–0,3.
+ * os assuntos nem sempre capturam —, não deixar a categoria decidir a pilha.
+ * Faixa esperada: 0,1–0,3.
  */
-export const BONUS_MESMO_TIPO = 0.15;
+export const BONUS_MESMA_CATEGORIA = 0.15;
 
 /**
  * Mínimo de assuntos em comum para um documento entrar na pilha.
@@ -97,7 +98,7 @@ export async function pilhaDe(documentoId: string): Promise<RespostaRelacionados
   const pesoDe = (assunto: string): number => peso.get(normalizar(assunto)) ?? 0;
 
   const assuntosFoco = new Set(foco.assuntos.map(normalizar));
-  const tipoFoco = normalizar(foco.tipo);
+  const categoriaFoco = normalizar(foco.categoria);
 
   const candidatos: ItemRelacionado[] = [];
   for (const candidato of classificados) {
@@ -115,8 +116,9 @@ export async function pilhaDe(documentoId: string): Promise<RespostaRelacionados
     const denominador = [...uniao].reduce((soma, assunto) => soma + pesoDe(assunto), 0);
     const jaccard = denominador > 0 ? numerador / denominador : 0;
 
-    const mesmoTipo = tipoFoco !== '' && normalizar(candidato.tipo) === tipoFoco;
-    const score = jaccard + (mesmoTipo ? BONUS_MESMO_TIPO : 0);
+    const mesmaCategoria =
+      categoriaFoco !== '' && normalizar(candidato.categoria) === categoriaFoco;
+    const score = jaccard + (mesmaCategoria ? BONUS_MESMA_CATEGORIA : 0);
 
     candidatos.push({
       id: candidato.id,
