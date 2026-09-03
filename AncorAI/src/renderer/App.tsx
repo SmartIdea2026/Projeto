@@ -222,7 +222,17 @@ export function App() {
     void (async () => {
       // A lista guardada aparece antes de qualquer requisição: abrir a
       // aplicação não deve significar esperar por duas APIs.
-      const guardado = await window.ancorai.recentesDoCache(FILTROS_PADRAO);
+      //
+      // É um atalho, não um requisito: se falhar, o resto da inicialização
+      // (status das credenciais, foco no campo de busca, recentes ao vivo)
+      // precisa continuar do mesmo jeito — sem o try/catch, uma falha aqui
+      // interrompia a função antes da tela sair do estado "carregando".
+      let guardado = null;
+      try {
+        guardado = await window.ancorai.recentesDoCache(FILTROS_PADRAO);
+      } catch {
+        // Segue para a consulta ao vivo, abaixo.
+      }
       if (guardado && guardado.documentos.length > 0) {
         setResultado(guardado);
         setCarregando(false);
@@ -413,6 +423,7 @@ export function App() {
   const consultaAtiva =
     filtros.termo.trim().length > 0 ||
     filtros.extensoes.length > 0 ||
+    Boolean(filtros.categoria) ||
     Boolean(filtros.dataInicial) ||
     Boolean(filtros.dataFinal);
   const falhas = resultado?.falhas ?? [];

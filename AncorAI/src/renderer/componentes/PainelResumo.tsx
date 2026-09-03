@@ -175,19 +175,18 @@ function Conteudo({
 }) {
   return (
     <div className="painel__corpo">
-      {(resumo.tipo || resumo.assuntos.length > 0) && (
+      {/*
+        A categoria não aparece aqui (categorizar-documentos-pelo-resumo): vira
+        selo no cartão do documento, ao lado da extensão — é onde quem navega
+        a lista já espera encontrar essa classificação, e é o que alimenta o
+        filtro por categoria da busca.
+      */}
+      {resumo.assuntos.length > 0 && (
         <ul className="painel__classificacao">
-          {resumo.tipo && (
-            <li>
-              <span className="painel__rotulo">Tipo identificado:</span> {resumo.tipo}
-            </li>
-          )}
-          {resumo.assuntos.length > 0 && (
-            <li>
-              <span className="painel__rotulo">Assuntos detectados:</span>{' '}
-              {resumo.assuntos.join(', ')}
-            </li>
-          )}
+          <li>
+            <span className="painel__rotulo">Assuntos detectados:</span>{' '}
+            {resumo.assuntos.join(', ')}
+          </li>
         </ul>
       )}
 

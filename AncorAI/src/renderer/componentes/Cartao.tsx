@@ -71,6 +71,15 @@ export function Cartao({ documento, aoAbrir, aoResumir, emFoco = false }: Props)
             <span className="etiqueta">{documento.extensao.toUpperCase()}</span>
           )}
           {/*
+            Categoria inferida pelo resumo por IA (categorizar-documentos-
+            pelo-resumo) — distinta da extensão acima. Ausente enquanto o
+            documento não foi resumido, ou quando o resumo não encontrou
+            categoria com confiança.
+          */}
+          {documento.categoria && (
+            <span className="etiqueta etiqueta--categoria">{documento.categoria}</span>
+          )}
+          {/*
             A fonte é identificada por ícone, texto e formato de etiqueta —
             nunca só por cor (ui-spec, acessibilidade).
           */}
