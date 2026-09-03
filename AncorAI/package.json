@@ -14,12 +14,14 @@
     "start": "electron-vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "electron-vite build && playwright test --config e2e/playwright.config.ts",
     "postinstall": "electron-builder install-app-deps",
     "package": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",
+    "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^26.4.0",
@@ -42,5 +44,10 @@
     "pdfjs-dist": "^6.2.108",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
+  },
+  "allowScripts": {
+    "electron@38.8.6": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true
   }
 }
