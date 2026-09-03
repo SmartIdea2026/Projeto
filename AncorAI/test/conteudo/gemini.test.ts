@@ -34,7 +34,7 @@ function comTexto(texto: string) {
 
 const VALIDO = JSON.stringify({
   resumo: 'Ata da reunião.',
-  categoria: 'Ata',
+  tipo: 'Ata',
   assuntos: ['planejamento'],
   destaques: ['Decisão registrada']
 });
@@ -103,7 +103,7 @@ describe('uma submissão devolve os quatro campos', () => {
     expect(geracoes).toHaveLength(1);
     expect(produzido).toEqual({
       resumo: 'Ata da reunião.',
-      categoria: 'Ata',
+      tipo: 'Ata',
       assuntos: ['planejamento'],
       destaques: ['Decisão registrada']
     });
@@ -124,67 +124,13 @@ describe('uma submissão devolve os quatro campos', () => {
 
     const enviado = JSON.parse(corpos[0] as string);
     expect(enviado.generationConfig.responseMimeType).toBe('application/json');
-    // `categoria` fica fora de `required`: sem confiança em nenhum item da
-    // lista fechada, a instrução manda omitir o campo, não devolver um valor
-    // fora do `enum`.
     expect(enviado.generationConfig.responseSchema.required).toEqual([
       'resumo',
+      'tipo',
       'assuntos',
       'destaques'
     ]);
     expect(JSON.stringify(enviado.systemInstruction)).toContain('instrução da equipe');
-  });
-
-  it('restringe a categoria a uma lista fechada, via enum no esquema', async () => {
-    const corpos: string[] = [];
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string, opcoes: { body?: string }) => {
-        if (!url.includes(':generateContent')) return resposta(CATALOGO);
-        corpos.push(opcoes.body as string);
-        return comTexto(VALIDO);
-      })
-    );
-
-    await resumir('k', 'i', { nome: 'a.md', texto: 'x' });
-
-    const enviado = JSON.parse(corpos[0] as string);
-    const enumCategoria = enviado.generationConfig.responseSchema.properties.categoria.enum;
-    expect(enumCategoria).toEqual(expect.arrayContaining(['Ata', 'ADR']));
-    expect(enumCategoria).not.toContain('Documento');
-  });
-});
-
-describe('categoria de vocabulário fechado', () => {
-  it('descarta uma categoria fora da lista fechada, em vez de aceitar qualquer rótulo', async () => {
-    // O `enum` do esquema já deveria impedir isso na API real — este teste
-    // cobre o modelo (ou um teste) que devolve algo fora dele mesmo assim.
-    vi.stubGlobal(
-      'fetch',
-      apiCompleta(
-        JSON.stringify({
-          resumo: 'Texto.',
-          categoria: 'Categoria Inventada',
-          assuntos: [],
-          destaques: []
-        })
-      )
-    );
-
-    const produzido = await resumir('k', 'i', { nome: 'a.md', texto: 'x' });
-
-    expect(produzido.categoria).toBe('');
-  });
-
-  it('categoria ausente vira string vazia, não erro', async () => {
-    vi.stubGlobal(
-      'fetch',
-      apiCompleta(JSON.stringify({ resumo: 'Texto.', assuntos: [], destaques: [] }))
-    );
-
-    const produzido = await resumir('k', 'i', { nome: 'a.md', texto: 'x' });
-
-    expect(produzido.categoria).toBe('');
   });
 });
 
@@ -199,7 +145,7 @@ describe('resposta fora do formato é falha, não conteúdo', () => {
   });
 
   it('recusa objeto sem resumo, em vez de exibir campo vazio', async () => {
-    vi.stubGlobal('fetch', apiCompleta(JSON.stringify({ categoria: 'Ata' })));
+    vi.stubGlobal('fetch', apiCompleta(JSON.stringify({ tipo: 'Ata' })));
 
     const erro = await resumir('k', 'i', { nome: 'a.md', texto: 'x' }).catch((e) => e);
 
@@ -220,7 +166,7 @@ describe('resposta fora do formato é falha, não conteúdo', () => {
   });
 
   it('tolera listas ausentes sem quebrar, desde que haja resumo', async () => {
-    vi.stubGlobal('fetch', apiCompleta(JSON.stringify({ resumo: 'Texto.', categoria: 'Ata' })));
+    vi.stubGlobal('fetch', apiCompleta(JSON.stringify({ resumo: 'Texto.', tipo: 'Ata' })));
 
     const produzido = await resumir('k', 'i', { nome: 'a.md', texto: 'x' });
 

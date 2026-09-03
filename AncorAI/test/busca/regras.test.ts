@@ -195,29 +195,6 @@ describe('filtro por tipo e período', () => {
   });
 });
 
-describe('filtro por categoria (categorizar-documentos-pelo-resumo)', () => {
-  const documentos = [
-    doc({ id: '1', nome: 'a.md', categoria: 'Ata' }),
-    doc({ id: '2', nome: 'b.md', categoria: 'ADR' }),
-    doc({ id: '3', nome: 'c.md' }) // ainda não resumido, sem categoria
-  ];
-
-  it('restringe pela categoria selecionada', () => {
-    const encontrados = aplicarFiltros(documentos, { ...FILTROS_PADRAO, categoria: 'Ata' });
-    expect(encontrados.map((item) => item.id)).toEqual(['1']);
-  });
-
-  it('documento sem categoria não corresponde a nenhuma categoria selecionada', () => {
-    const encontrados = aplicarFiltros(documentos, { ...FILTROS_PADRAO, categoria: 'Ata' });
-    expect(encontrados.map((item) => item.id)).not.toContain('3');
-  });
-
-  it('sem categoria selecionada, todos os documentos passam (inclusive sem categoria)', () => {
-    const encontrados = aplicarFiltros(documentos, FILTROS_PADRAO);
-    expect(encontrados.map((item) => item.id).sort()).toEqual(['1', '2', '3']);
-  });
-});
-
 describe('seleção de fonte', () => {
   it('considera todas as fontes quando nenhuma é escolhida (RN04)', () => {
     expect(fonteSelecionada(FILTROS_PADRAO, 'github')).toBe(true);

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FILTROS_PADRAO, POR_PAGINA, type Documento } from '../../src/compartilhado/tipos';
-import * as repositorio from '../../src/main/banco/repositorio';
 
 /**
  * Paginação dos resultados.
@@ -25,8 +24,7 @@ vi.mock('../../src/main/banco/repositorio', () => ({
   gravarCache: vi.fn(async () => undefined),
   conteudoParaBusca: vi.fn(async () => ({ textos: new Map(), versoes: new Map() })),
   inventarioSincronizado: vi.fn(async () => []),
-  documentosSemAutoria: vi.fn(async () => 0),
-  categoriasDeDocumentos: vi.fn(async () => new Map())
+  documentosSemAutoria: vi.fn(async () => 0)
 }));
 vi.mock('../../src/main/credenciais/validacao', () => ({
   lerValidacao: vi.fn(async () => null),
@@ -213,22 +211,6 @@ describe('recorte dos recentes independente da ordenação', () => {
   });
 });
 
-describe('categoria na janela de recentes', () => {
-  it('completa os documentos da janela com a categoria já conhecida no acervo', async () => {
-    // A janela vem direto do GitHub, sem categoria — o selo do cartão só
-    // aparece na tela padrão se ela for buscada à parte, no acervo local.
-    github.documentosRecentes.mockResolvedValue({ dados: acervo(2), aviso: null });
-    vi.mocked(repositorio.categoriasDeDocumentos).mockResolvedValueOnce(
-      new Map([['github:o/r:doc00.md', 'ADR']])
-    );
-
-    const resultado = await servico.recentes(FILTROS_PADRAO);
-
-    expect(resultado.documentos.find((d) => d.nome === 'doc00.md')?.categoria).toBe('ADR');
-    expect(resultado.documentos.find((d) => d.nome === 'doc01.md')?.categoria).toBeUndefined();
-  });
-});
-
 describe('rota da coleta', () => {
   it('período definido coleta pelo acervo, e não pela janela de recentes', async () => {
     github.buscarDocumentos.mockResolvedValue({ dados: ordensOpostas(25), aviso: null });
@@ -267,19 +249,6 @@ describe('rota da coleta', () => {
     });
 
     expect(resultado.total).toBe(5);
-  });
-
-  it('categoria definida coleta pelo acervo, e não pela janela de recentes', async () => {
-    // A categoria só existe no acervo local — um documento vindo direto do
-    // GitHub (rota de recentes) nunca a carrega, então filtrar por ela ali
-    // descartaria tudo, janela vazia ou não.
-    github.buscarDocumentos.mockResolvedValue({ dados: [], aviso: null });
-    github.documentosRecentes.mockResolvedValue({ dados: ordensOpostas(5), aviso: null });
-
-    await servico.recentes({ ...FILTROS_PADRAO, categoria: 'ADR' });
-
-    expect(github.buscarDocumentos).toHaveBeenCalled();
-    expect(github.documentosRecentes).not.toHaveBeenCalled();
   });
 });
 

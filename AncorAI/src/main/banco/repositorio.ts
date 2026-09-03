@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import Datastore from '@seald-io/nedb';
 import type { Documento, DocumentoAcessado, Fonte } from '../../compartilhado/tipos';
@@ -70,7 +69,7 @@ export interface RegistroConteudo {
    * painel resume o primeiro resultado da busca, que quase nunca foi aberto.
    */
   resumo?: string;
-  categoria?: string;
+  tipo?: string;
   assuntos?: string[];
   destaques?: string[];
   resumoEm?: string;
@@ -88,7 +87,6 @@ let cache: Datastore<RegistroCache> | null = null;
  * um dado que nenhuma das duas usa. Quem precisa do texto paga por ele.
  */
 let conteudo: Datastore<RegistroConteudo> | null = null;
-let carregandoConteudo: Promise<Datastore<RegistroConteudo>> | null = null;
 let diretorioBanco: string | null = null;
 
 export async function abrirBanco(diretorio: string): Promise<void> {
@@ -107,68 +105,13 @@ export async function abrirBanco(diretorio: string): Promise<void> {
   await acessos.loadDatabaseAsync();
   await cache.loadDatabaseAsync();
   await acessos.ensureIndexAsync({ fieldName: 'acessadoEm' });
-
-  await migrarCategoriaSeNecessario();
-}
-
-/**
- * Apaga o resumo — prosa, categoria (então chamada `tipo`), assuntos e
- * destaques — de todo registro de conteúdo que o tiver, para que cada
- * documento receba um resumo novo, já sob a lista fechada de categorias, na
- * próxima vez que aparecer como resultado ou for pedido.
- *
- * Exportada à parte de `migrarCategoriaSeNecessario` para que o teste exercite
- * a operação em si sem depender da marca de "já rodou" desta instalação.
- */
-export async function apagarResumosExistentes(): Promise<void> {
-  const colecao = await colecaoDeConteudo();
-  await colecao.updateAsync(
-    { resumo: { $exists: true } },
-    {
-      $unset: {
-        resumo: true,
-        categoria: true,
-        assuntos: true,
-        destaques: true,
-        resumoEm: true
-      }
-    },
-    { multi: true }
-  );
-}
-
-/**
- * Roda `apagarResumosExistentes` no máximo uma vez por instalação (mudança
- * `categorizar-documentos-pelo-resumo`).
- *
- * A marca em `preferencias` é o que garante isso. Sem ela, toda abertura da
- * aplicação pagaria o custo de abrir `conteudo_documentos.db` — a coleção que
- * `colecaoDeConteudo` deliberadamente evita carregar de saída, por poder
- * crescer a dezenas de megabytes — só para descobrir, indefinidamente, que
- * não há mais nada a apagar.
- */
-export async function migrarCategoriaSeNecessario(): Promise<void> {
-  if (await lerPreferencia('migracaoCategoriaFeita')) return;
-
-  // Sem o arquivo, `conteudo_documentos.db` nunca recebeu gravação alguma —
-  // não há nada a apagar. Checar a existência antes de abrir a coleção
-  // preserva a abertura sob demanda que `colecaoDeConteudo` garante: abri-la
-  // aqui criaria o arquivo vazio numa instalação nova, que nunca teve nada
-  // para migrar.
-  if (diretorioBanco && existsSync(join(diretorioBanco, 'conteudo_documentos.db'))) {
-    await apagarResumosExistentes();
-  }
-
-  await gravarPreferencia('migracaoCategoriaFeita', true);
 }
 
 export function fecharBanco(): void {
   acessos = null;
   cache = null;
   conteudo = null;
-  carregandoConteudo = null;
   acervo = null;
-  carregandoAcervo = null;
   preferencias = null;
   diretorioBanco = null;
 }
@@ -214,35 +157,18 @@ export async function listarAcessados(limite = 20): Promise<DocumentoAcessado[]>
  *
  * Ver a nota na declaração de `conteudo`: adiar esta abertura é o que mantém a
  * inicialização barata quando a coleção cresce.
- *
- * A promessa de carregamento — e não só o resultado — fica guardada em
- * `carregandoConteudo` enquanto está em andamento: sem isso, duas chamadas
- * concorrentes antes da primeira terminar veriam `conteudo` ainda nulo e cada
- * uma abriria seu próprio `Datastore` sobre o mesmo arquivo. O NeDB não tolera
- * dois `Datastore` carregando e persistindo o mesmo arquivo ao mesmo tempo — a
- * segunda instância a renomear seu `.db~` temporário encontra o arquivo que a
- * primeira já consumiu, e falha com ENOENT.
  */
 async function colecaoDeConteudo(): Promise<Datastore<RegistroConteudo>> {
   if (conteudo) return conteudo;
-  if (carregandoConteudo) return carregandoConteudo;
   if (!diretorioBanco) throw new Error('Banco de dados não foi inicializado.');
 
-  carregandoConteudo = (async () => {
-    const nova = new Datastore<RegistroConteudo>({
-      filename: join(diretorioBanco!, 'conteudo_documentos.db'),
-      autoload: false
-    });
-    await nova.loadDatabaseAsync();
-    conteudo = nova;
-    return nova;
-  })();
-
-  try {
-    return await carregandoConteudo;
-  } finally {
-    carregandoConteudo = null;
-  }
+  const nova = new Datastore<RegistroConteudo>({
+    filename: join(diretorioBanco, 'conteudo_documentos.db'),
+    autoload: false
+  });
+  await nova.loadDatabaseAsync();
+  conteudo = nova;
+  return nova;
 }
 
 /** Verdadeiro quando a coleção de conteúdo já foi carregada em memória. */
@@ -281,43 +207,23 @@ export async function gravarConteudo(
     {
       $set: { ...campos, extraidoEm: new Date().toISOString() },
       ...(resumoObsoleto
-        ? {
-            $unset: {
-              resumo: true,
-              categoria: true,
-              assuntos: true,
-              destaques: true,
-              resumoEm: true
-            }
-          }
+        ? { $unset: { resumo: true, tipo: true, assuntos: true, destaques: true, resumoEm: true } }
         : {})
     },
     { upsert: true }
   );
 }
 
-/**
- * Grava o resumo produzido pela LLM junto do texto que o originou, e espelha
- * a categoria no registro do acervo (mudança
- * `categorizar-documentos-pelo-resumo`) — sempre, mesmo vazia: uma categoria
- * vazia gravada contra a versão vigente diz "já resumido, sem categoria
- * confiável", distinto de "ainda não resumido".
- */
+/** Grava o resumo produzido pela LLM junto do texto que o originou. */
 export async function gravarResumo(
   id: string,
-  dados: { resumo: string; categoria: string; assuntos: string[]; destaques: string[] },
-  versaoConteudo: string
+  dados: { resumo: string; tipo: string; assuntos: string[]; destaques: string[] }
 ): Promise<void> {
   const colecao = await colecaoDeConteudo();
   await colecao.updateAsync(
     { _id: id },
     { $set: { ...dados, resumoEm: new Date().toISOString() } }
   );
-
-  await gravarCategoriaAcervo(id, {
-    categoria: dados.categoria,
-    categoriaVersaoConteudo: versaoConteudo
-  });
 }
 
 /** Identificadores de todos os documentos com conteúdo gravado. */
@@ -413,53 +319,22 @@ interface RegistroAcervo {
    * autoria, caso em que a próxima varredura tenta de novo.
    */
   versaoAutoria?: string | null;
-  /**
-   * Categoria do documento (mudança `categorizar-documentos-pelo-resumo`),
-   * espelhada aqui a partir do resumo por IA (`RegistroConteudo.categoria`)
-   * sempre que ele é (re)gerado — é este registro, e não o do resumo, que a
-   * busca consulta para o filtro por categoria.
-   */
-  categoria?: string | null;
-  /**
-   * O `versaoConteudo` para o qual `categoria` foi espelhada. Ausente ou
-   * diferente da versão vigente significa que o documento ainda não foi
-   * resumido nesta versão — mesma lógica de vigência que `versaoAutoria` usa
-   * para a autoria.
-   */
-  categoriaVersaoConteudo?: string | null;
   sincronizadoEm: string;
 }
 
 let acervo: Datastore<RegistroAcervo> | null = null;
-let carregandoAcervo: Promise<Datastore<RegistroAcervo>> | null = null;
 
-/**
- * A promessa de carregamento — e não só o resultado — fica guardada em
- * `carregandoAcervo` enquanto está em andamento: ver a mesma nota em
- * `colecaoDeConteudo`. Duas chamadas concorrentes ao mount da tela — a busca
- * de recentes e o dropdown de categoria disparam cada uma a sua, ambas no
- * primeiro instante da aplicação — bastam para expor a corrida sem isto.
- */
 async function colecaoDeAcervo(): Promise<Datastore<RegistroAcervo>> {
   if (acervo) return acervo;
-  if (carregandoAcervo) return carregandoAcervo;
   if (!diretorioBanco) throw new Error('Banco de dados não foi inicializado.');
 
-  carregandoAcervo = (async () => {
-    const nova = new Datastore<RegistroAcervo>({
-      filename: join(diretorioBanco!, 'acervo_documentos.db'),
-      autoload: false
-    });
-    await nova.loadDatabaseAsync();
-    acervo = nova;
-    return nova;
-  })();
-
-  try {
-    return await carregandoAcervo;
-  } finally {
-    carregandoAcervo = null;
-  }
+  const nova = new Datastore<RegistroAcervo>({
+    filename: join(diretorioBanco, 'acervo_documentos.db'),
+    autoload: false
+  });
+  await nova.loadDatabaseAsync();
+  acervo = nova;
+  return nova;
 }
 
 /**
@@ -475,13 +350,6 @@ function autoriaVigente(registro: RegistroAcervo): boolean {
   // que há, como em `estaVigente` para o texto.
   if (!registro.versaoConteudo) return true;
   return registro.versaoAutoria === registro.versaoConteudo;
-}
-
-/** Mesma lógica de vigência de `autoriaVigente`, para a categoria espelhada. */
-function categoriaVigente(registro: RegistroAcervo): boolean {
-  if (!registro.categoriaVersaoConteudo) return false;
-  if (!registro.versaoConteudo) return true;
-  return registro.categoriaVersaoConteudo === registro.versaoConteudo;
 }
 
 /** Recompõe o `Documento` a partir do registro do snapshot. */
@@ -507,10 +375,6 @@ function reconstruirDocumento(registro: RegistroAcervo): Documento {
     if (registro.dataReal) documento.dataModificacao = registro.dataReal;
   } else if (registro.dataAproximada) {
     documento.dataAproximada = true;
-  }
-
-  if (categoriaVigente(registro) && registro.categoria) {
-    documento.categoria = registro.categoria;
   }
 
   return documento;
@@ -580,78 +444,6 @@ export async function gravarAutoria(
 }
 
 /**
- * Espelha a categoria do resumo por IA no registro do acervo (mudança
- * `categorizar-documentos-pelo-resumo`) — é este registro, não o do resumo,
- * que a busca consulta para o filtro por categoria.
- */
-export async function gravarCategoriaAcervo(
-  id: string,
-  categoria: { categoria: string; categoriaVersaoConteudo: string }
-): Promise<void> {
-  const colecao = await colecaoDeAcervo();
-  await colecao.updateAsync(
-    { _id: id },
-    {
-      $set: {
-        categoria: categoria.categoria,
-        categoriaVersaoConteudo: categoria.categoriaVersaoConteudo
-      }
-    }
-  );
-}
-
-/**
- * Categorias já atribuídas a algum documento do acervo, sem repetição, em
- * ordem alfabética — para popular o dropdown do filtro por categoria.
- *
- * Só conta categorias vigentes (mesma lógica de `categoriaVigente`): uma
- * categoria desatualizada não viraria opção alcançável no filtro, porque
- * `reconstruirDocumento` já a esconde de `Documento.categoria`.
- */
-export async function categoriasDisponiveis(): Promise<string[]> {
-  const colecao = await colecaoDeAcervo();
-  const registros = await colecao
-    .findAsync({ categoria: { $exists: true, $ne: '' } })
-    .projection({ categoria: 1, categoriaVersaoConteudo: 1, versaoConteudo: 1 });
-
-  const categorias = new Set<string>();
-  for (const registro of registros) {
-    if (categoriaVigente(registro as RegistroAcervo) && registro.categoria) {
-      categorias.add(registro.categoria);
-    }
-  }
-  return [...categorias].sort((a, b) => a.localeCompare(b));
-}
-
-/**
- * Categoria vigente já conhecida no acervo para os documentos informados,
- * indexada por id.
- *
- * Serve para completar a janela de recentes (`categorizar-documentos-pelo-
- * resumo`): ela vem direto do GitHub, sem passar por `reconstruirDocumento`,
- * e por isso nunca carrega a categoria — mesmo quando o acervo local já a
- * conhece, por um resumo gerado antes.
- */
-export async function categoriasDeDocumentos(
-  ids: readonly string[]
-): Promise<ReadonlyMap<string, string>> {
-  const mapa = new Map<string, string>();
-  if (ids.length === 0) return mapa;
-
-  const colecao = await colecaoDeAcervo();
-  const registros = await colecao
-    .findAsync({ _id: { $in: [...ids] }, categoria: { $exists: true, $ne: '' } })
-    .projection({ categoria: 1, categoriaVersaoConteudo: 1, versaoConteudo: 1 });
-
-  for (const registro of registros) {
-    if (categoriaVigente(registro as RegistroAcervo) && registro.categoria) {
-      mapa.set(registro._id, registro.categoria);
-    }
-  }
-  return mapa;
-}
-
-/**
  * O inventário do snapshot local, cada documento já com autoria e data real
  * quando resolvidas.
  *
@@ -676,60 +468,6 @@ export async function idsComAutoriaPendente(): Promise<string[]> {
 /** Quantos documentos do snapshot ainda estão sem autoria resolvida. */
 export async function documentosSemAutoria(): Promise<number> {
   return (await idsComAutoriaPendente()).length;
-}
-
-/** Quantos documentos há no snapshot do inventário. Zero quando nunca sincronizado. */
-export async function totalNoInventario(): Promise<number> {
-  const colecao = await colecaoDeAcervo();
-  return (await colecao.findAsync({})).length;
-}
-
-/**
- * Um documento do acervo já classificado pela IA, com seus rótulos.
- *
- * `nome` e `link` vêm do snapshot do inventário; `categoria` e `assuntos`, do
- * registro de conteúdo. O texto de onde os rótulos saíram **não** acompanha
- * (ADR-0005) — esta função alimenta a pilha de relacionados, no processo
- * principal, e o que ela devolve pode chegar ao renderer.
- */
-export interface DocumentoClassificado {
-  id: string;
-  nome: string;
-  fonte: Fonte;
-  link: string;
-  categoria: string;
-  assuntos: string[];
-}
-
-/**
- * Documentos que já passaram pela classificação por IA (têm `resumoEm`) e estão
- * no snapshot do inventário.
- *
- * Um documento classificado mas ausente do snapshot fica de fora: sem o registro
- * do inventário não há nome nem link para apresentá-lo na pilha.
- */
-export async function documentosClassificados(): Promise<DocumentoClassificado[]> {
-  const conteudoColecao = await colecaoDeConteudo();
-  const acervoColecao = await colecaoDeAcervo();
-
-  const registrosAcervo = await acervoColecao.findAsync({});
-  const noInventario = new Map(registrosAcervo.map((registro) => [registro._id, registro]));
-
-  const saida: DocumentoClassificado[] = [];
-  for (const conteudo of await conteudoColecao.findAsync({})) {
-    if (!conteudo.resumoEm) continue;
-    const inventario = noInventario.get(conteudo._id);
-    if (!inventario) continue;
-    saida.push({
-      id: conteudo._id,
-      nome: inventario.nome,
-      fonte: inventario.fonte,
-      link: inventario.link,
-      categoria: conteudo.categoria ?? '',
-      assuntos: conteudo.assuntos ?? []
-    });
-  }
-  return saida;
 }
 
 /**

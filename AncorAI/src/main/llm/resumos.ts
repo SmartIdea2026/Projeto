@@ -107,7 +107,7 @@ function montar(
   documento: Documento,
   dados: {
     resumo: string;
-    categoria?: string;
+    tipo?: string;
     assuntos?: string[];
     destaques?: string[];
     resumoEm?: string;
@@ -118,7 +118,7 @@ function montar(
   return {
     documentoId: documento.id,
     resumo: dados.resumo,
-    categoria: dados.categoria ?? '',
+    tipo: dados.tipo ?? '',
     assuntos: dados.assuntos ?? [],
     destaques: dados.destaques ?? [],
     geradoEm: dados.resumoEm ?? new Date().toISOString(),
@@ -234,7 +234,7 @@ export async function resumoDoDocumento(
         documento,
         {
           resumo: conteudo.resumo,
-          categoria: conteudo.categoria,
+          tipo: conteudo.tipo,
           assuntos: conteudo.assuntos,
           destaques: conteudo.destaques,
           resumoEm: conteudo.resumoEm
@@ -252,7 +252,7 @@ export async function resumoDoDocumento(
 
     // Gravado antes de devolver: a submissão custou cota, e o resultado vale
     // para este documento mesmo que quem pediu já tenha trocado de foco.
-    await gravarResumo(documento.id, produzido, conteudo.versaoConteudo);
+    await gravarResumo(documento.id, produzido);
 
     return {
       resumo: montar(documento, produzido, conteudo.versaoConteudo, conteudo.truncado)
@@ -272,7 +272,7 @@ export async function resumoGravado(documento: Documento): Promise<ResumoDocumen
     documento,
     {
       resumo: registro.resumo,
-      categoria: registro.categoria,
+      tipo: registro.tipo,
       assuntos: registro.assuntos,
       destaques: registro.destaques,
       resumoEm: registro.resumoEm

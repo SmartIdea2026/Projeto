@@ -34,7 +34,7 @@ const RESULTADO: ResultadoBusca = {
 
 async function abrirConfiguracoes() {
   await waitFor(() => expect(document.querySelector('.cartao__nome')).not.toBeNull());
-  fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
+  fireEvent.click(screen.getByRole('button', { name: /GitHub conectada/i }));
   await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
 }
 

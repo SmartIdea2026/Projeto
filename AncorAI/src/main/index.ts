@@ -13,12 +13,6 @@ import { criarJanela } from './janela';
  * `janela.ts` e o registro dos canais IPC em `ipc.ts`.
  */
 
-// PoC de viabilidade do Playwright (ver openspec/changes/poc-viabilidade-playwright/):
-// isola os dados de uma execução E2E do perfil real do desenvolvedor. Precisa
-// rodar antes de qualquer leitura/escrita em `userData` — cofre e banco inclusive.
-const diretorioE2E = process.env['ANCORAI_E2E_USER_DATA_DIR'];
-if (diretorioE2E) app.setPath('userData', diretorioE2E);
-
 void app.whenReady().then(async () => {
   // O cofre e o banco precisam existir antes de qualquer canal responder.
   inicializarCofre(app.getPath('userData'));

@@ -12,12 +12,7 @@ import type { MotivoSemResumo } from '../../compartilhado/tipos';
  * erro que registre a URL requisitada.
  */
 
-// Sobrepõe a URL da API sob a suíte E2E (ver `e2e/apoio/servidorMockGemini.ts`),
-// que sobe um servidor local no lugar da API real — nenhum teste deve tocar
-// rede de verdade. Fora desse cenário, a env var não existe e o valor é o de
-// sempre.
-const BASE =
-  process.env['ANCORAI_E2E_GEMINI_BASE_URL'] || 'https://generativelanguage.googleapis.com/v1beta';
+const BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 /**
  * O modelo NÃO é fixado no código.
@@ -267,36 +262,10 @@ export async function verificarChave(chave: string): Promise<void> {
 /** O que uma submissão devolve, em uma resposta só. */
 export interface ResultadoLLM {
   resumo: string;
-  categoria: string;
+  tipo: string;
   assuntos: string[];
   destaques: string[];
 }
-
-/**
- * Lista fechada de categorias que o resumo pode atribuir (design.md, Decision
- * 3, mudança `categorizar-documentos-pelo-resumo`).
- *
- * Precisa ser mantida igual à lista em prosa de `instrucoes/resumo.md` — esta
- * cópia em código é o que garante a restrição de verdade (via `enum` no
- * esquema e filtro na interpretação), não só a instrução em texto livre, que
- * documentos do mesmo gênero (ex.: as ADRs) recebam sempre o mesmo rótulo.
- */
-const CATEGORIAS_PERMITIDAS = [
-  'Ata',
-  'ADR',
-  'Especificação',
-  'Levantamento',
-  'Pesquisa',
-  'Processo',
-  'Padrão',
-  'Manual',
-  'Relatório',
-  'Contrato',
-  'Edital',
-  'Formulário',
-  'Glossário',
-  'Template'
-];
 
 /**
  * Formato exigido da resposta.
@@ -304,20 +273,16 @@ const CATEGORIAS_PERMITIDAS = [
  * Pedir saída estruturada é o que permite obter os quatro campos de uma vez.
  * A alternativa — prosa livre e extração por análise do texto — seria heurística
  * sobre heurística, e quebraria em silêncio quando o modelo mudasse de estilo.
- *
- * `categoria` fica fora de `required`: sem confiança em nenhum item da lista
- * fechada, a instrução manda omitir o campo, não devolver um valor vazio —
- * `enum` não admite string vazia como membro válido.
  */
 const ESQUEMA = {
   type: 'object',
   properties: {
     resumo: { type: 'string' },
-    categoria: { type: 'string', enum: CATEGORIAS_PERMITIDAS },
+    tipo: { type: 'string' },
     assuntos: { type: 'array', items: { type: 'string' } },
     destaques: { type: 'array', items: { type: 'string' } }
   },
-  required: ['resumo', 'assuntos', 'destaques']
+  required: ['resumo', 'tipo', 'assuntos', 'destaques']
 };
 
 interface RespostaApi {
@@ -357,17 +322,15 @@ function interpretar(texto: string): ResultadoLLM {
     throw new ErroLLM('falha', 'O serviço de IA devolveu um resumo vazio.');
   }
 
-  const categoria = typeof objeto.categoria === 'string' ? objeto.categoria.trim() : '';
-
   return {
     resumo: objeto.resumo.trim(),
-    categoria: CATEGORIAS_PERMITIDAS.includes(categoria) ? categoria : '',
+    tipo: typeof objeto.tipo === 'string' ? objeto.tipo.trim() : '',
     assuntos: lista(objeto.assuntos),
     destaques: lista(objeto.destaques)
   };
 }
 
-/** Produz resumo, categoria, assuntos e destaques em uma única submissão. */
+/** Produz resumo, tipo, assuntos e destaques em uma única submissão. */
 export async function resumir(
   chave: string,
   instrucao: string,

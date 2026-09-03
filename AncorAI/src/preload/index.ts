@@ -8,7 +8,6 @@ import type {
   PreparoConteudo,
   ProgressoIngestao,
   RetratoSincronizacao,
-  RespostaRelacionados,
   RespostaResumo,
   ResultadoBusca,
   ResumoDocumento,
@@ -79,12 +78,6 @@ const api = {
 
   prepararConteudo: (documento: Documento): Promise<PreparoConteudo> =>
     ipcRenderer.invoke(CANAIS.prepararConteudo, documento),
-
-  relacionadosDoDocumento: (documento: Documento): Promise<RespostaRelacionados> =>
-    ipcRenderer.invoke(CANAIS.relacionadosDoDocumento, documento),
-
-  categoriasDisponiveis: (): Promise<string[]> =>
-    ipcRenderer.invoke(CANAIS.categoriasDisponiveis),
 
   abrirDocumento: (documento: Documento): Promise<void> =>
     ipcRenderer.invoke(CANAIS.abrirDocumento, documento),

@@ -87,10 +87,9 @@ describe('ordem de tabulação da tela principal', () => {
     // A ordenação fica entre os filtros e a lista, à direita do contador,
     // conforme o protótipo — e a tabulação acompanha essa leitura.
     //
-    // Os filtros são três: extensão, categoria e o botão de período. Os
-    // campos de data vivem dentro do painel do período e só entram na
-    // tabulação quando ele está aberto, que é o comportamento correto para
-    // conteúdo recolhido.
+    // Os filtros são dois: a extensão e o botão de período. Os campos de data
+    // vivem dentro do painel do período e só entram na tabulação quando ele
+    // está aberto, que é o comportamento correto para conteúdo recolhido.
     //
     // Cada resultado tem duas ações — gerar resumo e abrir na fonte — e o
     // painel de resumo vem depois da lista, que é onde ele aparece na tela.
@@ -100,8 +99,7 @@ describe('ordem de tabulação da tela principal', () => {
       'cabecalho',
       'busca',
       'busca',
-      // Buscar no conteúdo, extensão, categoria e período.
-      'filtros',
+      // Buscar no conteúdo, extensão e período.
       'filtros',
       'filtros',
       'filtros',
@@ -116,7 +114,7 @@ describe('ordem de tabulação da tela principal', () => {
     render(<App />);
     await waitFor(() => expect(document.querySelector('.cartao__nome')).not.toBeNull());
 
-    fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
+    fireEvent.click(screen.getByRole('button', { name: /GitHub conectada/i }));
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
 
     const dentro = focaveis(screen.getByRole('dialog'));
@@ -149,40 +147,6 @@ describe('ordem de tabulação da tela principal', () => {
 
     const cartao = document.querySelector('.cartao')!;
     expect(focaveis(cartao).length).toBeGreaterThan(0);
-  });
-
-  it('os itens da pilha de relacionados entram na tabulação, dentro do painel', async () => {
-    const comPilha = montarApi(RECENTES, {
-      relacionadosDoDocumento: vi.fn(async () => ({
-        pilha: [
-          {
-            id: 'github:o/r:guia.md',
-            nome: 'guia.md',
-            fonte: 'github' as const,
-            link: 'https://github.com/o/r/blob/main/guia.md',
-            score: 0.5
-          }
-        ],
-        semClassificacao: false
-      }))
-    });
-    instalarApi(comPilha);
-    render(<App />);
-    await waitFor(() => expect(document.querySelector('.painel')).not.toBeNull());
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /guia\.md/ })).toBeInTheDocument()
-    );
-
-    const item = screen.getByRole('button', { name: /guia\.md/ });
-    // Sem tabindex: entra pela posição no documento, dentro do painel.
-    expect(item).not.toHaveAttribute('tabindex');
-    expect(item.closest('.painel')).not.toBeNull();
-    expect(focaveis()).toContain(item);
-
-    // O painel vem depois da lista: o item da pilha também.
-    const ordem = focaveis();
-    const ultimoCartao = [...ordem].reverse().find((e) => e.closest('.cartao'));
-    expect(ordem.indexOf(item)).toBeGreaterThan(ordem.indexOf(ultimoCartao as HTMLElement));
   });
 
   it('o botão de sincronização é alcançável por teclado, com rótulo acessível', async () => {
