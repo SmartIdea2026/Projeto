@@ -9,8 +9,8 @@ import { montarApi, instalarApi } from './apoio';
  *
  * A busca no conteúdo alcança todo documento que mencione o termo no corpo, e
  * nem sempre é isso que se procura — então ela é ligada sob demanda, não por
- * padrão. Aqui se verifica que a busca padrão não pede o conteúdo e que marcar
- * a caixa refaz a consulta pedindo-o.
+ * padrão. Aqui se verifica que a busca padrão não pede o conteúdo e que acionar
+ * o botão de alternância refaz a consulta pedindo-o.
  */
 
 const RESULTADO: ResultadoBusca = {
@@ -35,7 +35,7 @@ const RESULTADO: ResultadoBusca = {
 
 beforeEach(() => vi.clearAllMocks());
 
-const CAIXA = /buscar no conteúdo/i;
+const ROTULO = /buscar no conteúdo/i;
 
 describe('busca no conteúdo é opt-in', () => {
   it('a busca padrão não pede o conteúdo', async () => {
@@ -54,7 +54,7 @@ describe('busca no conteúdo é opt-in', () => {
     expect(filtros.buscarConteudo).toBeFalsy();
   });
 
-  it('marcar a caixa refaz a consulta pedindo o conteúdo', async () => {
+  it('acionar o botão refaz a consulta pedindo o conteúdo', async () => {
     const api = montarApi(RESULTADO);
     instalarApi(api);
     render(<App />);
@@ -66,7 +66,7 @@ describe('busca no conteúdo é opt-in', () => {
     fireEvent.submit(screen.getByRole('search'));
     await waitFor(() => expect(api.buscar).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByRole('checkbox', { name: CAIXA }));
+    fireEvent.click(screen.getByRole('button', { name: ROTULO }));
 
     await waitFor(() => {
       const filtros = api.buscar.mock.calls.at(-1)?.[0];
@@ -74,11 +74,11 @@ describe('busca no conteúdo é opt-in', () => {
     });
   });
 
-  it('a caixa começa desmarcada', async () => {
+  it('o botão começa desligado', async () => {
     instalarApi(montarApi(RESULTADO));
     render(<App />);
-    await waitFor(() => expect(screen.getByRole('checkbox', { name: CAIXA })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: ROTULO })).toBeInTheDocument());
 
-    expect(screen.getByRole('checkbox', { name: CAIXA })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: ROTULO })).toHaveAttribute('aria-pressed', 'false');
   });
 });
