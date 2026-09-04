@@ -51,14 +51,28 @@ export function ordenar(documentos: Documento[], criterio: Ordenacao): Documento
     );
   };
 
-  switch (criterio) {
-    case 'a-z':
-      return copia.sort((a, b) => porNomeDesempatado(a, b, false));
-    case 'z-a':
-      return copia.sort((a, b) => porNomeDesempatado(a, b, true));
-    case 'data-asc':
-      return copia.sort((a, b) => porDataDesempatada(a, b, false));
-    case 'data-desc':
-      return copia.sort((a, b) => porDataDesempatada(a, b, true));
-  }
+  const porCriterio = (a: Documento, b: Documento): number => {
+    switch (criterio) {
+      case 'a-z':
+        return porNomeDesempatado(a, b, false);
+      case 'z-a':
+        return porNomeDesempatado(a, b, true);
+      case 'data-asc':
+        return porDataDesempatada(a, b, false);
+      case 'data-desc':
+        return porDataDesempatada(a, b, true);
+    }
+  };
+
+  // Um documento marcado `apenasConteudo` é a própria razão de ligar "Buscar
+  // no conteúdo": sem precedência própria, ele se perde atrás de qualquer
+  // termo que também bata no nome ou no autor de muitos documentos — com um
+  // acervo grande, isso empurra o único resultado que o filtro deveria trazer
+  // para páginas que ninguém abre, e a busca por conteúdo parece não fazer
+  // nada. Dentro de cada grupo — só conteúdo, e o resto —, o critério
+  // escolhido continua valendo normalmente.
+  return copia.sort((a, b) => {
+    const diferenca = Number(Boolean(b.apenasConteudo)) - Number(Boolean(a.apenasConteudo));
+    return diferenca !== 0 ? diferenca : porCriterio(a, b);
+  });
 }
