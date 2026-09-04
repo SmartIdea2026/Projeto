@@ -247,6 +247,35 @@ describe('ordenação', () => {
     ordenar(documentos, 'a-z');
     expect(documentos).toEqual(original);
   });
+
+  it('traz os documentos marcados apenasConteudo antes do resto, qualquer que seja o critério', () => {
+    // Todos com "e2efiltro" no nome — o que muda é a data e quem casou só
+    // pelo conteúdo. Sem prioridade própria, um acervo grande o suficiente
+    // empurra o único resultado que "Buscar no conteúdo" deveria trazer para
+    // uma página que ninguém abre, e o filtro parece não fazer nada — bug
+    // real, reproduzido com dados de produção antes deste teste existir.
+    const mistos = [
+      doc({ id: 'recente-generico', nome: 'recente.md', dataModificacao: '2026-08-01T00:00:00Z' }),
+      doc({
+        id: 'antigo-so-conteudo',
+        nome: 'antigo.md',
+        dataModificacao: '2026-01-01T00:00:00Z',
+        apenasConteudo: true
+      }),
+      doc({ id: 'medio-generico', nome: 'medio.md', dataModificacao: '2026-04-01T00:00:00Z' })
+    ];
+
+    expect(ordenar(mistos, 'data-desc').map((d) => d.id)).toEqual([
+      'antigo-so-conteudo',
+      'recente-generico',
+      'medio-generico'
+    ]);
+    expect(ordenar(mistos, 'a-z').map((d) => d.id)).toEqual([
+      'antigo-so-conteudo',
+      'medio-generico',
+      'recente-generico'
+    ]);
+  });
 });
 
 describe('unificação das fontes', () => {

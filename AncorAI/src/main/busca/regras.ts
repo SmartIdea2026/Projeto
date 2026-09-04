@@ -1,8 +1,12 @@
 import type { Documento, Filtros, Fonte } from '../../compartilhado/tipos';
+import { normalizar } from '../../compartilhado/normalizacao';
 
-// Reexportado para que o main continue importando as regras de um lugar só. A
-// implementação vive em `compartilhado/` porque o renderer também a usa.
+// Reexportados para que o main continue importando as regras de um lugar só.
+// As implementações vivem em `compartilhado/` porque o renderer também as usa
+// — `normalizar` para revalidar nome e autor depois que a autoria real de um
+// documento chega do GitHub (`App.tsx` - `detalharPagina`).
 export { ordenar } from '../../compartilhado/ordenacao';
+export { normalizar } from '../../compartilhado/normalizacao';
 
 /**
  * Regras de filtragem e ordenação aplicadas sobre os documentos já obtidos.
@@ -10,21 +14,6 @@ export { ordenar } from '../../compartilhado/ordenacao';
  * Estas regras são independentes das fontes: operam sobre o formato unificado,
  * depois que cada fonte já foi normalizada.
  */
-
-/**
- * Normaliza um texto para comparação de termo: sem acento e sem caixa.
- *
- * A mesma normalização vale para nome, autor e conteúdo — procurar "atas"
- * encontra "Atás", e procurar no conteúdo segue a mesma regra do nome.
- */
-export function normalizar(texto: string): string {
-  // NFD separa a letra do acento; a faixa \u0300–\u036f cobre os diacríticos
-  // combinantes, que são então removidos.
-  return texto
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase();
-}
 
 /**
  * Verdadeiro quando `termo` aparece em `texto` como uma palavra inteira.

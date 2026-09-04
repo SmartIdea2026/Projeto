@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { App } from '../../src/renderer/App';
 import type { Documento, ResultadoBusca, StatusFonte } from '../../src/compartilhado/tipos';
 import { CONECTADO, montarApi, instalarApi } from './apoio';
@@ -201,5 +201,109 @@ describe('reposicionamento pela data real', () => {
     expect(api.buscar).not.toHaveBeenCalled();
     expect(api.reordenar).not.toHaveBeenCalled();
     expect(document.querySelectorAll('.esqueleto')).toHaveLength(0);
+  });
+});
+
+/**
+ * Revalidação pela autoria real.
+ *
+ * O que decide se um documento entra numa busca por termo pode ser a autoria
+ * do snapshot local, ainda não resincronizada. Quando a autoria real chega
+ * (`detalharPagina`) e não bate mais com o termo buscado, o documento perde a
+ * razão de estar na lista — mantê-lo mostraria um cartão cujo autor não tem
+ * nenhuma relação com o termo, como se a ordenação tivesse ignorado a busca.
+ */
+describe('revalidação pela autoria real', () => {
+  const porAutor: Documento = {
+    ...base,
+    id: 'github:o/r:por-autor.md',
+    nome: 'por-autor.md',
+    caminho: 'Docs/por-autor.md',
+    autor: 'GustavoMairinck'
+  };
+
+  const porConteudo: Documento = {
+    ...base,
+    id: 'github:o/r:por-conteudo.md',
+    nome: 'por-conteudo.md',
+    caminho: 'Docs/por-conteudo.md',
+    autor: 'Marina Alves',
+    apenasConteudo: true
+  };
+
+  const RESULTADO_BUSCA: ResultadoBusca = {
+    // Nessa ordem porque é a que o processo principal já devolveria: `apresentar`
+    // (busca/servico.ts) ordena antes de responder, e apenasConteudo vai na
+    // frente (compartilhado/ordenacao.ts).
+    documentos: [porConteudo, porAutor],
+    total: 2,
+    pagina: 1,
+    falhas: [],
+    avisos: [],
+    doCache: false
+  };
+
+  function nomesNaTela(): string[] {
+    return Array.from(document.querySelectorAll('.cartao__nome')).map(
+      (elemento) => elemento.textContent ?? ''
+    );
+  }
+
+  async function buscarPor(termo: string): Promise<void> {
+    render(<App />);
+    await waitFor(() => expect(api.recentes).toHaveBeenCalled());
+    fireEvent.change(screen.getByLabelText('Buscar pelo nome do documento'), {
+      target: { value: termo }
+    });
+    fireEvent.submit(screen.getByRole('search'));
+    await waitFor(() => expect(api.buscar).toHaveBeenCalled());
+  }
+
+  beforeEach(() => {
+    api.buscar.mockResolvedValue(RESULTADO_BUSCA);
+  });
+
+  it('remove um resultado que só bateu pelo autor quando a autoria real já não bate mais com o termo', async () => {
+    let liberar: (docs: Documento[]) => void = () => {};
+    api.detalharDocumentos.mockImplementation(
+      () => new Promise<Documento[]>((resolver) => { liberar = resolver; })
+    );
+
+    await buscarPor('gustavo');
+
+    // Os dois aparecem primeiro, com a autoria do snapshot ainda vigente —
+    // `por-conteudo.md` na frente porque é `apenasConteudo`.
+    await waitFor(() => expect(nomesNaTela()).toEqual(['por-conteudo.md', 'por-autor.md']));
+
+    liberar([porConteudo, { ...porAutor, autor: 'andrefsa16' }]);
+
+    // A autoria real chega e `por-autor.md` deixa de justificar o resultado.
+    await waitFor(() => expect(nomesNaTela()).toEqual(['por-conteudo.md']));
+  });
+
+  it('mantém um resultado marcado apenasConteudo mesmo que a autoria real não bata com o termo', async () => {
+    api.detalharDocumentos.mockResolvedValue([
+      { ...porConteudo, autor: 'ninguem-relacionado' },
+      porAutor
+    ]);
+
+    await buscarPor('gustavo');
+
+    await waitFor(() => expect(screen.getByText('ninguem-relacionado')).toBeInTheDocument());
+    expect(nomesNaTela()).toEqual(['por-conteudo.md', 'por-autor.md']);
+  });
+
+  it('não mexe na lista quando a busca é sem termo (recentes)', async () => {
+    api.recentes.mockResolvedValue(RESULTADO_BUSCA);
+    api.detalharDocumentos.mockResolvedValue([
+      porConteudo,
+      { ...porAutor, autor: 'andrefsa16' }
+    ]);
+
+    render(<App />);
+
+    // Sem termo, a revalidação por nome/autor não faz sentido — nada é
+    // removido, mesmo que a autoria real não tenha relação com coisa alguma.
+    await waitFor(() => expect(nomesNaTela()).toEqual(['por-conteudo.md', 'por-autor.md']));
   });
 });

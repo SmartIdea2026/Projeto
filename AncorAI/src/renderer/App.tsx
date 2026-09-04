@@ -14,6 +14,7 @@ import {
   type StatusLLM
 } from '../compartilhado/tipos';
 import { ordenar } from '../compartilhado/ordenacao';
+import { casaPorNomeOuAutor, normalizar } from '../compartilhado/normalizacao';
 import { BotaoSincronizar } from './componentes/BotaoSincronizar';
 import { Cartao } from './componentes/Cartao';
 import { Filtros } from './componentes/Filtros';
@@ -80,9 +81,18 @@ export function App() {
    *
    * A resposta é descartada se outra consulta chegou no meio tempo, para não
    * sobrescrever a lista nova com o detalhe da antiga.
+   *
+   * A autoria que decidiu se um documento entrava no resultado pode ter sido
+   * a do snapshot local, ainda não resincronizado — e a que chega aqui é a
+   * real. Um documento que só bateu pelo nome do autor, e cuja autoria real já
+   * não bate mais com o termo buscado, perde a razão de estar na lista:
+   * mantê-lo mostraria um cartão cujo autor não tem nenhuma relação com o que
+   * foi buscado, como se a ordenação tivesse ignorado a busca. Um documento
+   * marcado `apenasConteudo` fica de fora dessa checagem — o conteúdo que o
+   * fez entrar não muda com a autoria.
    */
   const detalharPagina = useCallback(
-    async (base: ResultadoBusca, criterio: TipoFiltros['ordenacao']) => {
+    async (base: ResultadoBusca, criterio: TipoFiltros['ordenacao'], termo: string) => {
       if (base.documentos.length === 0) return;
 
       try {
@@ -90,11 +100,25 @@ export function App() {
         setResultado((atual) => {
           if (!atual || atual.documentos.length !== detalhados.length) return atual;
           const mesmoConjunto = atual.documentos.every((d, i) => d.id === detalhados[i]?.id);
+          if (!mesmoConjunto) return atual;
+
+          const termoNormalizado = normalizar(termo.trim());
+          const validos = termoNormalizado
+            ? detalhados.filter(
+                (documento) =>
+                  documento.apenasConteudo || casaPorNomeOuAutor(documento, termoNormalizado)
+              )
+            : detalhados;
+
           // A data apresentada muda aqui: o documento precisa mudar de lugar
           // junto. Uma lista rotulada "Data decrescente" com datas fora de
           // ordem afirma duas coisas incompatíveis, e quem lê não tem como
           // saber qual delas vale.
-          return mesmoConjunto ? { ...atual, documentos: ordenar(detalhados, criterio) } : atual;
+          return {
+            ...atual,
+            documentos: ordenar(validos, criterio),
+            total: atual.total - (detalhados.length - validos.length)
+          };
         });
       } catch {
         // Falhar aqui não muda nada para o usuário: a lista continua na tela sem
@@ -172,7 +196,7 @@ export function App() {
         // que o usuário já estava vendo; apenas o aviso é apresentado.
         if (novo.documentos.length > 0 || !emSegundoPlano) setResultado(novo);
         else setResultado((atual) => (atual ? { ...atual, falhas: novo.falhas } : novo));
-        void detalharPagina(novo, filtrosAtuais.ordenacao);
+        void detalharPagina(novo, filtrosAtuais.ordenacao, filtrosAtuais.termo);
       } finally {
         setCarregando(false);
       }
@@ -185,7 +209,7 @@ export function App() {
     try {
       const novo = await window.ancorai.buscar(filtrosAtuais);
       setResultado(novo);
-      void detalharPagina(novo, filtrosAtuais.ordenacao);
+      void detalharPagina(novo, filtrosAtuais.ordenacao, filtrosAtuais.termo);
     } finally {
       setCarregando(false);
     }
@@ -205,7 +229,7 @@ export function App() {
     async (filtrosAtuais: TipoFiltros) => {
       const novo = await window.ancorai.reordenar(filtrosAtuais);
       setResultado(novo);
-      void detalharPagina(novo, filtrosAtuais.ordenacao);
+      void detalharPagina(novo, filtrosAtuais.ordenacao, filtrosAtuais.termo);
     },
     [detalharPagina]
   );

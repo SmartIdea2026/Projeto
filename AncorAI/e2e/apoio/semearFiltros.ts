@@ -1,4 +1,10 @@
-import { abrirBanco, fecharBanco, gravarConteudo, sincronizarInventario } from '../../src/main/banco/repositorio';
+import {
+  abrirBanco,
+  fecharBanco,
+  gravarCategoriaAcervo,
+  gravarConteudo,
+  sincronizarInventario
+} from '../../src/main/banco/repositorio';
 import type { Documento } from '../../src/compartilhado/tipos';
 
 /**
@@ -15,6 +21,7 @@ import type { Documento } from '../../src/compartilhado/tipos';
 
 export const TERMO_COMUM = 'e2efiltro';
 export const TERMO_SO_CONTEUDO = 'abacateverde';
+export const CATEGORIA_SO_CONTEUDO = 'Especificação';
 
 export const DOC_ALFA: Documento = {
   id: 'e2e-filtro-alfa',
@@ -76,6 +83,13 @@ export async function semearParaFiltros(diretorioDados: string): Promise<void> {
     estado: 'extraido',
     texto: `Um parágrafo qualquer que menciona ${TERMO_SO_CONTEUDO} no meio do texto.`,
     truncado: false
+  });
+  // Categoria espelhada no acervo (categorizar-documentos-pelo-resumo), como a
+  // busca por conteúdo espera encontrar num documento já resumido pela IA —
+  // usado pelo teste que combina "Buscar no conteúdo" com o filtro de categoria.
+  await gravarCategoriaAcervo(DOC_SO_CONTEUDO.id, {
+    categoria: CATEGORIA_SO_CONTEUDO,
+    categoriaVersaoConteudo: 'semeado-e2e'
   });
   fecharBanco();
 }

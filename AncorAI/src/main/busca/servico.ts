@@ -178,6 +178,7 @@ function mesmaConsulta(a: Filtros, b: Filtros): boolean {
     a.termo.trim() === b.termo.trim() &&
     (a.dataInicial ?? '') === (b.dataInicial ?? '') &&
     (a.dataFinal ?? '') === (b.dataFinal ?? '') &&
+    (a.categoria ?? '') === (b.categoria ?? '') &&
     lista(a.extensoes) === lista(b.extensoes) &&
     lista(a.fontes) === lista(b.fontes) &&
     Boolean(a.buscarConteudo) === Boolean(b.buscarConteudo)
