@@ -5,6 +5,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from 'playwright-core';
 import { lancarApp, type AppE2E } from './apoio/lancarApp';
 import {
+  CATEGORIA_SO_CONTEUDO,
   DOC_ALFA,
   DOC_BETA,
   DOC_DELTA,
@@ -160,4 +161,17 @@ test('alternância "Buscar no conteúdo" só encontra o termo no corpo quando li
   await expect(janela.locator('.cartao')).toHaveCount(1);
   await expect(janela.locator('.cartao .cartao__nome')).toHaveText(DOC_SO_CONTEUDO.nome);
   await expect(janela.getByText('Encontrado no conteúdo')).toBeVisible();
+});
+
+test('combinação de "Buscar no conteúdo" com categoria mantém o resultado do conteúdo', async () => {
+  const janela = instancia.janela;
+
+  const campoBusca = janela.getByRole('searchbox', { name: 'Buscar pelo nome do documento' });
+  await campoBusca.fill(TERMO_SO_CONTEUDO);
+  await janela.getByRole('button', { name: 'Buscar no conteúdo' }).click();
+  await janela.getByLabel('Categoria:').selectOption(CATEGORIA_SO_CONTEUDO);
+  await reenviarBusca(janela);
+
+  await expect(janela.locator('.cartao')).toHaveCount(1);
+  await expect(janela.locator('.cartao .cartao__nome')).toHaveText(DOC_SO_CONTEUDO.nome);
 });
