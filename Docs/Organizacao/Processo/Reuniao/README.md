@@ -129,7 +129,7 @@ Organizacao/
 
 ## 6. Prompt padrão para gerar ATA
 
-Para gerar uma nova ATA, será utilizado o [notebook] do (https://notebook.google.com/notebook/971a05bb-12ce-44cb-810a-63449fa521f4?authuser=1) NotebookLM que já possui o arquivo de template da ATA.
+Para gerar uma nova ATA, será utilizado o [notebook](https://notebook.google.com/notebook/971a05bb-12ce-44cb-810a-63449fa521f4?authuser=1) do NotebookLM que já possui o arquivo de template da ATA.
 
 O usuário deverá:
 
