@@ -98,14 +98,14 @@ Cada reunião terá um arquivo próprio de ATA, em formato **Markdown (`.md`)**
 O nome do arquivo deverá seguir o padrão:
 
 ```text
-DD-MM-YYYY-descricao-curta.md
+ATA-DD-MM-YYYY-descricao-curta.md
 ```
 
 ### Exemplos
 
 ```text
-07-08-2026-reuniao-inicial.md
-10-08-2026-reuniao-requisitos.md
+ATA-07-08-2026-reuniao-inicial.md
+ATA-10-08-2026-reuniao-requisitos.md
 ```
 
 ### 5.3 Armazenamento da ATA
@@ -117,8 +117,8 @@ Organizacao/
 └── Processo/
     └── Reuniao/
         ├── Atas/
-        │   ├── 07-08-2026-reuniao-inicial.md
-        │   └── 10-08-2026-reuniao-requisitos.md
+        │   ├── ATA-07-08-2026-reuniao-inicial.md
+        │   └── ATA-10-08-2026-reuniao-requisitos.md
         ├── Templates/
         │   └── AtaTemplate.md
         └── README.md
@@ -152,6 +152,7 @@ O usuário deverá:
 > * Horário: [HH:MM às HH:MM]
 > * Local/Modalidade: [local ou plataforma]
 > * Participantes: [nome — função/representação]
+> * Responsáveis pela ATA: [nome e sobrenome, nome e sobrenome (em ordem alfabetica)]
 >
 > **Transcrição/Anotações:**
 >
