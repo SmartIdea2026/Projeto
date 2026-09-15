@@ -14,20 +14,40 @@ Os ciclos do AI-DLC na AWS dividem-se, essencialmente, em três etapas iterativa
 
   # 
 
-# **\-\>  Ciclo de Vida**
+## Ciclo de Vida
 
-Problema / Contexto  
+### 1. Initialization — Preparação
+Preparação do ambiente, contexto, regras e informações necessárias para iniciar o desenvolvimento.
+
+### 2. Ideation — Definição da intenção
+A equipe apresenta o problema ou objetivo. A IA ajuda a estruturar a intenção, esclarecer ambiguidades e definir o escopo.
+
+### 3. Inception — Entendimento e planejamento
+A IA analisa o contexto e estrutura requisitos, histórias de usuário, arquitetura e *Units of Work*. A equipe responde aos questionamentos e valida os artefatos antes de avançar.
+
+### 4. Construction — Projeto e construção
+Com o planejamento validado, a IA propõe o design, requisitos não funcionais, infraestrutura, código e testes. A equipe revisa e valida os resultados, podendo retornar às etapas anteriores para refinamento.
+
+### 5. Operations — Operação e evolução
+A solução é implantada e monitorada. Os resultados, problemas e novos requisitos alimentam novas iterações do ciclo.
+
+### Fluxo geral
+
+**Problema / Contexto**  
 ↓  
-IA entende o contexto e estrutura questionamentos e ambiguidades  
+**IA analisa e estrutura questionamentos**  
 ↓  
-Equipe responde aos questionamentos  
+**Equipe responde e esclarece ambiguidades**  
 ↓  
-IA cria propostas / soluções  
+**IA gera propostas e artefatos**  
 ↓  
-Equipe valida as propostas  
+**Equipe valida**  
 ↓  
-Avança para o próximo estágio  
-↺ *ou retorna às etapas anteriores para refinamento*
+**Próxima etapa ou retorno para refinamento**  
+↓  
+**Implementação → Operação → Novo ciclo**
+
+> **Observação:** a metodologia AI-DLC originalmente é apresentada pela AWS em três fases principais — **Inception, Construction e Operations**. A implementação atual de **AI-DLC Workflows** da AWS Labs expandiu o fluxo para cinco fases, adicionando **Initialization** e **Ideation**. 
 
 ## **3\. Qual a utilidade dessa metodologia?**
 
